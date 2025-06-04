@@ -1,0 +1,40 @@
+# Typing Convention for OptimizedGamedevFramework
+
+## Functions
+- Use `snake_case` for function names.
+- Function names should be descriptive and start with a verb.
+    Example: `calculate_score`, `load_assets`
+
+## Variables
+- Use `snake_case` for variable names.
+- Variable names should be concise and descriptive.
+    Example: `player_health`, `enemy_position`
+
+## Classes
+- Use `PascalCase` for class names.
+- Class names should represent objects or entities.
+    Example: `GameManager`, `PlayerCharacter`
+
+## Constants
+- Use `UPPER_SNAKE_CASE` for constants.
+- Constants should be descriptive and immutable.
+    Example: `MAX_PLAYER_HEALTH`, `DEFAULT_GRAVITY`
+
+## File Names
+- Use `snake_case` for file names.
+- File names should reflect the content or purpose of the file.
+    Example: `game_manager.py`, `player_character.py`
+
+## Modules
+- Use `snake_case` for module names.
+- Module names should be concise and relevant.
+    Example: `physics_engine`, `audio_manager`
+
+## Comments
+- Use `#` for single-line comments and `"""` for multi-line comments.
+- Comments should be clear and explain the purpose of the code.
+
+## General Guidelines
+- Avoid abbreviations unless widely understood.
+- Use meaningful names that reflect the purpose of the entity.
+- Maintain consistency across the project.
