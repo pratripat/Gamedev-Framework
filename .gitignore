@@ -1,0 +1,10 @@
+# ignore the virtual environments
+.venv/
+**/.venv/
+
+# ignore __pycache__ directories at all levels
+__pycache__/
+**/__pycache__/
+
+# Ignore .pyc and .pyo files
+*.py[cod]
