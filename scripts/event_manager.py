@@ -8,9 +8,18 @@ class EventManager:
     
     def subscribe(self, event_type, callback):
         self.subscribers[event_type].append(callback)
+    
+    def unsubscribe(self, event_type, callback):
+        if event_type in self.subscribers:
+            try:
+                self.subscribers[event_type].remove(callback)
+            except ValueError:
+                print(f"[EVENT MANAGER] Callback '{callback}' was not found for event '{event_type}'. (DEBUG)")
+        else:
+            print(f"[EVENT MANAGER] No subscribers for event '{event_type}'. (DEBUG)")
 
     def emit(self, event_type, data=None):
-        print(f"[EVENT MANAGER] Emitting event '{event_type}' with data: [{data}] (DEBUG)")
+        # print(f"[EVENT MANAGER] Emitting event '{event_type}' with data: [{data}] (DEBUG)")
         for callback in self.subscribers[event_type]:
             if data: callback(data)
             else: callback()
