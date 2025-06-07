@@ -41,7 +41,7 @@ class Input:
 
                 # handles events based on keybinds pressed
                 if event.key in self.keybinds['keys_pressed']:
-                    # print(f"[INPUT] the following key is held {self.keybinds['keys_pressed'][event.key]}")
+                    # print(f"[INPUT] the following key is held '{event.key}' (DEBUG)")
                     event_type = self.keybinds['keys_pressed'][event.key]
                     event_manager.emit(event_type)
 
@@ -51,7 +51,7 @@ class Input:
                 
                 # handles events based on keybinds released
                 if event.key in self.keybinds['keys_released']:
-                    # print(f"[INPUT] the following key is held {self.keybinds['keys_released'][event.key]}")
+                    # print(f"[INPUT] the following key is held '{event.key}' (DEBUG)")
                     event_type = self.keybinds['keys_released'][event.key]
                     event_manager.emit(event_type)
 
@@ -80,7 +80,7 @@ class Input:
         # Update keybinds for held keys
         for key in self.keys_held:
             if key in self.keybinds['keys_held']:
-                # print(f"[INPUT] the following key is held {self.keybinds['keys_held'][key]} (DEBUG)")
+                # print(f"[INPUT] the following key is held '{key}' (DEBUG)")
                 event_type = self.keybinds['keys_held'][key]
                 event_manager.emit(event_type)
 
