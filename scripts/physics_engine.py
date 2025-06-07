@@ -1,4 +1,4 @@
-from .ecs.component_manager import Position, Velocity
+from .ecs.component import Position, Velocity
 
 class PhysicsEngine:
     def __init__(self, component_manager):
@@ -11,5 +11,4 @@ class PhysicsEngine:
             velocity = self.component_manager.get(entity, Velocity)
 
             # Update position based on velocity
-            position.x += velocity.x * dt
-            position.y += velocity.y * dt
+            position += velocity * dt
