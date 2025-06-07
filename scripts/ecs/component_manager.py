@@ -1,21 +1,5 @@
 from collections import defaultdict
 
-class Position:
-    def __init__(self, x=0, y=0):
-        self.x = x
-        self.y = y
-    
-    def __repr__(self):
-        return f"Position(x={self.x}, y={self.y})"
-
-class Velocity:
-    def __init__(self, x=0, y=0):
-        self.x = x
-        self.y = y
-    
-    def __repr__(self):
-        return f"Velocity(x={self.x}, y={self.y})"
-
 class ComponentManager:
     def __init__(self):
         self._components = defaultdict(dict) # {component_type: {entity_id: instance}}
