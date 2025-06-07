@@ -27,6 +27,12 @@ class SceneManager():
         if self.get_scene(scene.id):
             raise ValueError(f"[SCENE MANAGER] Scene with id {scene.id} already exists. (DEBUG)")
         self.scenes.append(scene)
+    
+    def render_scene(self, screen):
+        if not self.current_scene:
+            raise RuntimeError("[SCENE MANAGER] No current scene set. (DEBUG)")
+        
+        self.current_scene.render(screen)
 
     def update_scene(self, dt):
         if not self.current_scene:

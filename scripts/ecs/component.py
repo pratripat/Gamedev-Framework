@@ -47,6 +47,17 @@ class Vector2Component:
     @property
     def vec(self):
         return self._vec
+
+    @vec.setter
+    def vec(self, value):
+        if isinstance(value, pygame.Vector2):
+            self._vec = value
+        elif isinstance(value, (tuple, list)):
+            self._vec = pygame.Vector2(*value)
+        elif isinstance(value, Vector2Component):
+            self._vec = value._vec
+        
+        self._clamp()
     
     # placeholer for velocity
     def _clamp(self):
@@ -58,20 +69,46 @@ class Position(Vector2Component):
         super().__init__(x, y)
 
 class Velocity(Vector2Component):
-    def __init__(self, x=0, y=0, fixed_speed=5):
+    def __init__(self, x=0, y=0, speed=5):
         super().__init__(x, y)
-        self.fixed_speed = fixed_speed
+        self.speed = speed
+
+class RenderComponent:
+    def __init__(self, surface, offset=(0,0)):
+        """
+        Initializes a render component with a surface and an offset.
+
+        :param surface: The surface to render.
+        :param offset: The offset from the entity's position.
+        """
+        self.surface = surface
+        self.offset = pygame.Vector2(offset)
     
-    def _clamp(self):
-        # If the velocity vector is zero, do nothing
-        if self._vec == pygame.Vector2(0, 0):
-            return
+class AnimationComponent:
+    def __init__(self, animation_id, animation_handler, offset=(0,0)):
+        self.animation_handler = animation_handler
+        self.animation_id = animation_id
+        self.animation = self.animation_handler.get_animation(animation_id)
+        self.offset = pygame.Vector2(offset)
+
+    def set_animation(self, animation_id):
+        """
+        Sets the current animation to the specified animation ID.
         
-        # Clamp the velocity to the maximum speed
-        if self._vec.length() != self.fixed_speed:
-            self._vec.scale_to_length(self.fixed_speed)
+        :param animation_id: The ID of the animation to set.
+        """
+        self.animation_id = animation_id
+        self.animation = self.animation_handler.get_animation(animation_id)
+    
+    def update(self, dt):
+        self.animation.run(dt)
+
+    @property
+    def current_image(self):
+        """
+        Returns the current image of the animation.
         
-        # threshold
-        # Ensure that the velocity is not zero
-        # if self._vec.length() < 0.01:
-        #     self._vec = pygame.Vector2(0, 0)
+        :return: The current image of the animation.
+        """
+        return self.animation.current_image
+    

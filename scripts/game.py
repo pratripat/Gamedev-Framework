@@ -13,6 +13,9 @@ class Game():
         pygame.display.set_caption("Game")
         # TEMP
 
+        self.clock = pygame.time.Clock()
+        self.fps = 60
+
         self.game_scene = GameScene()
         self.scene_manager = SceneManager()
         self.input_system = Input()
@@ -33,11 +36,27 @@ class Game():
         self.event_manager.emit("game_start")
 
         while 1:
+            self.clock.tick()
+            self.calculate_dt()
             self.update()
+            self.render()
+    
+    def render(self):
+        self.screen.fill((0, 0, 0))
+        self.scene_manager.render_scene(self.screen)
+        pygame.display.update()
 
     def update(self):
         self.input_system.update(self.event_manager)
 
         # TEMP
-        dt = 1/60
-        self.scene_manager.update_scene(dt)
+        self.scene_manager.update_scene(self.dt)
+
+    def calculate_dt(self):
+        fps = self.clock.get_fps()
+        print(fps)
+        
+        if fps == 0: 
+            self.dt = 0
+        else: 
+            self.dt = (1 / fps) * self.fps
