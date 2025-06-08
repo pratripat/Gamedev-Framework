@@ -21,7 +21,6 @@ class AnimationHandler:
         try:
             spritesheet_index = 0
             for animation_id in config:
-                print(animation_id)
                 self.animations[f"{entity}_{animation_id}"] = AnimationData(f"{ANIMATION_FOLDER}/{entity}", config[animation_id], spritesheet_index)
                 spritesheet_index += len(config[animation_id]['frames'])
 
@@ -38,7 +37,6 @@ class AnimationHandler:
         """
         if animation_id not in self.animations:
             entity = '_'.join(animation_id.split('_')[:-1]) # Extract entity name from animation ID
-            print(entity)
             self.load_animation(entity)  # Load the animation for the entity if not already loaded
         
         animation_data = self.animations.get(animation_id, None)

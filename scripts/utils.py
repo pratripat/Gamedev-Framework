@@ -1,9 +1,9 @@
 import pygame, json, os
 
 DEFAULT_COLORKEY = (0, 0, 0)
-INTIAL_WINDOW_SIZE = (800, 600)
+INTIAL_WINDOW_SIZE = (1200, 600)
+CENTER = pygame.Vector2(INTIAL_WINDOW_SIZE) * 0.5
 ANIMATION_FOLDER = "data/graphics/animations"
-SCALE = 3
 
 # loads an image from a file and applies a colorkey for transparency
 def load_image(path, colorkey=DEFAULT_COLORKEY, scale=1):
