@@ -10,6 +10,8 @@ from ..animation_state_machine import AnimationStateMachine
 from ..render_system import AnimationSystem, RenderSystem
 from ..camera import Camera
 
+import random
+
 class GameScene(Scene):
     """
     Represents the main game scene, managing entities, components, and physics.
@@ -53,18 +55,21 @@ class GameScene(Scene):
         # self.physics_component_manager.add(self.player.entity_id, Velocity(0, 0, speed=1))
         self.physics_component_manager.add(
             self.player.entity_id, 
-            Position(10, 10), 
-            Velocity(0, 0, speed=5), 
+            Position(self.player.entity_id, 10, 10), 
+            Velocity(self.player.entity_id, 0, 0, speed=5), 
             AnimationComponent(
-                entity="white_pawn",
+                entity_id=self.player.entity_id,
+                entity="black_pawn",
                 animation_id="idle",
                 animation_handler=self.animation_handler,
+                event_manager=event_manager,
                 center=True,
                 entity_type="chess_piece"
             ),
             AnimationStateMachine(
                 entity_id = self.player.entity_id,
                 component_manager=self.physics_component_manager,
+                event_manager=event_manager,
                 animation_priority_list = [
                     "idle",
                     "shoot",
@@ -74,54 +79,57 @@ class GameScene(Scene):
                 transitions = {
                     "moving": {
                         "to_animation": "idle", 
-                        "cond": lambda: self.physics_component_manager.get(self.player.entity_id, Velocity).vec.length_squared() == 0 and self.physics_component_manager.get(self.player.entity_id, AnimationComponent).animation.over,
+                        "cond": lambda: self.physics_component_manager.get(self.player.entity_id, Velocity).vec.length_squared() == 0,
                         "self_dest": False
                     },
                     "shoot": {
                         "to_animation": "idle", 
-                        "cond": lambda: input_system.mouse_states['left_held'] == False and self.physics_component_manager.get(self.player.entity_id, AnimationComponent).animation.over,
+                        "cond": lambda: input_system.mouse_states['left_held'] == False,
                         "self_dest": False
                     }
                 }
             )
         )
 
-        # for i in range(2):
-        #     enemy = self.entity_manager.create_entity()
+        for i in range(2):
+            enemy = self.entity_manager.create_entity()
 
-        #     self.physics_component_manager.add(enemy, 
-        #         Position(100 * i, 100), 
-        #         Velocity(-i, i, speed=2), 
-        #         AnimationComponent(
-        #             entity="black_pawn",
-        #             animation_id="idle",
-        #             animation_handler=self.animation_handler,
-        #             center=True,
-        #             entity_type="chess_piece"
-        #         ),
-        #         AnimationStateMachine(
-        #             entity_id = enemy,
-        #             component_manager=self.physics_component_manager,
-        #             animation_priority_list = [
-        #                 "idle",
-        #                 "shoot",
-        #                 "moving",
-        #                 "death"
-        #             ],
-        #             transitions = {
-        #                 "moving": {
-        #                     "to_animation": "idle", 
-        #                     "cond": lambda: self.physics_component_manager.get(enemy, AnimationComponent).animation.over,
-        #                     "self_dest": False
-        #                 },
-        #                 "shoot": {
-        #                     "to_animation": "idle",
-        #                     "cond": lambda: self.physics_component_manager.get(enemy, AnimationComponent).animation.over,
-        #                     "self_dest": False
-        #                 }
-        #             }
-        #         )
-        #     )
+            self.physics_component_manager.add(enemy, 
+                Position(enemy, 100, 100), 
+                Velocity(enemy, random.uniform(0,1), random.uniform(0,1), speed=5), 
+                AnimationComponent(
+                    entity_id=enemy,
+                    entity="black_pawn",
+                    animation_id="idle",
+                    animation_handler=self.animation_handler,
+                    event_manager=event_manager,
+                    center=True,
+                    entity_type="chess_piece"
+                ),
+                AnimationStateMachine(
+                    entity_id = enemy,
+                    component_manager=self.physics_component_manager,
+                    event_manager=event_manager,
+                    animation_priority_list = [
+                        "idle",
+                        "shoot",
+                        "moving",
+                        "death"
+                    ],
+                    transitions = {
+                        "moving": {
+                            "to_animation": "idle", 
+                            "cond": lambda: self.physics_component_manager.get(enemy, Velocity).vec.length_squared() == 0,
+                            "self_dest": False
+                        },
+                        "shoot": {
+                            "to_animation": "idle", 
+                            "cond": lambda: input_system.mouse_states['left_held'] == False,
+                            "self_dest": False
+                        }
+                    }
+                )
+            )
 
         self.camera.set_target(self.player.entity_id)
 
@@ -140,7 +148,7 @@ class GameScene(Scene):
         event_manager.subscribe(LEFT_RELEASE, lambda: self.player.on_move("left", held=False))
         event_manager.subscribe(RIGHT_RELEASE, lambda: self.player.on_move("right", held=False))
         
-        event_manager.subscribe(LEFT_CLICK, lambda: self.physics_component_manager.get(self.player.entity_id, AnimationStateMachine).set_animation("shoot"))
+        event_manager.subscribe(LEFT_HOLD, lambda: self.physics_component_manager.get(self.player.entity_id, AnimationStateMachine).set_animation("shoot"))
 
         # Set up keybinds for input system
         input_system.set_input_binds(
@@ -156,9 +164,13 @@ class GameScene(Scene):
                 pygame.K_a: LEFT_RELEASE,
                 pygame.K_d: RIGHT_RELEASE
             },
-            mouse_events = {
+            mouse_clicked = {
                 pygame.BUTTON_LEFT: LEFT_CLICK,
                 pygame.BUTTON_RIGHT: RIGHT_CLICK
+            },
+            mouse_held = {
+                pygame.BUTTON_LEFT: LEFT_HOLD,
+                pygame.BUTTON_RIGHT: RIGHT_HOLD
             }
         )
 

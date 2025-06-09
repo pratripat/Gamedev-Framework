@@ -19,7 +19,7 @@ class AnimationSystem:
 
                 animation_state_machine.set_animation(suggested_anim)
 
-            animation_state_machine.update(dt)
+            animation_state_machine.animation_component.update(dt)
 
 class RenderSystem:
     def __init__(self, component_manager):

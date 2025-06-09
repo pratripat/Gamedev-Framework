@@ -13,7 +13,7 @@ class Input:
             'left_release': True,
             'right_release': True
         }
-        self.input_binds = {"keys_pressed": {}, "keys_released": {}, "keys_held": {}, "mouse_events": {}}
+        self.input_binds = {"keys_pressed": {}, "keys_released": {}, "keys_held": {}, "mouse_clicked": {}, "mouse_held": {}}
 
         pygame.event.set_allowed([pygame.QUIT, pygame.KEYDOWN, pygame.KEYUP, pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP])
 
@@ -69,9 +69,9 @@ class Input:
                     self.mouse_states['right_release'] = False
 
                 # handles events based on input_binds mouse events
-                if event.button in self.input_binds['mouse_events']:
+                if event.button in self.input_binds['mouse_clicked']:
                     # print(f"[INPUT] the following mouse button is pressed '{event.button}' (DEBUG)")
-                    event_type = self.input_binds['mouse_events'][event.button]
+                    event_type = self.input_binds['mouse_clicked'][event.button]
                     event_manager.emit(event_type)
 
             if event.type == pygame.MOUSEBUTTONUP:
@@ -90,8 +90,19 @@ class Input:
                 # print(f"[INPUT] the following key is held '{key}' (DEBUG)")
                 event_type = self.input_binds['keys_held'][key]
                 event_manager.emit(event_type)
+        
+        # Update input_binds for held mouse 
+        if self.mouse_inputs["left_held"]: 
+            if 1 in self.input_binds["mouse_held"]:
+                event_type = self.input_binds["mouse_held"][1]
+                event_manager.emit(event_type)
+        if self.mouse_inputs["right_held"]:
+            if 3 in self.input_binds["mouse_held"]:
+                event_type = self.input_binds["mouse_held"][3]
+                event_manager.emit(event_type)     
 
-    def set_input_binds(self, keys_pressed={}, keys_released={}, keys_held={}, mouse_events={}):
+
+    def set_input_binds(self, keys_pressed={}, keys_released={}, keys_held={}, mouse_clicked={}, mouse_held={}):
         """
         Set input_binds for the input system.
             Dictionary mapping pygame key constants to event names.
@@ -99,7 +110,8 @@ class Input:
         self.input_binds["keys_pressed"] = keys_pressed
         self.input_binds["keys_released"] = keys_released
         self.input_binds["keys_held"] = keys_held
-        self.input_binds["mouse_events"] = mouse_events
+        self.input_binds["mouse_clicked"] = mouse_clicked
+        self.input_binds["mouse_held"] = mouse_held
 
     @property
     def key_inputs(self) -> dict:

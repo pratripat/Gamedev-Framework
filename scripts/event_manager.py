@@ -18,8 +18,8 @@ class EventManager:
         else:
             print(f"[EVENT MANAGER] No subscribers for event '{event_type}'. (DEBUG)")
 
-    def emit(self, event_type, data=None):
-        # print(f"[EVENT MANAGER] Emitting event '{event_type}' with data: [{data}] (DEBUG)")
+    def emit(self, event_type, **kwargs):
+        # print(f"[EVENT MANAGER] Emitting event '{event_type}' with kwargs: [{kwargs}] (DEBUG)")
         for callback in self.subscribers[event_type]:
-            if data: callback(data)
+            if kwargs: callback(**kwargs)
             else: callback()
