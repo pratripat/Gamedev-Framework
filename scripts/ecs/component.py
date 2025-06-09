@@ -118,8 +118,6 @@ class AnimationComponent:
         """
         if self.animation_id == animation_id: return
 
-        print(self.animation_id)
-
         self.animation_id = animation_id
         self.animation = self.animation_handler.get_animation(self.entity_name + "_" + animation_id)
     

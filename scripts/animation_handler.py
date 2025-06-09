@@ -179,6 +179,12 @@ class Animation:
         :param dt: The elapsed time since the last update.
         """
 
+        if self.frame > self.animation_data.duration():
+            if self.animation_data.config['loop'] == True:
+                self.frame = 0
+            elif self.animation_data.config['loop'] == False:
+                self.frame = self.animation_data.duration()
+
         self.frame += self.animation_data.config['speed'] * dt
 
         if type(self.animation_data.config['loop']) == type([]):
@@ -186,12 +192,6 @@ class Animation:
 
             if self.frame > sum(self.animation_data.config['frames'][:loop_indexes[1]+1]):
                 self.frame = sum(self.animation_data.config['frames'][:loop_indexes[0]+1])
-
-        if self.frame > self.animation_data.duration():
-            if self.animation_data.config['loop'] == True:
-                self.frame = 0
-            elif self.animation_data.config['loop'] == False:
-                self.frame = self.animation_data.duration()
 
         self.load_image()
 

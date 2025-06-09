@@ -1,23 +1,25 @@
 import pygame
-from .utils import INTIAL_WINDOW_SIZE, CENTER
+from .utils import CENTER
 from .ecs.component import Position, Velocity, RenderComponent, AnimationComponent
+from .animation_state_machine import AnimationStateMachine
 
 class AnimationSystem:
     def __init__(self, component_manager):
         self.component_manager = component_manager
     
     def update(self, dt):
-        for eid in self.component_manager.get_entities_with(AnimationComponent):
-            animation_component = self.component_manager.get(eid, AnimationComponent)
+        for eid in self.component_manager.get_entities_with(AnimationStateMachine):
+            animation_state_machine = self.component_manager.get(eid, AnimationStateMachine)
 
-            if animation_component.entity_type == "chess_piece":
+            if animation_state_machine.animation_component.entity_type == "chess_piece":
                 vel = self.component_manager.get(eid, Velocity).vec
-                if vel.length() > 0:
-                    animation_component.set_animation("moving")
-                else:
-                    animation_component.set_animation("idle")
+                is_moving = vel.x != 0 or vel.y != 0
+                
+                suggested_anim = "moving" if is_moving else "idle"
 
-            animation_component.update(dt)
+                animation_state_machine.set_animation(suggested_anim)
+
+            animation_state_machine.update(dt)
 
 class RenderSystem:
     def __init__(self, component_manager):
