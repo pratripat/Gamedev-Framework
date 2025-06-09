@@ -40,7 +40,7 @@ class AnimationHandler:
             self.load_animation(entity)  # Load the animation for the entity if not already loaded
         
         animation_data = self.animations.get(animation_id, None)
-        return Animation(animation_data)
+        return Animation(animation_data, animation_id)
 
 class AnimationData:
     def __init__(self, path, config, spritesheet_index=0):
@@ -101,8 +101,9 @@ class AnimationData:
         return sum(self.config['frames'])
 
 class Animation:
-    def __init__(self, animation_data):
+    def __init__(self, animation_data, animation_id):
         self.animation_data = animation_data
+        self.animation_id = animation_id
         self.frame = 0
         self.load_image()
     
@@ -173,13 +174,15 @@ class Animation:
 
         surface.blit(image, (position[0]+offset[0], position[1]+offset[1]))
 
-    def run(self, dt):
+    def run(self, event_manager, entity_id, dt):
         """
         Update the animation frame based on the elapsed time.
         :param dt: The elapsed time since the last update.
         """
 
         if self.frame > self.animation_data.duration():
+            event_manager.emit("animation_finished", entity_id=entity_id, animation_id=self.animation_id)
+
             if self.animation_data.config['loop'] == True:
                 self.frame = 0
             elif self.animation_data.config['loop'] == False:

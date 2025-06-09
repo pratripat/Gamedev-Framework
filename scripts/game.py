@@ -34,10 +34,9 @@ class Game():
             "input_system": self.input_system
         })
 
-        self.event_manager.emit("game_start")
-
         while 1:
             self.clock.tick(self.fps)
+            # self.clock.tick()
             self.calculate_dt()
             self.update()
             self.render()

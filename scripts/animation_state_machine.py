@@ -1,18 +1,19 @@
 from .ecs.component import AnimationComponent
 
 class AnimationStateMachine:
-    def __init__(self, entity_id, component_manager, animation_priority_list, transitions={}):
+    def __init__(self, entity_id, component_manager, event_manager, animation_priority_list, transitions={}):
         self.entity_id = entity_id
         self.component_manager = component_manager
         self.animation_priority_list = animation_priority_list
         self.transitions = transitions
+        
+        event_manager.subscribe("animation_finished", self.on_animation_finished)
     
-    def update(self, dt):
-        """
-        Updates the animation state machine, checking for transitions and updating the current animation.
-        :param dt: The elapsed time since the last update.
-        """
-        current_animation_id = self.animation_component.animation_id 
+    def on_animation_finished(self, entity_id, animation_id):
+        if entity_id != self.entity_id:
+            return
+        
+        current_animation_id = animation_id.split('_')[-1] # gets the last part, the actual animation n excludes the name of the entity
         if current_animation_id in self.transitions:
             to_animation = self.transitions[current_animation_id]["to_animation"]
             cond = self.transitions[current_animation_id]["cond"]
@@ -23,8 +24,6 @@ class AnimationStateMachine:
                 
                 if self.transitions[current_animation_id]["self_dest"]:
                     del self.transitions[current_animation_id]
-        
-        self.animation_component.update(dt)
 
     def add_transition(self, from_animation, to_animation, cond, self_dest=True):
         """
@@ -46,11 +45,11 @@ class AnimationStateMachine:
     
     def set_animation(self, animation_id):
         if animation_id not in self.animation_priority_list:
-            print(f"[ANIMATION STATE MACHINE] Animation {animation_id} not found in priority list. (DEBUG)")
+            # print(f"[ANIMATION STATE MACHINE] Animation {animation_id} not found in priority list. (DEBUG)")
             return
     
         if self.animation_priority_list.index(animation_id) > self.animation_priority_list.index(self.animation_component.animation_id):
-            print(f"[ANIMATION STATE MACHINE] Setting animation {animation_id} (DEBUG)")
+            # print(f"[ANIMATION STATE MACHINE] Setting animation {animation_id} (DEBUG)")
             self.animation_component.set_animation(animation_id)
 
     @property

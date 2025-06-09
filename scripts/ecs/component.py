@@ -1,7 +1,8 @@
 import pygame
 
 class Vector2Component:
-    def __init__(self, x=0, y=0):
+    def __init__(self, entity_id, x=0, y=0):
+        self.entity_id = entity_id
         self._vec = pygame.Vector2(x, y)
     
     def __iadd__(self, other) -> "Vector2Component": # for vec += other
@@ -75,22 +76,17 @@ class Vector2Component:
 
 
 class Position(Vector2Component):
-    def __init__(self, x=0, y=0):
-        super().__init__(x, y)
+    def __init__(self, entity_id, x=0, y=0):
+        super().__init__(entity_id, x, y)
 
 class Velocity(Vector2Component):
-    def __init__(self, x=0, y=0, speed=5):
-        super().__init__(x, y)
+    def __init__(self, entity_id, x=0, y=0, speed=5):
+        super().__init__(entity_id, x, y)
         self.speed = speed
 
 class RenderComponent:
-    def __init__(self, surface, offset=(0,0), center=False):
-        """
-        Initializes a render component with a surface and an offset.
-
-        :param surface: The surface to render.
-        :param offset: The offset from the entity's position.
-        """
+    def __init__(self, entity_id, surface, offset=(0,0), center=False):
+        self.entity_id = entity_id
         self.surface = surface
         self.offset = pygame.Vector2(offset)
         
@@ -98,8 +94,10 @@ class RenderComponent:
             self.offset -= pygame.Vector2(surface.get_size()) / 2
     
 class AnimationComponent:
-    def __init__(self, entity, animation_id, animation_handler, offset=(0,0), center=False, entity_type=None):
+    def __init__(self, entity_id, entity, animation_id, animation_handler, event_manager, offset=(0,0), center=False, entity_type=None):
         self.animation_handler = animation_handler
+        self.event_manager = event_manager
+        self.entity_id = entity_id
         self.entity_name = entity
         self.entity_type = entity_type # chess_piece, foilage
         self.offset = pygame.Vector2(offset)
@@ -122,7 +120,7 @@ class AnimationComponent:
         self.animation = self.animation_handler.get_animation(self.entity_name + "_" + animation_id)
     
     def update(self, dt):
-        self.animation.run(dt)
+        self.animation.run(self.event_manager, self.entity_id, dt)
 
     @property
     def current_image(self):
