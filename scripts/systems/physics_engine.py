@@ -1,4 +1,4 @@
-from .ecs.component import Position, Velocity
+from ..components.physics import Position, Velocity
 
 class PhysicsEngine:
     def __init__(self, component_manager):

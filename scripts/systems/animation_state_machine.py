@@ -1,4 +1,4 @@
-from .ecs.component import AnimationComponent
+from ..components.animation import AnimationComponent
 
 class AnimationStateMachine:
     def __init__(self, entity_id, component_manager, event_manager, animation_priority_list, transitions={}):

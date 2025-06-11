@@ -1,7 +1,7 @@
-from .scene_manager import SceneManager
+from .systems.scene_manager import SceneManager
 from .scenes.game_scene import GameScene
-from .input_system import Input
-from .event_manager import EventManager
+from .systems.input_system import Input
+from .systems.event_manager import EventManager
 from .utils import INTIAL_WINDOW_SIZE
 import pygame
 
@@ -15,12 +15,12 @@ class Game():
         # TEMP
 
         self.clock = pygame.time.Clock()
-        self.fps = 60
+        self.target_fps = 60
 
-        self.game_scene = GameScene()
-        self.scene_manager = SceneManager()
-        self.input_system = Input()
         self.event_manager = EventManager()
+        self.input_system = Input()
+        self.scene_manager = SceneManager()
+        self.game_scene = GameScene(self.event_manager)
 
         self.setup()
 
@@ -35,7 +35,7 @@ class Game():
         })
 
         while 1:
-            self.clock.tick(self.fps)
+            self.clock.tick(self.target_fps)
             # self.clock.tick()
             self.calculate_dt()
             self.update()
@@ -50,13 +50,13 @@ class Game():
         self.input_system.update(self.event_manager)
 
         # TEMP
-        self.scene_manager.update_scene(self.dt)
+        self.scene_manager.update_scene(fps=self.fps, dt=self.dt)
 
     def calculate_dt(self):
-        fps = self.clock.get_fps()
+        self.fps = self.clock.get_fps()
         # print(fps)
         
-        if fps == 0: 
+        if self.fps == 0: 
             self.dt = 0
         else: 
-            self.dt = (1 / fps) * self.fps
+            self.dt = (1 / self.fps) * self.fps

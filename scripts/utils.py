@@ -82,3 +82,26 @@ def load_images_from_spritesheet(file_path, colorkey=DEFAULT_COLORKEY, scale=1):
                 images.append(image)
 
     return images
+
+def get_unit_direction_towards(start_pos: pygame.Vector2, end_pos: pygame.Vector2):
+    """
+    Returns the unit direction vector from start_pos to end_pos.
+    
+    :param start_pos: Starting position (tuple, list, or pygame.Vector2).
+    :param end_pos: Target position (tuple, list, or pygame.Vector2).
+    :return: pygame.Vector2 representing the unit direction.
+    """
+    direction = end_pos - start_pos
+    if direction.length() == 0:
+        return pygame.Vector2(0, 0)
+    return direction.normalize()
+
+def rotate_vector(vector, angle):
+    """
+    Rotates a vector by a given angle in degrees.
+
+    :param vector: The vector to rotate (tuple, list, or pygame.Vector2).
+    :param angle: The angle in degrees to rotate the vector (counter-clockwise).
+    :return: A new pygame.Vector2 representing the rotated vector.
+    """
+    return pygame.Vector2(vector).rotate(angle)

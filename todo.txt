@@ -1,1 +1,56 @@
-Stuck on player movement
+BULLET PATTERNS
+
+🎯 Bullet Hell Pattern Ideas
+1. Single Shot
+Basic bullet in the facing direction.
+
+Use for pistols, enemies that track.
+
+2. Triple Spread
+Three bullets at slight angles (e.g., -15°, 0°, 15°).
+
+Shotgun-like spread.
+
+3. Spiral
+You already have this.
+
+Angle rotates over time to create spirals.
+
+4. Burst Spread
+Fire 5–10 bullets in all directions in a single frame.
+
+Think: “explosion” or circular attack.
+
+5. Wave / Sine Wave
+Bullets curve like a wave using a sine offset over time.
+
+python
+Copy
+Edit
+# Each projectile updates its own y-position like:
+offset = amplitude * math.sin(frequency * elapsed_time)
+6. Homing Bullets
+Bullet rotates gradually to face target.
+
+Needs target-tracking logic.
+
+7. Delayed Burst
+Shoot a slow-moving orb → after a delay, it explodes into radial bullets.
+
+8. Wall of Bullets
+Fire a full row or arc of bullets toward the player.
+
+Can combine with movement to make "moving wall".
+
+9. Random Scatter
+Bullets fly off in randomized directions within a cone.
+
+Good for chaotic enemies.
+
+10. Rotating Beam
+Beam that rotates slowly around the enemy.
+
+Can be implemented with collision segments instead of projectiles.
+
+11. Ring of Orbiting Bullets
+Bullets circle around an enemy, then shoot outward or inward.

@@ -1,6 +1,6 @@
 import pygame
-from .ecs.component import Position
-from .utils import INTIAL_WINDOW_SIZE, CENTER
+from ..components.physics import Position
+from ..utils import CENTER
 
 class Camera:
     def __init__(self):

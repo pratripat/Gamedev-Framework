@@ -1,6 +1,7 @@
 import pygame
-from .utils import CENTER
-from .ecs.component import Position, Velocity, RenderComponent, AnimationComponent
+from ..utils import CENTER
+from ..components.physics import Position, Velocity
+from ..components.animation import RenderComponent, AnimationComponent
 from .animation_state_machine import AnimationStateMachine
 
 class AnimationSystem:
