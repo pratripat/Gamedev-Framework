@@ -1,5 +1,5 @@
 import pygame, json
-from .utils import load_image, load_images_from_spritesheet, DEFAULT_COLORKEY, ANIMATION_FOLDER
+from ..utils import load_image, load_images_from_spritesheet, DEFAULT_COLORKEY, ANIMATION_FOLDER
 
 class AnimationHandler:
     def __init__(self):

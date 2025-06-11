@@ -34,11 +34,11 @@ class SceneManager():
         
         self.current_scene.render(screen)
 
-    def update_scene(self, dt):
+    def update_scene(self, **kwargs):
         if not self.current_scene:
             raise RuntimeError("[SCENE MANAGER] No current scene set. (DEBUG)")
         
-        self.current_scene.update(dt)
+        self.current_scene.update(**kwargs)
 
     def remove_scene(self, id: str):
         scene = self.get_scene(id)

@@ -1,7 +1,8 @@
 import pygame
-from .component import Velocity
+from ..components.physics import Velocity
+from .animation_state_machine import AnimationStateMachine
 
-class Player:
+class PlayerInputSystem:
     def __init__(self, entity_id):
         """
         Initializes a player with a given entity ID.
@@ -16,6 +17,10 @@ class Player:
             "right": False
         }
     
+    def shoot(self, component_manager, event_manager):
+        component_manager.get(self.entity_id, AnimationStateMachine).set_animation("shoot")
+        event_manager.emit("shoot", entity_id=self.entity_id)
+
     def on_move(self, direction, held=True):
         self.held[direction] = held
 
