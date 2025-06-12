@@ -1,5 +1,5 @@
 import pygame, json
-from ..utils import load_image, load_images_from_spritesheet, DEFAULT_COLORKEY, ANIMATION_FOLDER
+from ..utils import load_image, load_images_from_spritesheet, DEFAULT_COLORKEY, ANIMATION_FOLDER, GameSceneEvents
 
 class AnimationHandler:
     def __init__(self):
@@ -181,7 +181,7 @@ class Animation:
         """
 
         if self.frame > self.animation_data.duration():
-            event_manager.emit("animation_finished", entity_id=entity_id, animation_id=self.animation_id)
+            event_manager.emit(GameSceneEvents.ANIMATION_FINISHED, entity_id=entity_id, animation_id=self.animation_id)
 
             if self.animation_data.config['loop'] == True:
                 self.frame = 0

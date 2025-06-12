@@ -1,4 +1,5 @@
 from ..components.animation import AnimationComponent
+from ..utils import GameSceneEvents
 
 class AnimationStateMachine:
     def __init__(self, entity_id, component_manager, event_manager, animation_priority_list, transitions={}):
@@ -7,23 +8,30 @@ class AnimationStateMachine:
         self.animation_priority_list = animation_priority_list
         self.transitions = transitions
         
-        event_manager.subscribe("animation_finished", self.on_animation_finished)
-    
+        event_manager.subscribe(GameSceneEvents.ANIMATION_FINISHED, self.on_animation_finished)
+
     def on_animation_finished(self, entity_id, animation_id):
+        if animation_id.split('_')[-1] == "death":
+            print(entity_id)
         if entity_id != self.entity_id:
             return
+    
+        print(entity_id)
         
         current_animation_id = animation_id.split('_')[-1] # gets the last part, the actual animation n excludes the name of the entity
         if current_animation_id in self.transitions:
             to_animation = self.transitions[current_animation_id]["to_animation"]
             cond = self.transitions[current_animation_id]["cond"]
 
-            if cond():
-                if to_animation:
-                    self.animation_component.set_animation(to_animation)
-                
-                if self.transitions[current_animation_id]["self_dest"]:
-                    del self.transitions[current_animation_id]
+            try:
+                if cond():
+                    if to_animation:
+                        self.animation_component.set_animation(to_animation)
+                    
+                    if self.transitions[current_animation_id]["self_dest"]:
+                        del self.transitions[current_animation_id]
+            except Exception as e:
+                print(f"[ANIMATION STATE MACHINE] Error in condition for transition from {current_animation_id} to {to_animation}: {e}")
 
     def add_transition(self, from_animation, to_animation, cond, self_dest=True):
         """

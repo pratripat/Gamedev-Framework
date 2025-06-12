@@ -54,3 +54,13 @@ Can be implemented with collision segments instead of projectiles.
 
 11. Ring of Orbiting Bullets
 Bullets circle around an enemy, then shoot outward or inward.
+
+
+
+
+
+
+OFFSET IN ANIMATION CONFIG FILE
+
+
+COMPOSITE CHESS PIECE CLASS
