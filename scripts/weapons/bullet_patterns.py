@@ -1,8 +1,9 @@
 import pygame
-from ..utils import get_unit_direction_towards, rotate_vector, load_image
+from ..utils import get_unit_direction_towards, rotate_vector, load_image, CollisionShape, CollisionLayer
 from ..components.physics import Position, Velocity
 from ..components.animation import RenderComponent, AnimationComponent
 from ..components.projectile import ProjectileComponent
+from ..components.combat import HitBoxComponent
 
 def spawn_projectile(eid, cm, em, direction, data, position_offset=pygame.Vector2(0,0)):
     pos = data['start_pos']
@@ -22,6 +23,14 @@ def spawn_projectile(eid, cm, em, direction, data, position_offset=pygame.Vector
             proj_id,
             load_image(data['image_file']),
             center = True
+        ),
+        HitBoxComponent(
+            entity_id=proj_id,
+            offset=(0,0),
+            size=(data['size'], data['size']),
+            shape=CollisionShape.CIRCLE,
+            layer=data.get('layer', CollisionLayer.PROJECTILE.value),
+            mask=data.get('mask', CollisionLayer.create_mask(CollisionLayer.ENEMY))
         )
     )
 

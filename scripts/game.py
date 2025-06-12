@@ -29,10 +29,7 @@ class Game():
         self.scene_manager.set_current_scene("game")
 
     def run(self):
-        self.scene_manager.play_scene({
-            "event_manager": self.event_manager,
-            "input_system": self.input_system
-        })
+        self.scene_manager.play_scene(input_system=self.input_system)
 
         while 1:
             self.clock.tick(self.target_fps)
@@ -50,13 +47,13 @@ class Game():
         self.input_system.update(self.event_manager)
 
         # TEMP
-        self.scene_manager.update_scene(fps=self.fps, dt=self.dt)
+        self.scene_manager.update_scene(fps=self.target_fps, dt=self.dt)
 
     def calculate_dt(self):
         self.fps = self.clock.get_fps()
-        # print(fps)
+        # print(self.fps)
         
         if self.fps == 0: 
             self.dt = 0
         else: 
-            self.dt = (1 / self.fps) * self.fps
+            self.dt = (1 / self.fps) * self.target_fps

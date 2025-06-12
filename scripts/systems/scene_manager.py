@@ -49,7 +49,7 @@ class SceneManager():
         else:
             raise ValueError(f"[SCENE MANAGER] Scene with id {id} not found. (DEBUG)")
 
-    def play_scene(self, data: dict):
+    def play_scene(self, **kwargs):
         if not self.current_scene:
             raise RuntimeError("[SCENE MANAGER] No current scene set. (DEBUG)")
-        self.current_scene.start(*(data.values()))
+        self.current_scene.start(**kwargs)
