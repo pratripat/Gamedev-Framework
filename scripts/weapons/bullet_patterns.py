@@ -6,8 +6,14 @@ from ..components.projectile import ProjectileComponent
 from ..components.combat import HitBoxComponent
 
 def spawn_projectile(eid, cm, em, direction, data, position_offset=pygame.Vector2(0,0)):
-    pos = data['start_pos']
+    pos = data.get('start_pos', pygame.Vector2(0, 0))
     spawn_pos = pos + position_offset
+
+    raw_layer = data.get('layer', CollisionLayer.PROJECTILE)
+    layer = raw_layer if isinstance(raw_layer, CollisionLayer) else CollisionLayer(raw_layer)
+
+    raw_mask = data.get('mask', CollisionLayer.create_mask(CollisionLayer.ENEMY, CollisionLayer.PLAYER))
+    mask = raw_mask.value if isinstance(raw_mask, CollisionLayer) else raw_mask
 
     proj_id = em.create_entity()
     cm.add(
@@ -29,10 +35,12 @@ def spawn_projectile(eid, cm, em, direction, data, position_offset=pygame.Vector
             offset=(0,0),
             size=(data['size'], data['size']),
             shape=CollisionShape.CIRCLE,
-            layer=data.get('layer', CollisionLayer.PROJECTILE.value),
-            mask=data.get('mask', CollisionLayer.create_mask(CollisionLayer.ENEMY))
+            layer=layer,
+            mask=mask
         )
     )
+
+    # print(f"[DEBUG] Spawned projectile {proj_id} at {spawn_pos} with velocity {direction * data['speed']}, layer={layer}, mask={mask}")
 
     return proj_id
 

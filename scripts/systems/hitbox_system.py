@@ -6,7 +6,7 @@ from ..components.projectile import ProjectileComponent
 
 class HitBoxSystem:
     def can_hit(self, hitbox: HitBoxComponent, hurtbox: HurtBoxComponent) -> bool:
-        return (hitbox.mask & (1 << hurtbox.layer)) != 0
+        return (hitbox.mask & hurtbox.layer) != 0
 
     def update(self, event_manager, component_manager, entity_list, scroll):
         quadtree = Quadtree(0, (*scroll, *INTIAL_WINDOW_SIZE))
@@ -48,7 +48,7 @@ class HitBoxSystem:
                 if not pos_b:
                     continue
                 
-                hurtbox_rect = pygame.Rect(*(pos_b + hurtbox.offset), *hurtbox.size)
+                # hurtbox_rect = pygame.Rect(*(pos_b + hurtbox.offset), *hurtbox.size)
 
                 # Check for collision between hitbox and hurtbox
                 if hitbox_rect.colliderect(hurtbox_rect):
