@@ -1,5 +1,5 @@
 import pygame, json, os
-from enum import Enum
+from enum import Enum, IntFlag
 
 DEFAULT_COLORKEY = (0, 0, 0)
 INTIAL_WINDOW_SIZE = (1200, 600)
@@ -25,24 +25,22 @@ class CollisionShape(Enum):
     RECT = "rect"
     CIRCLE = "circle"
 
-class CollisionLayer(Enum):
+class CollisionLayer(IntFlag):
     PLAYER = 1
     ENEMY = 2
     PROJECTILE = 4
     ENVIRONMENT = 8
     ALL = PLAYER | ENEMY | PROJECTILE | ENVIRONMENT
 
+    @staticmethod
     def create_mask(*layers):
         """
-        Creates a bitmask from the provided collision layers.
-        
-        :param layers: CollisionLayer instances to combine.
-        :return: Combined bitmask as an integer.
+        Combines multiple CollisionLayer values into a single bitmask.
         """
-        mask = 0
+        mask = CollisionLayer(0)
         for layer in layers:
-            mask |= layer.value
-        return 1 << mask
+            mask |= layer
+        return mask
 
 class GameSceneEvents(Enum):
     DAMAGE = "damage"
@@ -80,23 +78,21 @@ class Quadtree:
     def get_index(self, rect):
         indexes = []
         x, y, w, h = self.bounds
-        
         vertical_mid = x + w / 2
         horizontal_mid = y + h / 2
 
-        top = rect.y < horizontal_mid and rect.y + rect.height <= horizontal_mid
-        bottom = rect.y >= horizontal_mid
-        left = rect.x < vertical_mid and rect.x + rect.width <= vertical_mid
-        right = rect.x >= vertical_mid
+        top = rect.y < horizontal_mid
+        bottom = rect.y + rect.height > horizontal_mid
+        left = rect.x < vertical_mid
+        right = rect.x + rect.width > vertical_mid
 
-        if top:
-            if right: indexes.append(0) # top right
-            elif left: indexes.append(1) # top left
-        elif bottom:
-            if right: indexes.append(3) # bottom right
-            elif left: indexes.append(2) # bottom left
+        if top and right: indexes.append(0)
+        if top and left: indexes.append(1)
+        if bottom and left: indexes.append(2)
+        if bottom and right: indexes.append(3)
 
         return indexes
+
 
     def insert(self, entity_id, rect):
         if self.nodes[0] is not None:

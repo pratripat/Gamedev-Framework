@@ -43,7 +43,7 @@ class HealthComponent:
 
         self.effects = []
 
-        event_manager.subscribe(GameSceneEvents.DAMAGE, self.take_damage)
+        event_manager.subscribe(GameSceneEvents.DAMAGE, self.take_damage, source=self.entity_id)
 
     def take_damage(self, entity_id, damage, effects):
         if entity_id != self.entity_id:
@@ -55,6 +55,9 @@ class HealthComponent:
         
         self.health -= damage
         self.effects = effects
+
+        if self.entity_id == 0: # TEMP: Assuming entity_id 0 is the player
+            print(f"[HEALTH COMPONENT] Player took {damage} damage, health now: {self.health}")
 
         # TEMP
         # set animation to hit

@@ -12,6 +12,7 @@ class EntityManager:
         self.dead_entities = set() # entities that are dead but not yet removed
         self.player_id = None
         self.component_manager = component_manager
+        self.event_manager = event_manager
 
         event_manager.subscribe(GameSceneEvents.DEATH, self.kill_entity)
         event_manager.subscribe(GameSceneEvents.REMOVE_ENTITY, self.delete_entity)
@@ -31,7 +32,6 @@ class EntityManager:
     
     def check_dead_entity(self, entity_id, animation_id):
         if animation_id.split('_')[-1] == "death" and entity_id in self.dead_entities:
-            print(entity_id)
             self.dead_entities.discard(entity_id)
             self.to_remove.add(entity_id)
             return True
@@ -47,5 +47,6 @@ class EntityManager:
         for entity_id in self.to_remove:
             if entity_id in self.entities.copy():
                 self.entities.discard(entity_id)
-            self.component_manager.remove_all(entity_id)
+                self.event_manager.unsubscribe_all_for(entity_id)
+                self.component_manager.remove_all(entity_id)
         self.to_remove.clear()

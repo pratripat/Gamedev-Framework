@@ -79,17 +79,17 @@ class GameScene(Scene):
                 transitions = {
                     "moving": {
                         "to_animation": "idle", 
-                        "cond": lambda: self.physics_component_manager.get(self.player, Velocity).vec.length_squared() == 0,
+                        "cond": (lambda eid=self.player: self.physics_component_manager.get(eid, Velocity).vec.length_squared() == 0),
                         "self_dest": False
                     },
                     "shoot": {
                         "to_animation": "idle", 
-                        "cond": lambda: input_system.mouse_states['left_held'] == False,
+                        "cond": (lambda: input_system.mouse_states['left_held'] == False),
                         "self_dest": False
                     },
                     "damage": {
                         "to_animation": "idle",
-                        "cond": lambda: self.physics_component_manager.get(self.player, HealthComponent).invincibility_timer <= 0,
+                        "cond": (lambda eid=self.player: self.physics_component_manager.get(eid, HealthComponent).invincibility_timer <= 0),
                         "self_dest": False
                     }
                 }
@@ -113,7 +113,7 @@ class GameScene(Scene):
                 offset=(0, 0), 
                 size=(32, 32), 
                 shape=CollisionShape.RECT, 
-                layer=CollisionLayer.PLAYER.value
+                layer=CollisionLayer.PLAYER
             ),
             HealthComponent(
                 entity_id=self.player,
@@ -127,7 +127,7 @@ class GameScene(Scene):
             enemy = self.entity_manager.create_entity()
 
             self.physics_component_manager.add(enemy, 
-                Position(enemy, 100, 100), 
+                Position(enemy, 100, 100 + 50*i), 
                 Velocity(enemy, 0, i/3, speed=5), 
                 AnimationComponent(
                     entity_id=enemy,
@@ -152,17 +152,13 @@ class GameScene(Scene):
                     transitions = {
                         "moving": {
                             "to_animation": "idle", 
-                            "cond": lambda: self.physics_component_manager.get(enemy, Velocity).vec.length_squared() == 0,
-                            "self_dest": False
-                        },
-                        "shoot": {
-                            "to_animation": "idle", 
-                            "cond": lambda: input_system.mouse_states['left_held'] == False,
+                            "cond": (lambda eid=enemy: self.physics_component_manager.get(eid, Velocity).vec.length_squared() == 0),
                             "self_dest": False
                         },
                         "damage": {
                             "to_animation": "idle",
-                            "cond": lambda: self.physics_component_manager.get(enemy, HealthComponent).invincibility_timer <= 0,
+                            # "cond": lambda: print('being called now also (death)', enemy) and self.physics_component_manager.get(enemy, HealthComponent) and self.physics_component_manager.get(enemy, HealthComponent).invincibility_timer <= 0,
+                            "cond": (lambda eid=enemy: self.physics_component_manager.get(eid, HealthComponent).invincibility_timer <= 0),
                             "self_dest": False
                         }
                     }
@@ -172,7 +168,7 @@ class GameScene(Scene):
                     shoot_fn=shoot_spread,
                     projectile_data={
                         "damage": 10,
-                        "speed": 10,
+                        "speed": 5,
                         "range": 100,
                         "effects": [],
                         "size": 1,
@@ -186,7 +182,7 @@ class GameScene(Scene):
                     offset=(0, 0), 
                     size=(32, 32), 
                     shape=CollisionShape.RECT, 
-                    layer=CollisionLayer.ENEMY.value
+                    layer=CollisionLayer.ENEMY
                 ),
                 HealthComponent(
                     entity_id=enemy,
@@ -196,8 +192,6 @@ class GameScene(Scene):
                 )
             )
 
-        self.event_manager.emit(GameSceneEvents.SHOOT, entity_id=enemy)
-
         self.camera.set_target(self.player)
 
         # Initialize game-specific components here
@@ -205,17 +199,17 @@ class GameScene(Scene):
         # keybinds
 
         # Subscribe to player input events
-        self.event_manager.subscribe(Inputs.UP, lambda: self.player_input_system.on_move("up"))
-        self.event_manager.subscribe(Inputs.DOWN, lambda: self.player_input_system.on_move("down"))
-        self.event_manager.subscribe(Inputs.LEFT, lambda: self.player_input_system.on_move("left"))
-        self.event_manager.subscribe(Inputs.RIGHT, lambda: self.player_input_system.on_move("right"))
+        self.event_manager.subscribe(Inputs.UP, lambda: self.player_input_system.on_move("up"), source=self.player)
+        self.event_manager.subscribe(Inputs.DOWN, lambda: self.player_input_system.on_move("down"), source=self.player)
+        self.event_manager.subscribe(Inputs.LEFT, lambda: self.player_input_system.on_move("left"), source=self.player)
+        self.event_manager.subscribe(Inputs.RIGHT, lambda: self.player_input_system.on_move("right"), source=self.player)
 
-        self.event_manager.subscribe(Inputs.UP_RELEASE, lambda: self.player_input_system.on_move("up", held=False))
-        self.event_manager.subscribe(Inputs.DOWN_RELEASE, lambda: self.player_input_system.on_move("down", held=False))
-        self.event_manager.subscribe(Inputs.LEFT_RELEASE, lambda: self.player_input_system.on_move("left", held=False))
-        self.event_manager.subscribe(Inputs.RIGHT_RELEASE, lambda: self.player_input_system.on_move("right", held=False))
+        self.event_manager.subscribe(Inputs.UP_RELEASE, lambda: self.player_input_system.on_move("up", held=False), source=self.player)
+        self.event_manager.subscribe(Inputs.DOWN_RELEASE, lambda: self.player_input_system.on_move("down", held=False), source=self.player)
+        self.event_manager.subscribe(Inputs.LEFT_RELEASE, lambda: self.player_input_system.on_move("left", held=False), source=self.player)
+        self.event_manager.subscribe(Inputs.RIGHT_RELEASE, lambda: self.player_input_system.on_move("right", held=False), source=self.player)
         
-        self.event_manager.subscribe(Inputs.LEFT_HOLD, lambda: self.player_input_system.shoot(self.physics_component_manager, self.event_manager))
+        self.event_manager.subscribe(Inputs.LEFT_HOLD, lambda: self.player_input_system.shoot(self.physics_component_manager, self.event_manager), source=self.player)
 
         # Set up keybinds for input system
         input_system.set_input_binds(
@@ -248,12 +242,12 @@ class GameScene(Scene):
         self.player_input_system.update(self.physics_component_manager) 
         self.physics_engine.update(dt)
         self.combat_system.update(
-            self.event_manager,
-            self.physics_component_manager,
-            self.physics_component_manager.get_entities_with_either(HurtBoxComponent, HitBoxComponent),
-            self.camera.scroll,
-            fps,
-            dt
+            event_manager=self.event_manager,
+            component_manager=self.physics_component_manager,
+            entity_list=self.physics_component_manager.get_entities_with_either(HurtBoxComponent, HitBoxComponent),
+            scroll=self.camera.scroll,
+            fps=fps,
+            dt=dt
         )
         self.animation_system.update(dt)
 

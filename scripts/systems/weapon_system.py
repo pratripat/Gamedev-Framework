@@ -28,7 +28,7 @@ class WeaponSystem:
                 projectile_data['start_pos'] = shoot_pos
                 projectile_data['target_pos'] = target_pos + self.camera.scroll
 
-                projectile_data['layer'] = CollisionLayer.PLAYER.value
+                projectile_data['layer'] = CollisionLayer.PLAYER
                 projectile_data['mask'] = CollisionLayer.create_mask(CollisionLayer.ENEMY)
 
                 # making the proj
@@ -40,7 +40,7 @@ class WeaponSystem:
             
             # enemy is shooting
             else:
-                print(f'[WEAPON SYSTEM] Entity: {entity_id} has shot... (DEBUG)')
+                # print(f'[WEAPON SYSTEM] Entity: {entity_id} has shot... (DEBUG)')
                 
                 target_pos = pygame.Vector2(1, 0) + shoot_pos # default target position
                 if projectile_data['towards_player']:
@@ -49,7 +49,7 @@ class WeaponSystem:
                 projectile_data['start_pos'] = shoot_pos
                 projectile_data['target_pos'] = target_pos
 
-                projectile_data['layer'] = CollisionLayer.ENEMY.value
+                projectile_data['layer'] = CollisionLayer.ENEMY
                 projectile_data['mask'] = CollisionLayer.create_mask(CollisionLayer.PLAYER)
 
                 weapon_component.shoot_fn(entity_id, self.component_manager, self.entity_manager, projectile_data)
