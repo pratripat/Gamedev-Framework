@@ -53,14 +53,14 @@ class GameScene(Scene):
 
         shoot_radial_rotate = SpiralShooter()
 
-        self.physics_component_manager.add(
+        self.physics_component_manager.add(            
             self.player, 
             PlayerTagComponent(),
             Position(self.player, 10, 10), 
             Velocity(self.player, 0, 0, speed=4), 
             AnimationComponent(
                 entity_id=self.player,
-                entity="black_pawn",
+                entity="white_pawn",
                 animation_id="idle",
                 animation_handler=self.animation_handler,
                 event_manager=self.event_manager,
