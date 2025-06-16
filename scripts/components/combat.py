@@ -16,7 +16,7 @@ class WeaponComponent:
         return not self.shot
 
 class HitBoxComponent:
-    def __init__(self, entity_id, offset, size, shape, layer: int, mask: int):
+    def __init__(self, entity_id, offset, size, shape, layer: int, mask: int, center=True):
         self.entity_id = entity_id
         self.offset = pygame.Vector2(offset)
         self.size = size
@@ -24,13 +24,19 @@ class HitBoxComponent:
         self.layer = layer
         self.mask = mask
 
+        if center:
+            self.offset -= pygame.Vector2(size) / 2
+
 class HurtBoxComponent:
-    def __init__(self, entity_id, offset, size, shape, layer: int):
+    def __init__(self, entity_id, offset, size, shape, layer: int, center=True):
         self.entity_id = entity_id
         self.offset = pygame.Vector2(offset)
         self.size = size
         self.shape = shape
         self.layer = layer
+        
+        if center:
+            self.offset -= pygame.Vector2(size) / 2
 
 class HealthComponent:
     iframetimer = 1/6

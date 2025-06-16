@@ -1,0 +1,24 @@
+{
+    "Player": {
+        "Position": {
+            "x": 10.0,
+            "y": 10.0
+        },
+        "Velocity": {
+            "vx": 0.0,
+            "vy": 0.0,
+            "speed": 4.0
+        },
+        "HurtBox": {
+            "offset_x": 0.0,
+            "offset_y": 0.0,
+            "width": 16.0,
+            "height": 64.0
+        },
+        "AnimationComponent": {
+            "entity": "white_pawn",
+            "animation_id": "idle",
+            "center": true
+        }
+    }
+}

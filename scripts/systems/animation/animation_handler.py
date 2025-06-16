@@ -38,8 +38,9 @@ class AnimationHandler:
         if animation_id not in self.animations:
             entity = '_'.join(animation_id.split('_')[:-1]) # Extract entity name from animation ID
             self.load_animation(entity)  # Load the animation for the entity if not already loaded
+            print(f"[ANIMATION] Animation '{animation_id}' not found, loading from entity '{entity}' (DEBUG)")
         
-        animation_data = self.animations.get(animation_id, None)
+        animation_data = self.animations[animation_id]
         return Animation(animation_data, animation_id)
 
 class AnimationData:
@@ -181,7 +182,10 @@ class Animation:
         """
 
         if self.frame > self.animation_data.duration():
-            event_manager.emit(GameSceneEvents.ANIMATION_FINISHED, entity_id=entity_id, animation_id=self.animation_id)
+            try:
+                event_manager.emit(GameSceneEvents.ANIMATION_FINISHED, entity_id=entity_id, animation_id=self.animation_id)
+            except Exception as e:
+                print("[ANIMATION] Error emitting ANIMATION_FINISHED event:", e, "(DEBUG)")
 
             if self.animation_data.config['loop'] == True:
                 self.frame = 0
