@@ -60,7 +60,7 @@ class GameScene(Scene):
             Velocity(self.player, 0, 0, speed=4), 
             AnimationComponent(
                 entity_id=self.player,
-                entity="black_pawn",
+                entity="white_pawn",
                 animation_id="idle",
                 animation_handler=self.animation_handler,
                 event_manager=self.event_manager,
@@ -93,7 +93,7 @@ class GameScene(Scene):
             ),
             WeaponComponent(
                 cooldown=1/100,
-                shoot_fn=shoot_single,
+                shoot_fn=shoot_radial_rotate,
                 projectile_data={
                     "damage": 20,
                     "speed": 10,
@@ -108,7 +108,7 @@ class GameScene(Scene):
             HurtBoxComponent(
                 entity_id=self.player, 
                 offset=(0, 0), 
-                size=(32, 32), 
+                size=(16, 64), 
                 shape=CollisionShape.RECT, 
                 layer=CollisionLayer.PLAYER
             ),
@@ -120,7 +120,7 @@ class GameScene(Scene):
             )
         )
 
-        for i in range(2):
+        for i in range(100):
             enemy = self.entity_manager.create_entity()
 
             self.physics_component_manager.add(enemy, 
@@ -128,7 +128,7 @@ class GameScene(Scene):
                 Velocity(enemy, random.uniform(-0.5, 0.5), random.uniform(-0.5, 0.5), speed=5), 
                 AnimationComponent(
                     entity_id=enemy,
-                    entity="black_rook",
+                    entity="black_pawn",
                     animation_id="moving",
                     animation_handler=self.animation_handler,
                     event_manager=self.event_manager,
@@ -250,13 +250,13 @@ class GameScene(Scene):
         self.render_system.render(surface, self.camera)
 
         # render all the hurtboxs and hitboxes
-        boxes = self.physics_component_manager.get_entities_with_either(HurtBoxComponent, HitBoxComponent)
-        for entity_id in boxes:
-            hurtbox = self.physics_component_manager.get(entity_id, HurtBoxComponent)
-            hitbox = self.physics_component_manager.get(entity_id, HitBoxComponent)
-            pos = self.physics_component_manager.get(entity_id, Position).vec
+        # boxes = self.physics_component_manager.get_entities_with_either(HurtBoxComponent, HitBoxComponent)
+        # for entity_id in boxes:
+        #     hurtbox = self.physics_component_manager.get(entity_id, HurtBoxComponent)
+        #     hitbox = self.physics_component_manager.get(entity_id, HitBoxComponent)
+        #     pos = self.physics_component_manager.get(entity_id, Position).vec
 
-            if hurtbox:
-                pygame.draw.rect(surface, (255, 0, 0), (*pos + hurtbox.offset - self.camera.scroll, *hurtbox.size), 1)
-            if hitbox:
-                pygame.draw.rect(surface, (0, 255, 0), (*pos + hitbox.offset - self.camera.scroll, *hitbox.size), 1)
+        #     if hurtbox:
+        #         pygame.draw.rect(surface, (255, 0, 0), (*pos + hurtbox.offset - self.camera.scroll, *hurtbox.size), 1)
+        #     if hitbox:
+        #         pygame.draw.rect(surface, (0, 255, 0), (*pos + hitbox.offset - self.camera.scroll, *hitbox.size), 1)
