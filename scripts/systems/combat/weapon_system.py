@@ -1,9 +1,9 @@
 import pygame
-from ..components.physics import Position, Velocity
-from ..components.combat import WeaponComponent
-from ..components.tags import PlayerTagComponent
+from ...components.physics import Position, Velocity
+from ...components.combat import WeaponComponent
+from ...components.tags import PlayerTagComponent
 
-from ..utils import CollisionLayer, GameSceneEvents
+from ...utils import CollisionLayer, GameSceneEvents
 
 class WeaponSystem:
     def __init__(self, component_manager, entity_manager, camera, event_manager):

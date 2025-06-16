@@ -73,3 +73,25 @@ def shoot_radial(eid, cm, em, data):
         projs.append(spawn_projectile(eid, cm, em, d, data))
     
     return projs
+
+class SpiralShooter:
+    def __init__(self, bullets_per_shot=10, angle_increment=1):
+        self.current_angle = 0
+        self.bullets_per_shot = bullets_per_shot
+        self.angle_increment = angle_increment
+
+    def __call__(self, eid, cm, em, data):
+        dir = pygame.Vector2(1, 0)
+        dir = rotate_vector(dir, self.current_angle)
+        if data.get('on_player', False): dir = get_unit_direction_towards(data['start_pos'], data['target_pos'])
+        
+        projs = []
+        for i in range(self.bullets_per_shot):
+            angle = (360 / self.bullets_per_shot) * i
+            d = rotate_vector(dir, angle)
+
+            projs.append(spawn_projectile(eid, cm, em, d, data))
+        
+        self.current_angle += self.angle_increment
+        
+        return projs

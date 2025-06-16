@@ -1,5 +1,5 @@
 from collections import defaultdict
-from ..systems.animation_state_machine import AnimationStateMachine
+from ..systems.animation.animation_state_machine import AnimationStateMachine
 
 class ComponentManager:
     def __init__(self):

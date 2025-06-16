@@ -34,6 +34,8 @@ class AnimationComponent:
 
         self.animation_id = animation_id
         self.animation = self.animation_handler.get_animation(self.entity_name + "_" + animation_id)
+
+        if self.entity_name == 'black_rook': print(self.animation.current_image.get_size())
     
     def update(self, dt):
         self.animation.run(self.event_manager, self.entity_id, dt)

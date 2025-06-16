@@ -1,4 +1,4 @@
-from ..components.combat import HealthComponent
+from ...components.combat import HealthComponent
 
 class HealthSystem:
     def update(self, component_manager, fps, dt):

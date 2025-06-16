@@ -1,6 +1,6 @@
 import pygame
 from ..utils import GameSceneEvents
-from ..systems.animation_state_machine import AnimationStateMachine
+from ..systems.animation.animation_state_machine import AnimationStateMachine
 
 class WeaponComponent:
     def __init__(self, cooldown, shoot_fn, projectile_data):
@@ -18,7 +18,7 @@ class WeaponComponent:
 class HitBoxComponent:
     def __init__(self, entity_id, offset, size, shape, layer: int, mask: int):
         self.entity_id = entity_id
-        self.offset = offset
+        self.offset = pygame.Vector2(offset)
         self.size = size
         self.shape = shape
         self.layer = layer
@@ -27,7 +27,7 @@ class HitBoxComponent:
 class HurtBoxComponent:
     def __init__(self, entity_id, offset, size, shape, layer: int):
         self.entity_id = entity_id
-        self.offset = offset
+        self.offset = pygame.Vector2(offset)
         self.size = size
         self.shape = shape
         self.layer = layer

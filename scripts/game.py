@@ -1,7 +1,7 @@
-from .systems.scene_manager import SceneManager
+from .systems.scene.scene_manager import SceneManager
 from .scenes.game_scene import GameScene
-from .systems.input_system import Input
-from .systems.event_manager import EventManager
+from .systems.input.input_system import Input
+from .systems.core.event_manager import EventManager
 from .utils import INTIAL_WINDOW_SIZE
 import pygame
 
