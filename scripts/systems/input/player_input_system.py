@@ -1,8 +1,8 @@
 import pygame
-from ..components.physics import Velocity
-from .animation_state_machine import AnimationStateMachine
+from ...components.physics import Velocity
+from ..animation.animation_state_machine import AnimationStateMachine
 
-from ..utils import GameSceneEvents
+from ...utils import GameSceneEvents
 
 class PlayerInputSystem:
     def __init__(self, entity_id):

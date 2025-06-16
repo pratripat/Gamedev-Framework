@@ -1,6 +1,6 @@
 import pygame
-from ..components.physics import Position
-from ..utils import CENTER
+from ...components.physics import Position
+from ...utils import CENTER
 
 class Camera:
     def __init__(self):

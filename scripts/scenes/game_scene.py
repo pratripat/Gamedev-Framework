@@ -1,5 +1,5 @@
 import pygame
-from ..systems.scene_manager import Scene
+from ..systems.scene.scene_manager import Scene
 #components
 from ..components.physics import Position, Velocity
 from ..components.animation import AnimationComponent, RenderComponent
@@ -9,17 +9,17 @@ from ..ecs.component_manager import ComponentManager
 
 #systems
 from ..ecs.entity_manager import EntityManager
-from ..systems.player_input_system import PlayerInputSystem
-from ..systems.physics_engine import PhysicsEngine
-from ..systems.animation_handler import AnimationHandler
-from ..systems.animation_state_machine import AnimationStateMachine
-from ..systems.render_system import AnimationSystem, RenderSystem
-from ..systems.camera import Camera
-from ..systems.combat_system import CombatSystem
+from ..systems.input.player_input_system import PlayerInputSystem
+from ..systems.core.physics_engine import PhysicsEngine
+from ..systems.animation.animation_handler import AnimationHandler
+from ..systems.animation.animation_state_machine import AnimationStateMachine
+from ..systems.rendering.render_system import AnimationSystem, RenderSystem
+from ..systems.rendering.camera import Camera
+from ..systems.combat.combat_system import CombatSystem
 
 from ..weapons.bullet_patterns import *
 
-from ..utils import Inputs, CollisionShape, CollisionLayer, GameSceneEvents
+from ..utils import Inputs, CollisionShape, CollisionLayer
 
 import random
 
@@ -50,6 +50,8 @@ class GameScene(Scene):
         # Create a player entity
         self.player = self.entity_manager.create_entity(player=True)
         self.player_input_system = PlayerInputSystem(entity_id=self.player)
+
+        shoot_radial_rotate = SpiralShooter()
 
         self.physics_component_manager.add(
             self.player, 
@@ -86,26 +88,21 @@ class GameScene(Scene):
                         "to_animation": "idle", 
                         "cond": (lambda: input_system.mouse_states['left_held'] == False),
                         "self_dest": False
-                    },
-                    "damage": {
-                        "to_animation": "idle",
-                        "cond": (lambda eid=self.player: self.physics_component_manager.get(eid, HealthComponent).invincibility_timer <= 0),
-                        "self_dest": False
                     }
                 }
             ),
             WeaponComponent(
-                cooldown=1/6,
+                cooldown=1/100,
                 shoot_fn=shoot_single,
                 projectile_data={
-                    "damage": 100,
+                    "damage": 20,
                     "speed": 10,
                     "range": 100,
                     "effects": [],
                     "size": 1,
                     "image_file": "data/graphics/images/projectile.png",
                     "angle": 3,
-                    "number": 5
+                    "number": 10
                 }
             ),
             HurtBoxComponent(
@@ -123,15 +120,15 @@ class GameScene(Scene):
             )
         )
 
-        for i in range(5):
+        for i in range(2):
             enemy = self.entity_manager.create_entity()
 
             self.physics_component_manager.add(enemy, 
-                Position(enemy, 100, 100 + 50*i), 
-                Velocity(enemy, 0, i/3, speed=5), 
+                Position(enemy, random.uniform(-50, 50), random.uniform(-50, 50)), 
+                Velocity(enemy, random.uniform(-0.5, 0.5), random.uniform(-0.5, 0.5), speed=5), 
                 AnimationComponent(
                     entity_id=enemy,
-                    entity="black_pawn",
+                    entity="black_rook",
                     animation_id="moving",
                     animation_handler=self.animation_handler,
                     event_manager=self.event_manager,
@@ -153,12 +150,6 @@ class GameScene(Scene):
                         "moving": {
                             "to_animation": "idle", 
                             "cond": (lambda eid=enemy: self.physics_component_manager.get(eid, Velocity).vec.length_squared() == 0),
-                            "self_dest": False
-                        },
-                        "damage": {
-                            "to_animation": "idle",
-                            # "cond": lambda: print('being called now also (death)', enemy) and self.physics_component_manager.get(enemy, HealthComponent) and self.physics_component_manager.get(enemy, HealthComponent).invincibility_timer <= 0,
-                            "cond": (lambda eid=enemy: self.physics_component_manager.get(eid, HealthComponent).invincibility_timer <= 0),
                             "self_dest": False
                         }
                     }

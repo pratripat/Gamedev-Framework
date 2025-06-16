@@ -1,5 +1,5 @@
-from ..components.animation import AnimationComponent
-from ..utils import GameSceneEvents
+from ...components.animation import AnimationComponent
+from ...utils import GameSceneEvents
 
 class AnimationStateMachine:
     def __init__(self, entity_id, component_manager, event_manager, animation_priority_list, transitions={}):

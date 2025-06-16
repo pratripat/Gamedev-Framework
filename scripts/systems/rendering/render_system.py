@@ -1,8 +1,8 @@
 import pygame
-from ..utils import CENTER
-from ..components.physics import Position, Velocity
-from ..components.animation import RenderComponent, AnimationComponent
-from .animation_state_machine import AnimationStateMachine
+from ...utils import CENTER
+from ...components.physics import Position, Velocity
+from ...components.animation import RenderComponent, AnimationComponent
+from ..animation.animation_state_machine import AnimationStateMachine
 
 class AnimationSystem:
     def __init__(self, component_manager):
@@ -28,7 +28,7 @@ class RenderSystem:
 
     def render(self, surface, camera):
         scroll = camera.scroll
-        offset = pygame.Vector2(0,0)
+        temp_surf_offset = pygame.Vector2(0,0)
         temp_surf = pygame.Surface(surface.get_size())
         for eid in self.component_manager.get_entities_with(Position):
             pos = self.component_manager.get(eid, Position)
@@ -45,6 +45,6 @@ class RenderSystem:
 
         if camera.zoom != 1:
             temp_surf = pygame.transform.scale(temp_surf, ((surface.get_width() * camera.zoom), (surface.get_height() * camera.zoom)))
-            offset = CENTER - (pygame.Vector2(temp_surf.get_size()) / 2)
+            temp_surf_offset = CENTER - (pygame.Vector2(temp_surf.get_size()) / 2)
 
-        surface.blit(temp_surf, offset)
+        surface.blit(temp_surf, temp_surf_offset)

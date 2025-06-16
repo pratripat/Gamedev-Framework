@@ -1,8 +1,8 @@
 import pygame
-from ..utils import Quadtree, INTIAL_WINDOW_SIZE, GameSceneEvents
-from ..components.combat import HurtBoxComponent, HitBoxComponent
-from ..components.physics import Position
-from ..components.projectile import ProjectileComponent
+from ...utils import Quadtree, INTIAL_WINDOW_SIZE, GameSceneEvents
+from ...components.combat import HurtBoxComponent, HitBoxComponent
+from ...components.physics import Position
+from ...components.projectile import ProjectileComponent
 
 class HitBoxSystem:
     def can_hit(self, hitbox: HitBoxComponent, hurtbox: HurtBoxComponent) -> bool:
