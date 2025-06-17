@@ -1,10 +1,10 @@
 import pygame
 from ..systems.scene.scene_manager import Scene
 #components
-from ..components.physics import Position, Velocity
+from ..components.physics import Position, Velocity, CollisionComponent
 from ..components.animation import AnimationComponent, RenderComponent
 from ..components.combat import WeaponComponent, HitBoxComponent, HurtBoxComponent, HealthComponent
-from ..components.tags import PlayerTagComponent
+from ..components.tags import PlayerTagComponent, EnemyTagComponent
 from ..ecs.component_manager import ComponentManager
 
 #systems
@@ -60,7 +60,7 @@ class GameScene(Scene):
             Velocity(self.player, 0, 0, speed=4), 
             AnimationComponent(
                 entity_id=self.player,
-                entity="white_pawn",
+                entity="black_pawn",
                 animation_id="idle",
                 animation_handler=self.animation_handler,
                 event_manager=self.event_manager,
@@ -93,7 +93,7 @@ class GameScene(Scene):
             ),
             WeaponComponent(
                 cooldown=1/100,
-                shoot_fn=shoot_radial_rotate,
+                shoot_fn=shoot_spread,
                 projectile_data={
                     "damage": 20,
                     "speed": 10,
@@ -117,13 +117,41 @@ class GameScene(Scene):
                 max_health=100,
                 event_manager=self.event_manager,
                 component_manager=self.physics_component_manager
+            ),
+            CollisionComponent(
+                entity_id=self.player,
+                offset=(0, 0),
+                size=(32, 32),
+                center=True
             )
         )
 
-        for i in range(100):
+        for i in range(4):
+            # add a collision block
+            block = self.entity_manager.create_entity()
+            self.physics_component_manager.add(
+                block,
+                Position(block, i*32, 0),
+                # RenderComponent(
+                #     entity_id=block,
+                #     surface=load_image('data/graphics/animations/black_rook.png'),
+                #     offset=(0, 0),
+                #     center=True
+                # ),
+                CollisionComponent(
+                    entity_id=block,
+                    offset=(0, 0),
+                    size=(32, 32),
+                    solid=True
+                )
+            )
+
+        # create some enemy entities
+        for i in range(0):
             enemy = self.entity_manager.create_entity()
 
             self.physics_component_manager.add(enemy, 
+                EnemyTagComponent(),
                 Position(enemy, random.uniform(-50, 50), random.uniform(-50, 50)), 
                 Velocity(enemy, random.uniform(-0.5, 0.5), random.uniform(-0.5, 0.5), speed=5), 
                 AnimationComponent(
@@ -231,7 +259,7 @@ class GameScene(Scene):
     def update(self, fps, dt):
         # Update the physics engine
         self.player_input_system.update(self.physics_component_manager) 
-        self.physics_engine.update(dt)
+        self.physics_engine.update(self.camera.scroll, dt)
         self.combat_system.update(
             event_manager=self.event_manager,
             component_manager=self.physics_component_manager,
@@ -260,3 +288,11 @@ class GameScene(Scene):
         #         pygame.draw.rect(surface, (255, 0, 0), (*pos + hurtbox.offset - self.camera.scroll, *hurtbox.size), 1)
         #     if hitbox:
         #         pygame.draw.rect(surface, (0, 255, 0), (*pos + hitbox.offset - self.camera.scroll, *hitbox.size), 1)
+
+        boxes = self.physics_component_manager.get_entities_with(CollisionComponent)
+        for entity_id in boxes:
+            collision_component = self.physics_component_manager.get(entity_id, CollisionComponent)
+            pos = self.physics_component_manager.get(entity_id, Position).vec
+
+            if collision_component:
+                pygame.draw.rect(surface, (255, 255, 255), (*pos + collision_component.offset - self.camera.scroll, *collision_component.size), 1)

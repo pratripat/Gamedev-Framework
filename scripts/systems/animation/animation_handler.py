@@ -185,7 +185,8 @@ class Animation:
             try:
                 event_manager.emit(GameSceneEvents.ANIMATION_FINISHED, entity_id=entity_id, animation_id=self.animation_id)
             except Exception as e:
-                print("[ANIMATION] Error emitting ANIMATION_FINISHED event:", e, "(DEBUG)")
+                # print("[ANIMATION] Error emitting ANIMATION_FINISHED event:", e, "(DEBUG)")
+                pass
 
             if self.animation_data.config['loop'] == True:
                 self.frame = 0
