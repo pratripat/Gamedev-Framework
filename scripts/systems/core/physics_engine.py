@@ -36,7 +36,7 @@ class PhysicsEngine:
 
             pos = self.component_manager.get(non_solid_component_entity, Position)
             vel = self.component_manager.get(non_solid_component_entity, Velocity)
-            rect = pygame.Rect(*(pos.vec + non_solid_component.offset), *non_solid_component.size)
+            rect = pygame.FRect(*(pos.vec + non_solid_component.offset), *non_solid_component.size)
 
             rect.x += vel.x * dt
 
@@ -80,4 +80,4 @@ class PhysicsEngine:
                     if vel.y < 0:
                         rect.top = colliding_rect.bottom
             
-            pos.vec = pygame.Vector2(rect.topleft) - non_solid_component.offset
+            pos.vec.update(pygame.Vector2(rect.topleft) - non_solid_component.offset)

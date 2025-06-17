@@ -9,6 +9,7 @@ from ..ecs.component_manager import ComponentManager
 
 #systems
 from ..ecs.entity_manager import EntityManager
+from ..ecs.entity_factory import EntityFactory
 from ..systems.input.player_input_system import PlayerInputSystem
 from ..systems.core.physics_engine import PhysicsEngine
 from ..systems.animation.animation_handler import AnimationHandler
@@ -38,6 +39,7 @@ class GameScene(Scene):
         self.camera = Camera()
 
         self.entity_manager = EntityManager(component_manager=self.physics_component_manager, event_manager=event_manager)
+        self.entity_factory = EntityFactory()
 
         self.physics_engine = PhysicsEngine(self.physics_component_manager)
         self.animation_system = AnimationSystem(self.physics_component_manager)
@@ -48,90 +50,98 @@ class GameScene(Scene):
         print(f"[SCENE] Starting scene: '{self.id}' (DEBUG)")
 
         # Create a player entity
-        self.player = self.entity_manager.create_entity(player=True)
+        # self.player = self.entity_manager.create_entity(player=True)
+        
+        self.player = self.entity_factory.create_player(
+            component_manager=self.physics_component_manager,
+            entity_manager=self.entity_manager,
+            event_manager=self.event_manager,
+            animation_handler=self.animation_handler,
+            input_system=input_system
+        )
         self.player_input_system = PlayerInputSystem(entity_id=self.player)
 
         shoot_radial_rotate = SpiralShooter()
 
-        self.physics_component_manager.add(
-            self.player, 
-            PlayerTagComponent(),
-            Position(self.player, 10, 10), 
-            Velocity(self.player, 0, 0, speed=4), 
-            AnimationComponent(
-                entity_id=self.player,
-                entity="black_pawn",
-                animation_id="idle",
-                animation_handler=self.animation_handler,
-                event_manager=self.event_manager,
-                center=True,
-                entity_type="chess_piece"
-            ),
-            AnimationStateMachine(
-                entity_id = self.player,
-                component_manager=self.physics_component_manager,
-                event_manager=self.event_manager,
-                animation_priority_list = [
-                    "idle",
-                    "shoot",
-                    "moving",
-                    "damage",
-                    "death"
-                ],
-                transitions = {
-                    "moving": {
-                        "to_animation": "idle", 
-                        "cond": (lambda eid=self.player: self.physics_component_manager.get(eid, Velocity).vec.length_squared() == 0),
-                        "self_dest": False
-                    },
-                    "shoot": {
-                        "to_animation": "idle", 
-                        "cond": (lambda: input_system.mouse_states['left_held'] == False),
-                        "self_dest": False
-                    }
-                }
-            ),
-            WeaponComponent(
-                cooldown=1/100,
-                shoot_fn=shoot_spread,
-                projectile_data={
-                    "damage": 20,
-                    "speed": 10,
-                    "range": 100,
-                    "effects": [],
-                    "size": 1,
-                    "image_file": "data/graphics/images/projectile.png",
-                    "angle": 3,
-                    "number": 10
-                }
-            ),
-            HurtBoxComponent(
-                entity_id=self.player, 
-                offset=(0, 0), 
-                size=(16, 64), 
-                shape=CollisionShape.RECT, 
-                layer=CollisionLayer.PLAYER
-            ),
-            HealthComponent(
-                entity_id=self.player,
-                max_health=100,
-                event_manager=self.event_manager,
-                component_manager=self.physics_component_manager
-            ),
-            CollisionComponent(
-                entity_id=self.player,
-                offset=(0, 0),
-                size=(32, 32),
-                center=True
-            )
-        )
+        # self.physics_component_manager.add(            
+        #     self.player, 
+        #     PlayerTagComponent(),
+        #     Position(self.player, 10, 10), 
+        #     Velocity(self.player, 0, 0, speed=4), 
+        #     AnimationComponent(
+        #         entity_id=self.player,
+        #         entity="white_pawn",
+        #         animation_id="idle",
+        #         animation_handler=self.animation_handler,
+        #         event_manager=self.event_manager,
+        #         center=True,
+        #         entity_type="chess_piece"
+        #     ),
+        #     AnimationStateMachine(
+        #         entity_id = self.player,
+        #         component_manager=self.physics_component_manager,
+        #         event_manager=self.event_manager,
+        #         animation_priority_list = [
+        #             "idle",
+        #             "shoot",
+        #             "moving",
+        #             "damage",
+        #             "death"
+        #         ],
+        #         transitions = {
+        #             "moving": {
+        #                 "to_animation": "idle", 
+        #                 "cond": (lambda eid=self.player: self.physics_component_manager.get(eid, Velocity).vec.length_squared() == 0),
+        #                 "self_dest": False
+        #             },
+        #             "shoot": {
+        #                 "to_animation": "idle", 
+        #                 "cond": (lambda: input_system.mouse_states['left_held'] == False),
+        #                 "self_dest": False
+        #             }
+        #         }
+        #     ),
+        #     WeaponComponent(
+        #         cooldown=1/100,
+        #         shoot_fn=shoot_spread,
+        #         projectile_data={
+        #             "damage": 20,
+        #             "speed": 10,
+        #             "range": 100,
+        #             "effects": [],
+        #             "size": 1,
+        #             "image_file": "data/graphics/images/projectile.png",
+        #             "angle": 3,
+        #             "number": 10
+        #         }
+        #     ),
+        #     HurtBoxComponent(
+        #         entity_id=self.player, 
+        #         offset=(0, 0), 
+        #         size=(16, 64), 
+        #         shape=CollisionShape.RECT, 
+        #         layer=CollisionLayer.PLAYER
+        #     ),
+        #     HealthComponent(
+        #         entity_id=self.player,
+        #         max_health=100,
+        #         event_manager=self.event_manager,
+        #         component_manager=self.physics_component_manager
+        #     ),
+        #     CollisionComponent(
+        #         entity_id=self.player,
+        #         offset=(0, 0),
+        #         size=(32, 32),
+        #         center=True
+        #     )
+        # )
 
-        for i in range(4):
+        for i in range(100):
             # add a collision block
             block = self.entity_manager.create_entity()
             self.physics_component_manager.add(
                 block,
-                Position(block, i*32, 0),
+                Position(block, -400+i*32, 50),
                 # RenderComponent(
                 #     entity_id=block,
                 #     surface=load_image('data/graphics/animations/black_rook.png'),
@@ -147,13 +157,13 @@ class GameScene(Scene):
             )
 
         # create some enemy entities
-        for i in range(0):
+        for i in range(1):
             enemy = self.entity_manager.create_entity()
 
             self.physics_component_manager.add(enemy, 
                 EnemyTagComponent(),
-                Position(enemy, random.uniform(-50, 50), random.uniform(-50, 50)), 
-                Velocity(enemy, random.uniform(-0.5, 0.5), random.uniform(-0.5, 0.5), speed=5), 
+                Position(enemy, 50, random.uniform(-50, 50)), 
+                Velocity(enemy, random.uniform(-0.5, 0.5), random.uniform(0, 1), speed=5), 
                 AnimationComponent(
                     entity_id=enemy,
                     entity="black_pawn",
@@ -208,6 +218,13 @@ class GameScene(Scene):
                     max_health=100,
                     event_manager=self.event_manager,
                     component_manager=self.physics_component_manager
+                ),
+                CollisionComponent(
+                    entity_id=enemy,
+                    offset=(0, 0),
+                    size=(32, 32),
+                    center=True,
+                    solid=False
                 )
             )
 
