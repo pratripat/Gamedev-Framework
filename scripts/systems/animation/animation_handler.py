@@ -38,7 +38,7 @@ class AnimationHandler:
         if animation_id not in self.animations:
             entity = '_'.join(animation_id.split('_')[:-1]) # Extract entity name from animation ID
             self.load_animation(entity)  # Load the animation for the entity if not already loaded
-            print(f"[ANIMATION] Animation '{animation_id}' not found, loading from entity '{entity}' (DEBUG)")
+            # print(f"[ANIMATION] Animation '{animation_id}' not found, loading from entity '{entity}' (DEBUG)")
         
         animation_data = self.animations[animation_id]
         return Animation(animation_data, animation_id)
@@ -124,7 +124,7 @@ class Animation:
             self.image = images[i]
             break
     
-    def render(self, surface, position, flipped=[False, False], colorkey=DEFAULT_COLORKEY, angle=0, center_rotation=True, alpha=None, animation_offset=None):
+    def render(self, surface, position, flipped=[False, False], colorkey=DEFAULT_COLORKEY, angle=0, center_rotation=True, alpha=None, animation_offset=None, scale=None):
         """
         Render the current frame of the animation onto the given surface at the specified position.
         :param surface: The surface to render the animation onto.
@@ -165,6 +165,11 @@ class Animation:
             alpha_surface.set_alpha(alpha)
             alpha_surface.blit(image, (0, 0))
             image = alpha_surface
+
+        if scale != None:
+            image = pygame.transform.scale(image, (int(image.get_width() * scale), int(image.get_height() * scale)))
+            offset[0] *= scale
+            offset[1] *= scale
 
         if animation_offset != None:
             offset = animation_offset.copy()

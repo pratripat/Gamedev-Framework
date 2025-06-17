@@ -1,0 +1,197 @@
+{
+    "player": {
+        "AnimationComponent": {
+            "entity": "white_pawn",
+            "animation_id": "idle",
+            "center": true,
+            "entity_type": "chess_piece"
+        },
+        "PlayerTagComponent": {},
+        "Position": {
+            "x": 0.0,
+            "y": 0.0
+        },
+        "Velocity": {
+            "x": 0.0,
+            "y": 0.0,
+            "speed": 4.0
+        },
+        "HurtBoxComponent": {
+            "offset_x": -8.0,
+            "offset_y": -24.0,
+            "width": 16.0,
+            "height": 60.0
+        },
+        "HealthComponent": {
+            "max_health": 100
+        },
+        "CollisionComponent": {
+            "offset_x": 0.0,
+            "offset_y": 28.0,
+            "width": 46.0,
+            "height": 18.0,
+            "solid": false,
+            "center": true
+        },
+        "WeaponComponent": {
+            "cooldown": 0.16666666666666666,
+            "shoot_fn": "shoot_spread",
+            "projectile_data": {
+                "damage": 10,
+                "speed": 5,
+                "range": 100,
+                "effects": [],
+                "size": 1,
+                "image_file": "data/graphics/images/projectile.png",
+                "towards_player": true,
+                "angle": 3
+            }
+        },
+        "AnimationStateMachine": {
+            "animation_priority_list": [
+                "idle",
+                "shoot",
+                "moving",
+                "damage",
+                "death"
+            ],
+            "transitions": {
+                "moving": {
+                    "to_animation": "idle",
+                    "cond": "lambda eid: component_manager.get(entity_id, Velocity).vec.length_squared() == 0",
+                    "self_dest": false
+                }
+            }
+        }
+    },
+    "enemy_pawn": {
+        "EnemyTagComponent": {},
+        "Position": {
+            "x": 0.0,
+            "y": 0.0
+        },
+        "Velocity": {
+            "x": 0.0,
+            "y": 0.0,
+            "speed": 4.0
+        },
+        "AnimationComponent": {
+            "entity": "black_pawn",
+            "animation_id": "idle",
+            "center": true,
+            "entity_type": "chess_piece"
+        },
+        "HurtBoxComponent": {
+            "offset_x": -8.0,
+            "offset_y": -24.0,
+            "width": 16.0,
+            "height": 60.0
+        },
+        "HealthComponent": {
+            "max_health": 100
+        },
+        "CollisionComponent": {
+            "offset_x": 0.0,
+            "offset_y": 28.0,
+            "width": 46.0,
+            "height": 18.0,
+            "solid": false,
+            "center": true
+        },
+        "WeaponComponent": {
+            "cooldown": 0.16666666666666666,
+            "shoot_fn": "shoot_spread",
+            "projectile_data": {
+                "damage": 10,
+                "speed": 5,
+                "range": 100,
+                "effects": [],
+                "size": 1,
+                "image_file": "data/graphics/images/projectile.png",
+                "towards_player": true,
+                "angle": 3
+            }
+        },
+        "AnimationStateMachine": {
+            "animation_priority_list": [
+                "idle",
+                "shoot",
+                "moving",
+                "damage",
+                "death"
+            ],
+            "transitions": {
+                "moving": {
+                    "to_animation": "idle",
+                    "cond": "lambda eid: component_manager.get(entity_id, Velocity).vec.length_squared() == 0",
+                    "self_dest": false
+                }
+            }
+        }
+    },
+    "enemy_rook": {
+        "EnemyTagComponent": {},
+        "Position": {
+            "x": 0.0,
+            "y": 0.0
+        },
+        "Velocity": {
+            "x": 0.0,
+            "y": 0.0,
+            "speed": 2.0
+        },
+        "AnimationComponent": {
+            "entity": "black_rook",
+            "animation_id": "idle",
+            "center": true,
+            "entity_type": "chess_piece"
+        },
+        "HurtBoxComponent": {
+            "offset_x": -12.0,
+            "offset_y": -25.0,
+            "width": 24.0,
+            "height": 66.0
+        },
+        "HealthComponent": {
+            "max_health": 200
+        },
+        "CollisionComponent": {
+            "offset_x": 0.0,
+            "offset_y": 36.0,
+            "width": 44.0,
+            "height": 14.0,
+            "solid": false,
+            "center": true
+        },
+        "WeaponComponent": {
+            "cooldown": 0.16666666666666666,
+            "shoot_fn": "shoot_spread",
+            "projectile_data": {
+                "damage": 10,
+                "speed": 5,
+                "range": 100,
+                "effects": [],
+                "size": 1,
+                "image_file": "data/graphics/images/projectile.png",
+                "towards_player": true,
+                "angle": 3
+            }
+        },
+        "AnimationStateMachine": {
+            "animation_priority_list": [
+                "idle",
+                "shoot",
+                "moving",
+                "damage",
+                "death"
+            ],
+            "transitions": {
+                "moving": {
+                    "to_animation": "idle",
+                    "cond": "lambda eid: component_manager.get(entity_id, Velocity).vec.length_squared() == 0",
+                    "self_dest": false
+                }
+            }
+        }
+    }
+}

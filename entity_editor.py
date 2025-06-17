@@ -4,6 +4,7 @@ import pygame
 import json
 import os
 import time
+import ast
 
 # loads an image from a file and applies a colorkey for transparency
 def load_image(path, colorkey=(0, 0, 0), scale=1):
@@ -32,7 +33,7 @@ pygame.init()
 pygame.display.set_mode((1, 1))
 
 # Constants
-DISPLAY_WIDTH, DISPLAY_HEIGHT = 200, 200
+DISPLAY_WIDTH, DISPLAY_HEIGHT = 400, 400
 DEFAULT_COLORKEY = (255, 0, 255)
 COMPONENT_ORDER = [
     "PlayerTagComponent",
@@ -43,7 +44,9 @@ COMPONENT_ORDER = [
     "RenderComponent",
     "HurtBoxComponent",
     "HealthComponent",
-    "CollisionComponent"
+    "CollisionComponent",
+    "AnimationStateMachine",
+    "WeaponComponent"
 ]
 
 # Dummy schemas
@@ -56,7 +59,40 @@ COMPONENT_SCHEMAS = {
     "RenderComponent": {"image_file": {"type": str, "default": ""}, "offset_x": {"type": float, "default": 0.0}, "offset_y": {"type": float, "default": 0.0}, "center": {"type": bool, "default": True}},
     "HurtBoxComponent": {"offset_x": {"type": float, "default": 0.0}, "offset_y": {"type": float, "default": 0.0}, "width": {"type": float, "default": 16.0}, "height": {"type": float, "default": 64.0}},
     "HealthComponent": {"max_health": {"type": int, "default": 100}},
-    "CollisionComponent": {"offset_x": {"type": float, "default": 0.0}, "offset_y": {"type": float, "default": 0.0}, "size_x": {"type": float, "default": 16.0}, "size_y": {"type": float, "default": 16.0}, "solid": {"type": bool, "default": False}, "center": {"type": bool, "default": True}},
+    "CollisionComponent": {"offset_x": {"type": float, "default": 0.0}, "offset_y": {"type": float, "default": 0.0}, "width": {"type": float, "default": 16.0}, "height": {"type": float, "default": 16.0}, "solid": {"type": bool, "default": False}, "center": {"type": bool, "default": True}},
+    "AnimationStateMachine": {
+        "animation_priority_list": {
+            "type": list,
+            "default": ["idle", "shoot", "moving", "damage", "death"]
+        },
+        "transitions": {
+            "type": dict,
+            "default": {
+                "moving": {
+                    "to_animation": "idle",
+                    "cond": "lambda eid: component_manager.get(entity_id, Velocity).vec.length_squared() == 0",  # Represented as string for editing
+                    "self_dest": False
+                }
+            }
+        }
+    },
+    "WeaponComponent": {
+        "cooldown": {"type": float, "default": 1/6},
+        "shoot_fn": {"type": str, "default": "shoot_spread"},  # Represented by function name
+        "projectile_data": {
+            "type": dict,
+            "default": {
+                "damage": 10,
+                "speed": 5,
+                "range": 100,
+                "effects": [],
+                "size": 1,
+                "image_file": "data/graphics/images/projectile.png",
+                "towards_player": True,
+                "angle": 3
+            }
+        }
+    }
 }
 
 class EntityEditor:
@@ -119,11 +155,11 @@ class EntityEditor:
         component_label.pack(anchor=W, padx=10)
 
         # Canvas + scrollbar wrapper
-        component_canvas = Canvas(center, bg="#2e2e2e", highlightthickness=0, width=DISPLAY_WIDTH)
+        component_canvas = Canvas(center, bg="#2e2e2e", highlightthickness=0)
         component_canvas.pack(side=LEFT, fill=BOTH, expand=True)
 
         scrollbar = Scrollbar(center, orient=VERTICAL, command=component_canvas.yview)
-        scrollbar.pack(side=RIGHT, fill=Y)
+        scrollbar.pack(side=RIGHT, fill=Y, expand=True)
 
         component_canvas.configure(yscrollcommand=scrollbar.set)
 
@@ -145,6 +181,17 @@ class EntityEditor:
         component_canvas.bind_all("<MouseWheel>", _on_mousewheel)  # Windows/macOS
         component_canvas.bind_all("<Button-4>", lambda e: component_canvas.yview_scroll(-1, "units"))  # Linux scroll up
         component_canvas.bind_all("<Button-5>", lambda e: component_canvas.yview_scroll(1, "units"))   # Linux scroll down
+
+        self.zoom_factor = 1.0  # Zoom in 2x by default
+
+        zoom_label = Label(right, text="Zoom", fg="white", bg="#1e1e1e")
+        zoom_label.pack()
+
+        self.zoom_slider = Scale(right, from_=0.5, to=5.0, resolution=0.1, orient=HORIZONTAL,
+                                bg="#1e1e1e", fg="white", troughcolor="#444", highlightthickness=0,
+                                command=self.set_zoom)
+        self.zoom_slider.set(self.zoom_factor)
+        self.zoom_slider.pack()
 
     def add_entity(self):
         name = f"Entity_{len(self.entities)}"
@@ -238,7 +285,27 @@ class EntityEditor:
                             self.update_preview_animation()
                     return callback
 
-                if var_type == bool:
+                # Inside your loop where you create input fields per component field
+                if var_type in [list, dict]:
+                    text = Text(row, height=4, width=40, bg="#3a3a3a", fg="white", insertbackground="white")
+                    text.insert("1.0", json.dumps(value, indent=2))  # Prettified
+                    text.pack(side=LEFT, fill=X, expand=True)
+
+                    def make_text_callback(cname=comp_name, k=key, t=text):
+                        def callback(event=None):
+                            try:
+                                content = t.get("1.0", END).strip()
+                                self.entities[self.selected_entity][cname][k] = ast.literal_eval(content)
+                                if cname == "AnimationComponent" and k in ("entity", "animation_id"):
+                                    self.update_preview_animation()
+                            except Exception as e:
+                                print(f"Error parsing {cname}.{k}: {e}")
+                        return callback
+
+                    text.bind("<FocusOut>", make_text_callback())
+                    self.component_widgets[comp_name][key] = text
+
+                elif var_type == bool:
                     var = BooleanVar(value=value)
                     chk = Checkbutton(row, variable=var, bg="#3a3a3a", selectcolor="black", activeforeground="white")
                     chk.pack(side=LEFT)
@@ -300,24 +367,36 @@ class EntityEditor:
             comp = self.entities.get(self.selected_entity, {}).get("AnimationComponent", {})
             center = comp.get("center", True)
             width, height = self.preview_animation.image.get_size()
-            pos = ((DISPLAY_WIDTH - width) / 2, (DISPLAY_HEIGHT - height) / 2) if center else (DISPLAY_WIDTH/2, DISPLAY_HEIGHT/2)
+            pos = ((DISPLAY_WIDTH - width * self.zoom_factor) / 2, (DISPLAY_HEIGHT - height * self.zoom_factor) / 2) if center else (DISPLAY_WIDTH/2, DISPLAY_HEIGHT/2)
             self.preview_animation.run(None, None, 2)
-            self.preview_animation.render(self.preview_surface, pos)
+            self.preview_animation.render(self.preview_surface, pos, scale=self.zoom_factor)
         
         if self.preview_image:
             comp = self.entities.get(self.selected_entity, {}).get("RenderComponent", {})
             center = comp.get("center", True)
             width, height = self.preview_image.get_size()
-            pos = ((DISPLAY_WIDTH - width) / 2, (DISPLAY_HEIGHT - height) / 2) if center else (DISPLAY_WIDTH/2, DISPLAY_HEIGHT/2)
+            pos = ((DISPLAY_WIDTH - width * self.zoom_factor) / 2, (DISPLAY_HEIGHT - height * self.zoom_factor) / 2) if center else (DISPLAY_WIDTH/2, DISPLAY_HEIGHT/2)
             self.preview_surface.blit(self.preview_image, pos)
 
-        # Draw HurtBox
+        # Draw HurtBoxComponent
         hurt = self.entities.get(self.selected_entity, {}).get("HurtBoxComponent")
         if hurt:
-            ox, oy = float(hurt["offset_x"]), float(hurt["offset_y"])
-            w, h = float(hurt["width"]), float(hurt["height"])
-            rect = pygame.Rect(DISPLAY_WIDTH // 2 + ox, DISPLAY_HEIGHT // 2 + oy, w, h)
+            ox, oy = float(hurt.get("offset_x", 0))*self.zoom_factor, float(hurt.get("offset_y", 0))*self.zoom_factor
+            w, h = float(hurt.get("width", 16)) * self.zoom_factor, float(hurt.get("height", 16)) * self.zoom_factor
+            rect = pygame.Rect(DISPLAY_WIDTH / 2 + ox, DISPLAY_HEIGHT / 2 + oy, w, h)
             pygame.draw.rect(self.preview_surface, (255, 0, 0), rect, 1)
+        
+        # Draw CollisionBoxComponent
+        collision = self.entities.get(self.selected_entity, {}).get("CollisionComponent")
+        if collision:
+            ox, oy = float(collision.get("offset_x", 0))*self.zoom_factor, float(collision.get("offset_y", 0))*self.zoom_factor
+            w, h = float(collision.get("width", 16)) * self.zoom_factor, float(collision.get("height", 16)) * self.zoom_factor
+            center = collision.get("center", False)
+            if center:
+                ox -= w / 2
+                oy -= h / 2
+            rect = pygame.Rect(DISPLAY_WIDTH / 2 + ox, DISPLAY_HEIGHT / 2 + oy, w, h)
+            pygame.draw.rect(self.preview_surface, (0, 255, 0), rect, 1)
 
         # Crosshair
         pygame.draw.line(self.preview_surface, (255, 255, 255), (DISPLAY_WIDTH // 2 - 5, DISPLAY_HEIGHT // 2), (DISPLAY_WIDTH // 2 + 5, DISPLAY_HEIGHT // 2))
@@ -332,21 +411,34 @@ class EntityEditor:
             pass
         self.root.after(100, self.update_preview_loop)
     
+    def set_zoom(self, val):
+        try:
+            self.zoom_factor = float(val)
+            # print(f"[EntityEditor] Zoom factor set to {self.zoom_factor}. (DEBUG)")
+        except ValueError:
+            self.zoom_factor = 1.0
+    
     def delete_component(self, comp_name):
         if self.selected_entity and comp_name in self.entities[self.selected_entity]:
             del self.entities[self.selected_entity][comp_name]
             self.update_component_ui()
-    
+
     def save_data(self):
         if self.selected_entity:
             for comp, fields in self.component_widgets.items():
                 for key, var in fields.items():
                     val = var.get()
+                    schema_type = COMPONENT_SCHEMAS[comp][key]["type"]
                     try:
-                        val = COMPONENT_SCHEMAS[comp][key]["type"](val)
-                    except ValueError:
+                        # Safely evaluate list/dict/string representations
+                        if schema_type in [list, dict]:
+                            val = ast.literal_eval(val)
+                        else:
+                            val = schema_type(val)
+                    except Exception:
                         val = COMPONENT_SCHEMAS[comp][key]["default"]
                     self.entities[self.selected_entity][comp][key] = val
+
         file = filedialog.asksaveasfilename(defaultextension=".json")
         if file:
             with open(file, "w") as f:
