@@ -83,3 +83,13 @@ class Velocity(Vector2Component):
     def __init__(self, entity_id, x=0, y=0, speed=5):
         super().__init__(entity_id, x, y)
         self.speed = speed
+
+class CollisionComponent:
+    def __init__(self, entity_id, offset, size, solid=False, center=False):
+        self.entity_id = entity_id
+        self.offset = pygame.Vector2(offset)
+        self.size = pygame.Vector2(size)
+        self.solid = solid
+
+        if center:
+            self.offset -= self.size / 2

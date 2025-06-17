@@ -111,13 +111,14 @@ class Quadtree:
                     self.nodes[i].insert(*obj)
             self.objects.clear()
     
-    def retrieve(self, return_list, rect):
+    def retrieve(self, return_list: list, rect: pygame.Rect):
         for i in self.get_index(rect):
             if self.nodes[i]:
                 self.nodes[i].retrieve(return_list, rect)
         
-        return_list.extend(self.objects)
-
+        for object in self.objects:
+            if object not in return_list:
+                return_list.append(object)
 
 # loads an image from a file and applies a colorkey for transparency
 def load_image(path, colorkey=DEFAULT_COLORKEY, scale=1):
