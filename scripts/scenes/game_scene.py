@@ -2,10 +2,9 @@ import pygame
 from ..systems.scene.scene_manager import Scene
 #components
 from ..components.physics import Position, Velocity, CollisionComponent
-from ..components.animation import AnimationComponent, RenderComponent
-from ..components.combat import WeaponComponent, HitBoxComponent, HurtBoxComponent, HealthComponent
-from ..components.tags import PlayerTagComponent, EnemyTagComponent
+from ..components.combat import HitBoxComponent, HurtBoxComponent
 from ..ecs.component_manager import ComponentManager
+from ..components.ai import AIComponent
 
 #systems
 from ..ecs.entity_manager import EntityManager
@@ -13,10 +12,10 @@ from ..ecs.entity_factory import EntityFactory
 from ..systems.input.player_input_system import PlayerInputSystem
 from ..systems.core.physics_engine import PhysicsEngine
 from ..systems.animation.animation_handler import AnimationHandler
-from ..systems.animation.animation_state_machine import AnimationStateMachine
 from ..systems.rendering.render_system import AnimationSystem, RenderSystem
 from ..systems.rendering.camera import Camera
 from ..systems.combat.combat_system import CombatSystem
+from ..systems.combat.ai_system import AISystem
 
 from ..weapons.bullet_patterns import *
 
@@ -50,8 +49,6 @@ class GameScene(Scene):
         print(f"[SCENE] Starting scene: '{self.id}' (DEBUG)")
 
         # Create a player entity
-        # self.player = self.entity_manager.create_entity(player=True)
-        
         self.player = self.entity_factory.create_player(
             component_manager=self.physics_component_manager,
             entity_manager=self.entity_manager,
@@ -60,29 +57,22 @@ class GameScene(Scene):
             input_system=input_system
         )
         self.player_input_system = PlayerInputSystem(entity_id=self.player)
+        self.ai_system = AISystem(player_entity_id=None, component_manager=self.physics_component_manager, event_manager=self.event_manager)
 
-        # for i in range(100):
-        #     # add a collision block
-        #     block = self.entity_manager.create_entity()
-        #     self.physics_component_manager.add(
-        #         block,
-        #         Position(block, -400+i*32, 50),
-        #         # RenderComponent(
-        #         #     entity_id=block,
-        #         #     surface=load_image('data/graphics/animations/black_rook.png'),
-        #         #     offset=(0, 0),
-        #         #     center=True
-        #         # ),
-        #         CollisionComponent(
-        #             entity_id=block,
-        #             offset=(0, 0),
-        #             size=(32, 32),
-        #             solid=True
-        #         )
-        #     )
+        for i in range(10):
+            coll_box = self.entity_factory.create_entity(
+                entity="collision_box",
+                component_manager=self.physics_component_manager,
+                entity_manager=self.entity_manager,
+                event_manager=self.event_manager,
+                animation_handler=self.animation_handler,
+                input_system=input_system
+            )
+
+            self.physics_component_manager.get(coll_box, Position).x = i*32
 
         # create some enemy entities
-        for i in range(10):
+        for i in range(1):
             enemy = self.entity_factory.create_enemy(
                 component_manager=self.physics_component_manager,
                 entity_manager=self.entity_manager,
@@ -98,6 +88,15 @@ class GameScene(Scene):
             self.physics_component_manager.get(enemy, Position).y = i*100
             self.physics_component_manager.get(enemy, Velocity).x = random.uniform(-0.5, 0.5)
             self.physics_component_manager.get(enemy, Velocity).y = random.uniform(0, 1)
+
+            self.physics_component_manager.add(
+                enemy, 
+                AIComponent(
+                    entity_id=enemy,
+                    behavior="chase",  # or "sniper", "patrol", etc.
+                    shoot_fn=shoot_single
+                )
+            )
 
         self.camera.set_target(self.player)
 
@@ -147,6 +146,7 @@ class GameScene(Scene):
     def update(self, fps, dt):
         # Update the physics engine
         self.player_input_system.update(self.physics_component_manager) 
+        self.ai_system.update(dt)
         self.physics_engine.update(self.camera.scroll, dt)
         self.combat_system.update(
             event_manager=self.event_manager,
@@ -158,7 +158,7 @@ class GameScene(Scene):
         )
         self.animation_system.update(dt)
 
-        self.camera.update(self.physics_component_manager, lerp=True, mouse=pygame.mouse.get_pos(), mouse_ratio=0.05)
+        self.camera.update(self.physics_component_manager, lerp=True, mouse=pygame.mouse.get_pos(), mouse_ratio=0.1)
     
         self.entity_manager.refresh_entities()
 

@@ -114,6 +114,19 @@ class EntityFactory:
 
         return enemy
 
+    def create_entity(self, entity, component_manager, entity_manager, event_manager, animation_handler, input_system):
+        """
+        Create a generic entity with the given data.
+        """
+        entity_id = entity_manager.create_entity()
+
+        entity_component_data = self.data.get(entity, {})
+
+        # Add components to the entity
+        self.add_components_to_entity(entity_id, entity_component_data, component_manager, entity_manager, event_manager, animation_handler, input_system)
+
+        return entity_id
+
     def add_components_to_entity(self, entity_id, entity_data, component_manager, entity_manager, event_manager, animation_handler, input_system, player=False):
         ctx = {
             "component_manager": component_manager,
