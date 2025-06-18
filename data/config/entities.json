@@ -20,7 +20,8 @@
             "offset_x": -8.0,
             "offset_y": -24.0,
             "width": 16.0,
-            "height": 60.0
+            "height": 60.0,
+            "center": false
         },
         "HealthComponent": {
             "max_health": 100
@@ -34,11 +35,11 @@
             "center": true
         },
         "WeaponComponent": {
-            "cooldown": 0.16666666666666666,
+            "cooldown": 0.01,
             "shoot_fn": "shoot_spread",
             "projectile_data": {
                 "damage": 10,
-                "speed": 5,
+                "speed": 10,
                 "range": 100,
                 "effects": [],
                 "size": 1,
@@ -58,7 +59,17 @@
             "transitions": {
                 "moving": {
                     "to_animation": "idle",
-                    "cond": "lambda eid: component_manager.get(entity_id, Velocity).vec.length_squared() == 0",
+                    "cond": "vel_zero_check",
+                    "self_dest": false
+                },
+                "shoot": {
+                    "to_animation": "idle",
+                    "cond": "left_held_release",
+                    "self_dest": false
+                },
+                "damage": {
+                    "to_animation": "idle",
+                    "cond": "check_invincibility_timer",
                     "self_dest": false
                 }
             }
@@ -85,7 +96,8 @@
             "offset_x": -8.0,
             "offset_y": -24.0,
             "width": 16.0,
-            "height": 60.0
+            "height": 60.0,
+            "center": false
         },
         "HealthComponent": {
             "max_health": 100
@@ -99,7 +111,7 @@
             "center": true
         },
         "WeaponComponent": {
-            "cooldown": 0.16666666666666666,
+            "cooldown": 0.01,
             "shoot_fn": "shoot_spread",
             "projectile_data": {
                 "damage": 10,
@@ -123,7 +135,12 @@
             "transitions": {
                 "moving": {
                     "to_animation": "idle",
-                    "cond": "lambda eid: component_manager.get(entity_id, Velocity).vec.length_squared() == 0",
+                    "cond": "vel_zero_check",
+                    "self_dest": false
+                },
+                "damage": {
+                    "to_animation": "idle",
+                    "cond": "check_invincibility_timer",
                     "self_dest": false
                 }
             }
@@ -150,7 +167,8 @@
             "offset_x": -12.0,
             "offset_y": -25.0,
             "width": 24.0,
-            "height": 66.0
+            "height": 66.0,
+            "center": false
         },
         "HealthComponent": {
             "max_health": 200
@@ -164,7 +182,7 @@
             "center": true
         },
         "WeaponComponent": {
-            "cooldown": 0.16666666666666666,
+            "cooldown": 0.01,
             "shoot_fn": "shoot_spread",
             "projectile_data": {
                 "damage": 10,
@@ -188,7 +206,12 @@
             "transitions": {
                 "moving": {
                     "to_animation": "idle",
-                    "cond": "lambda eid: component_manager.get(entity_id, Velocity).vec.length_squared() == 0",
+                    "cond": "vel_zero_check",
+                    "self_dest": false
+                },
+                "damage": {
+                    "to_animation": "idle",
+                    "cond": "check_invincibility_timer",
                     "self_dest": false
                 }
             }
