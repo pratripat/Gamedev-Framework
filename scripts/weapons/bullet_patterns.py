@@ -95,3 +95,10 @@ class SpiralShooter:
         self.current_angle += self.angle_increment
         
         return projs
+    
+SHOOT_FUNCTIONS = {
+    'shoot_single': shoot_single,
+    'shoot_spread': shoot_spread,
+    'shoot_radial': shoot_radial,
+    'shoot_radial_spiral': SpiralShooter(bullets_per_shot=10, angle_increment=1)
+}
