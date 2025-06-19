@@ -6,9 +6,10 @@
             ],
             "loop": false,
             "speed": 1,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [0, 0]
         },
         "moving": {
             "frames": [
@@ -24,9 +25,10 @@
             ],
             "loop": true,
             "speed": 2,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [0, 0]
         },
         "shoot": {
             "frames": [
@@ -38,9 +40,10 @@
             ],
             "loop": true,
             "speed": 1,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [0, 0]
         },
         "damage": {
             "frames": [
@@ -49,9 +52,10 @@
             ],
             "loop": true,
             "speed": 1,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [0, 0]
         },
         "death": {
             "frames": [
@@ -78,9 +82,10 @@
             ],
             "loop": false,
             "speed": 1,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [-25, 0]
         }
     },
     "white_knight": {
@@ -90,9 +95,10 @@
             ],
             "loop": false,
             "speed": 1,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [0, 0]
         },
         "idleflipped": {
             "frames": [
@@ -100,9 +106,10 @@
             ],
             "loop": false,
             "speed": 1,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [0, 0]
         },
         "moving": {
             "frames": [
@@ -118,9 +125,10 @@
             ],
             "loop": true,
             "speed": 2,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [0, 0]
         },
         "movingflipped": {
             "frames": [
@@ -136,9 +144,10 @@
             ],
             "loop": true,
             "speed": 2,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [0, 0]
         },
         "shoot": {
             "frames": [
@@ -150,9 +159,10 @@
             ],
             "loop": true,
             "speed": 1,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [0, 0]
         },
         "shootflipped": {
             "frames": [
@@ -164,9 +174,10 @@
             ],
             "loop": true,
             "speed": 1,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [0, 0]
         },
         "damage": {
             "frames": [
@@ -175,9 +186,10 @@
             ],
             "loop": true,
             "speed": 1,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [0, 0]
         },
         "damageflipped": {
             "frames": [
@@ -186,9 +198,10 @@
             ],
             "loop": true,
             "speed": 1,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [0, 0]
         }
     },
     "white_rook": {
@@ -198,9 +211,10 @@
             ],
             "loop": false,
             "speed": 1,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [0, 0]
         },
         "moving": {
             "frames": [
@@ -216,9 +230,10 @@
             ],
             "loop": true,
             "speed": 2,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [0, 0]
         },
         "shoot": {
             "frames": [
@@ -230,9 +245,10 @@
             ],
             "loop": true,
             "speed": 1,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [0, 0]
         },
         "damage": {
             "frames": [
@@ -241,9 +257,10 @@
             ],
             "loop": true,
             "speed": 1,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [0, 0]
         }
     },
     "white_bishop": {
@@ -253,9 +270,10 @@
             ],
             "loop": false,
             "speed": 1,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [0, 0]
         },
         "idleflipped": {
             "frames": [
@@ -263,9 +281,10 @@
             ],
             "loop": false,
             "speed": 1,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [0, 0]
         },
         "moving": {
             "frames": [
@@ -281,9 +300,10 @@
             ],
             "loop": true,
             "speed": 2,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [0, 0]
         },
         "movingflipped": {
             "frames": [
@@ -299,9 +319,10 @@
             ],
             "loop": true,
             "speed": 2,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [0, 0]
         },
         "shoot": {
             "frames": [
@@ -313,9 +334,10 @@
             ],
             "loop": true,
             "speed": 1,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [0, 0]
         },
         "shootflipped": {
             "frames": [
@@ -327,9 +349,10 @@
             ],
             "loop": true,
             "speed": 1,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [0, 0]
         },
         "damage": {
             "frames": [
@@ -338,9 +361,10 @@
             ],
             "loop": true,
             "speed": 1,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [0, 0]
         },
         "damageflipped": {
             "frames": [
@@ -349,9 +373,10 @@
             ],
             "loop": true,
             "speed": 1,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [0, 0]
         }
     },
     "black_pawn": {
@@ -361,9 +386,10 @@
             ],
             "loop": false,
             "speed": 1,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [0, 0]
         },
         "moving": {
             "frames": [
@@ -379,9 +405,10 @@
             ],
             "loop": true,
             "speed": 2,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [0, 0]
         },
         "shoot": {
             "frames": [
@@ -393,9 +420,10 @@
             ],
             "loop": true,
             "speed": 1,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [0, 0]
         },
         "damage": {
             "frames": [
@@ -404,9 +432,10 @@
             ],
             "loop": true,
             "speed": 1,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [0, 0]
         },
         "death": {
             "frames": [
@@ -433,9 +462,10 @@
             ],
             "loop": false,
             "speed": 1,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [-25, 0]
         }
     },
     "black_rook": {
@@ -445,9 +475,10 @@
             ],
             "loop": false,
             "speed": 1,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [0, 0]
         },
         "moving": {
             "frames": [
@@ -463,9 +494,10 @@
             ],
             "loop": true,
             "speed": 2,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [0, 0]
         },
         "shoot": {
             "frames": [
@@ -477,9 +509,10 @@
             ],
             "loop": true,
             "speed": 1,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [0, 0]
         },
         "damage": {
             "frames": [
@@ -488,9 +521,10 @@
             ],
             "loop": true,
             "speed": 1,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [0, 0]
         }
     },
     "black_knight": {
@@ -500,9 +534,10 @@
             ],
             "loop": false,
             "speed": 1,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [0, 0]
         },
         "idleflipped": {
             "frames": [
@@ -510,9 +545,10 @@
             ],
             "loop": false,
             "speed": 1,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [0, 0]
         },
         "moving": {
             "frames": [
@@ -528,9 +564,10 @@
             ],
             "loop": true,
             "speed": 2,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [0, 0]
         },
         "movingflipped": {
             "frames": [
@@ -546,9 +583,10 @@
             ],
             "loop": true,
             "speed": 2,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [0, 0]
         },
         "shoot": {
             "frames": [
@@ -560,9 +598,10 @@
             ],
             "loop": true,
             "speed": 1,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [0, 0]
         },
         "shootflipped": {
             "frames": [
@@ -574,9 +613,10 @@
             ],
             "loop": true,
             "speed": 1,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [0, 0]
         },
         "damage": {
             "frames": [
@@ -585,9 +625,10 @@
             ],
             "loop": true,
             "speed": 1,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [0, 0]
         },
         "damageflipped": {
             "frames": [
@@ -596,9 +637,10 @@
             ],
             "loop": true,
             "speed": 1,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [0, 0]
         }
     },
     "black_bishop": {
@@ -608,9 +650,10 @@
             ],
             "loop": false,
             "speed": 1,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [0, 0]
         },
         "idleflipped": {
             "frames": [
@@ -618,9 +661,10 @@
             ],
             "loop": false,
             "speed": 1,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [0, 0]
         },
         "moving": {
             "frames": [
@@ -636,9 +680,10 @@
             ],
             "loop": true,
             "speed": 2,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [0, 0]
         },
         "movingflipped": {
             "frames": [
@@ -654,9 +699,10 @@
             ],
             "loop": true,
             "speed": 2,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [0, 0]
         },
         "shoot": {
             "frames": [
@@ -668,9 +714,10 @@
             ],
             "loop": true,
             "speed": 1,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [0, 0]
         },
         "shootflipped": {
             "frames": [
@@ -682,9 +729,10 @@
             ],
             "loop": true,
             "speed": 1,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [0, 0]
         }
     },
     "vegetation": {
@@ -694,9 +742,10 @@
             ],
             "loop": false,
             "speed": 1,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [0, 0]
         }, 
         "1": {
             "frames": [
@@ -704,9 +753,10 @@
             ],
             "loop": false,
             "speed": 1,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [0, 0]
         },
         "2": {
             "frames": [
@@ -714,9 +764,10 @@
             ],
             "loop": false,
             "speed": 1,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [0, 0]
         },
         "3": {
             "frames": [
@@ -724,9 +775,10 @@
             ],
             "loop": false,
             "speed": 1,
-            "scale": 2,
+            "scale": 1,
             "centered": false,
-            "flip": false
+            "flip": false,
+            "offset": [0, 0]
         }
     }
 }

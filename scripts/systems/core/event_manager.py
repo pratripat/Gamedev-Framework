@@ -6,8 +6,9 @@ class EventManager:
         # if an event_type is not found in the dictionary, it will return an empty list instead of raising a KeyError
         self.subscribers = defaultdict(list)
     
-    def subscribe(self, event_type, callback, source=None):
-        self.subscribers[event_type].append((callback, source))
+    def subscribe(self, event_type, *callbacks, source=None):
+        for callback in callbacks:
+            self.subscribers[event_type].append((callback, source))
     
     def unsubscribe(self, event_type, callback, source=None):
         if event_type in self.subscribers:

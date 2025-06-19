@@ -12,12 +12,21 @@ class WeaponSystem:
         self.camera = camera
 
         event_manager.subscribe(GameSceneEvents.SHOOT, self.on_shoot)
+        event_manager.subscribe(GameSceneEvents.DEATH, self._disable_weapon_comp)
+
+    def _disable_weapon_comp(self, entity_id):
+        weapon_comp = self.component_manager.get(entity_id, WeaponComponent)
+        if weapon_comp:
+            weapon_comp.disabled = True
     
     def on_shoot(self, entity_id):
         weapon_component = self.component_manager.get(entity_id, WeaponComponent)
+        if weapon_component.disabled:
+            return
+        
         if weapon_component.can_shoot:
             shoot_pos = self.component_manager.get(entity_id, Position).vec.copy()
-            vel = self.component_manager.get(entity_id, Velocity).vec
+            realistic_vel = self.component_manager.get(entity_id, Velocity).realistic_vel
 
             projectile_data = weapon_component.projectile_data.copy()
 
@@ -36,15 +45,19 @@ class WeaponSystem:
                 # making sure all the projs have the same vel as that of the entity
                 for proj_id in projectiles:
                     proj_vel = self.component_manager.get(proj_id, Velocity).vec
-                    proj_vel += vel
-            
+                    proj_vel += realistic_vel
+                    proj_vel = proj_vel.normalize()
+                    proj_vel *= projectile_data['speed']
+
             # enemy is shooting
             else:
                 # print(f'[WEAPON SYSTEM] Entity: {entity_id} has shot... (DEBUG)')
                 
                 target_pos = pygame.Vector2(1, 0) + shoot_pos # default target position
                 if projectile_data['towards_player']:
-                    target_pos = self.component_manager.get(self.entity_manager.player_id, Position).vec.copy()
+                    player_pos = self.component_manager.get(self.entity_manager.player_id, Position)
+                    if player_pos:
+                        target_pos = player_pos.vec.copy()
                 
                 projectile_data['start_pos'] = shoot_pos
                 projectile_data['target_pos'] = target_pos

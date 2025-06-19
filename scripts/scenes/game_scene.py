@@ -56,8 +56,8 @@ class GameScene(Scene):
             animation_handler=self.animation_handler,
             input_system=input_system
         )
-        self.player_input_system = PlayerInputSystem(entity_id=self.player)
-        self.ai_system = AISystem(player_entity_id=None, component_manager=self.physics_component_manager, event_manager=self.event_manager)
+        self.player_input_system = PlayerInputSystem(entity_id=self.player, event_manager=self.event_manager)
+        self.ai_system = AISystem(player_entity_id=self.player, component_manager=self.physics_component_manager, event_manager=self.event_manager)
 
         for i in range(10):
             coll_box = self.entity_factory.create_entity(
@@ -72,7 +72,7 @@ class GameScene(Scene):
             self.physics_component_manager.get(coll_box, Position).x = i*32
 
         # create some enemy entities
-        for i in range(1):
+        for i in range(3):
             enemy = self.entity_factory.create_enemy(
                 component_manager=self.physics_component_manager,
                 entity_manager=self.entity_manager,
@@ -83,11 +83,8 @@ class GameScene(Scene):
             )
 
             # Set random position and velocity for the enemy
-            self.physics_component_manager.get(enemy, Position).x = random.uniform(-100, 100)
-            # self.physics_component_manager.get(enemy, Position).y = random.uniform(-100, 100)
+            self.physics_component_manager.get(enemy, Position).x = 200
             self.physics_component_manager.get(enemy, Position).y = i*100
-            self.physics_component_manager.get(enemy, Velocity).x = random.uniform(-0.5, 0.5)
-            self.physics_component_manager.get(enemy, Velocity).y = random.uniform(0, 1)
 
             self.physics_component_manager.add(
                 enemy, 
@@ -146,7 +143,7 @@ class GameScene(Scene):
     def update(self, fps, dt):
         # Update the physics engine
         self.player_input_system.update(self.physics_component_manager) 
-        self.ai_system.update(dt)
+        self.ai_system.update(fps, dt)
         self.physics_engine.update(self.camera.scroll, dt)
         self.combat_system.update(
             event_manager=self.event_manager,
@@ -165,22 +162,22 @@ class GameScene(Scene):
     def render(self, surface):
         self.render_system.render(surface, self.camera)
 
-        # render all the hurtboxs and hitboxes
-        boxes = self.physics_component_manager.get_entities_with_either(HurtBoxComponent, HitBoxComponent)
-        for entity_id in boxes:
-            hurtbox = self.physics_component_manager.get(entity_id, HurtBoxComponent)
-            hitbox = self.physics_component_manager.get(entity_id, HitBoxComponent)
-            pos = self.physics_component_manager.get(entity_id, Position).vec
+        # # render all the hurtboxs and hitboxes
+        # boxes = self.physics_component_manager.get_entities_with_either(HurtBoxComponent, HitBoxComponent)
+        # for entity_id in boxes:
+        #     hurtbox = self.physics_component_manager.get(entity_id, HurtBoxComponent)
+        #     hitbox = self.physics_component_manager.get(entity_id, HitBoxComponent)
+        #     pos = self.physics_component_manager.get(entity_id, Position).vec
 
-            if hurtbox:
-                pygame.draw.rect(surface, (255, 0, 0), (*pos + hurtbox.offset - self.camera.scroll, *hurtbox.size), 1)
-            if hitbox:
-                pygame.draw.rect(surface, (0, 255, 0), (*pos + hitbox.offset - self.camera.scroll, *hitbox.size), 1)
+        #     if hurtbox:
+        #         pygame.draw.rect(surface, (255, 0, 0), (*pos + hurtbox.offset - self.camera.scroll, *hurtbox.size), 1)
+        #     if hitbox:
+        #         pygame.draw.rect(surface, (0, 255, 0), (*pos + hitbox.offset - self.camera.scroll, *hitbox.size), 1)
 
-        boxes = self.physics_component_manager.get_entities_with(CollisionComponent)
-        for entity_id in boxes:
-            collision_component = self.physics_component_manager.get(entity_id, CollisionComponent)
-            pos = self.physics_component_manager.get(entity_id, Position).vec
+        # boxes = self.physics_component_manager.get_entities_with(CollisionComponent)
+        # for entity_id in boxes:
+        #     collision_component = self.physics_component_manager.get(entity_id, CollisionComponent)
+        #     pos = self.physics_component_manager.get(entity_id, Position).vec
 
-            if collision_component:
-                pygame.draw.rect(surface, (255, 255, 255), (*pos + collision_component.offset - self.camera.scroll, *collision_component.size), 1)
+        #     if collision_component:
+        #         pygame.draw.rect(surface, (255, 255, 255), (*pos + collision_component.offset - self.camera.scroll, *collision_component.size), 1)

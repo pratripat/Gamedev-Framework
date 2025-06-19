@@ -72,6 +72,9 @@ class AnimationData:
         # flips the images horizontally if specified in the config
         if self.config.get("flip", False):
             self.images = [pygame.transform.flip(image, True, False) for image in self.images]
+        
+        # offset
+        self.config["offset"] = pygame.Vector2(self.config["offset"])
 
         self.resize_images(self.config.get("scale", 1))
 
@@ -137,7 +140,7 @@ class Animation:
         :param animation_offset: An optional offset to apply to the animation position.
         """
     
-        offset = [0, 0]
+        offset = self.animation_data.config["offset"].copy() * self.animation_data.config["scale"]
         image = self.image
 
         if any(flipped):

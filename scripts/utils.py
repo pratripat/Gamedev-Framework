@@ -1,5 +1,5 @@
 import pygame, json, os
-from enum import Enum, IntFlag
+from enum import Enum, IntFlag, auto
 
 DEFAULT_COLORKEY = (0, 0, 0)
 INTIAL_WINDOW_SIZE = (1200, 600)
@@ -48,6 +48,14 @@ class GameSceneEvents(Enum):
     SHOOT = "shoot"
     REMOVE_ENTITY = "remove_entity"
     ANIMATION_FINISHED = "animation_finished"
+
+class EnemyState(Enum):
+    IDLE = auto()
+    PATROL = auto()
+    CHASE = auto()
+    ATTACK = auto()
+    FLEE = auto()
+    DEAD = auto()
 
 class Quadtree:
     MAX_OBJECTS = 4
@@ -131,7 +139,9 @@ def load_image(path, colorkey=DEFAULT_COLORKEY, scale=1):
     :return: Scaled image with colorkey applied.
     """
     if not os.path.exists(path):
-        raise FileNotFoundError(f"[UTILS] Image file '{path}' does not exist. (DEBUG)")
+        # raise FileNotFoundError(f"[UTILS] Image file '{path}' does not exist. (DEBUG)")
+        print(f"[UTILS] Image file '{path}' does not exist. (DEBUG)")
+        return None
     
     image = pygame.image.load(path).convert()
     image.set_colorkey(colorkey)

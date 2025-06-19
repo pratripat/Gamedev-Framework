@@ -12,8 +12,11 @@ class Camera:
     def update(self, component_manager, lerp=False, lerp_speed=0.15, mouse=None, mouse_ratio=0.5):
         if self.target_entity_id is None: return
 
-        target_pos = component_manager.get(self.target_entity_id, Position).vec
-        desired_pos = target_pos - CENTER
+        desired_pos = self.scroll.copy()
+
+        target_pos = component_manager.get(self.target_entity_id, Position)
+        if target_pos:
+            desired_pos = target_pos.vec - CENTER
 
         # follow mouse
         if mouse:
