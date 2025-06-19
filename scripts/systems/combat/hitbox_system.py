@@ -1,5 +1,5 @@
 import pygame
-from ...utils import Quadtree, INTIAL_WINDOW_SIZE, GameSceneEvents
+from ...utils import Quadtree, INITIAL_WINDOW_SIZE, GameSceneEvents
 from ...components.combat import HurtBoxComponent, HitBoxComponent
 from ...components.physics import Position
 from ...components.projectile import ProjectileComponent
@@ -9,7 +9,7 @@ class HitBoxSystem:
         return (hitbox.mask & hurtbox.layer) != 0
 
     def update(self, event_manager, component_manager, entity_list, scroll):
-        quadtree = Quadtree(0, (*scroll, *INTIAL_WINDOW_SIZE))
+        quadtree = Quadtree(0, (*scroll, *INITIAL_WINDOW_SIZE))
 
         # insert all hitboxes to qt
         for entity_id in entity_list:
@@ -59,7 +59,7 @@ class HitBoxSystem:
                     projectile = component_manager.get(attacker, ProjectileComponent)
                     if projectile:
                         # If the attacker is a projectile, emit a damage event with the projectile's data
-                        event_manager.emit(GameSceneEvents.DAMAGE, entity_id=defender, damage=projectile.damage, effects=projectile.effects)
+                        event_manager.emit(GameSceneEvents.DAMAGE, entity_id=defender, proj_id=attacker, damage=projectile.damage, effects=projectile.effects)
                     else:
                         # Otherwise, emit a generic damage event
                         print(f'[HIT BOX SYSTEM] Non projectile type has damaged entity {defender} (DEBUG)')

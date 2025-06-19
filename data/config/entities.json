@@ -17,10 +17,10 @@
             "speed": 6.0
         },
         "HurtBoxComponent": {
-            "offset_x": -4.0,
-            "offset_y": -12.0,
-            "width": 8.0,
-            "height": 30.0,
+            "offset_x": -8.0,
+            "offset_y": -24.0,
+            "width": 16.0,
+            "height": 60.0,
             "center": false
         },
         "HealthComponent": {
@@ -28,9 +28,9 @@
         },
         "CollisionComponent": {
             "offset_x": 0.0,
-            "offset_y": 14.0,
-            "width": 23.0,
-            "height": 9.0,
+            "offset_y": 27.0,
+            "width": 46.0,
+            "height": 20.0,
             "solid": false,
             "center": true
         },
@@ -41,6 +41,8 @@
                 "damage": 10,
                 "speed": 13,
                 "range": 100,
+                "bounce": 0,
+                "penetration": 0,
                 "effects": [],
                 "size": 1,
                 "image_file": "data/graphics/images/projectile.png",
@@ -93,10 +95,10 @@
             "entity_type": "chess_piece"
         },
         "HurtBoxComponent": {
-            "offset_x": -4.0,
-            "offset_y": -12.0,
-            "width": 8.0,
-            "height": 30.0,
+            "offset_x": -8.0,
+            "offset_y": -24.0,
+            "width": 16.0,
+            "height": 60.0,
             "center": false
         },
         "HealthComponent": {
@@ -104,9 +106,9 @@
         },
         "CollisionComponent": {
             "offset_x": 0.0,
-            "offset_y": 14.0,
-            "width": 23.0,
-            "height": 9.0,
+            "offset_y": 27.0,
+            "width": 46.0,
+            "height": 20.0,
             "solid": false,
             "center": true
         },
@@ -117,6 +119,8 @@
                 "damage": 5,
                 "speed": 10,
                 "range": 100,
+                "bounce": 0,
+                "penetration": 0,
                 "effects": [],
                 "size": 1,
                 "image_file": "data/graphics/images/projectile.png",
@@ -164,10 +168,10 @@
             "entity_type": "chess_piece"
         },
         "HurtBoxComponent": {
-            "offset_x": -6.0,
-            "offset_y": -12.5,
-            "width": 12.0,
-            "height": 33.0,
+            "offset_x": -13.0,
+            "offset_y": -25.0,
+            "width": 26.0,
+            "height": 70.0,
             "center": false
         },
         "HealthComponent": {
@@ -175,9 +179,9 @@
         },
         "CollisionComponent": {
             "offset_x": 0.0,
-            "offset_y": 18.0,
-            "width": 22.0,
-            "height": 7.0,
+            "offset_y": 34.0,
+            "width": 46.0,
+            "height": 22.0,
             "solid": false,
             "center": true
         },
@@ -188,6 +192,8 @@
                 "damage": 10,
                 "speed": 5,
                 "range": 100,
+                "bounce": 0,
+                "penetration": 0,
                 "effects": [],
                 "size": 1,
                 "image_file": "data/graphics/images/projectile.png",
