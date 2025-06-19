@@ -2,8 +2,8 @@ import pygame, json, os
 from enum import Enum, IntFlag, auto
 
 DEFAULT_COLORKEY = (0, 0, 0)
-INTIAL_WINDOW_SIZE = (1200, 600)
-CENTER = pygame.Vector2(INTIAL_WINDOW_SIZE) * 0.5
+INITIAL_WINDOW_SIZE = (1920, 1002) # (1280, 720)
+CENTER = pygame.Vector2(INITIAL_WINDOW_SIZE) * 0.5
 ANIMATION_FOLDER = "data/graphics/animations"
 
 # Define keybinds for player inputs
@@ -48,6 +48,7 @@ class GameSceneEvents(Enum):
     SHOOT = "shoot"
     REMOVE_ENTITY = "remove_entity"
     ANIMATION_FINISHED = "animation_finished"
+    COLLISION = "collision"
 
 class EnemyState(Enum):
     IDLE = auto()

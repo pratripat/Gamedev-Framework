@@ -8,11 +8,11 @@ class CombatSystem:
         self.weapon_system = WeaponSystem(physics_component_manager, entity_manager, camera, event_manager)
         self.hitbox_system = HitBoxSystem()
         self.health_system = HealthSystem()
-        self.projectile_system = ProjectileSystem()
+        self.projectile_system = ProjectileSystem(physics_component_manager, event_manager)
 
     def update(self, event_manager, component_manager, entity_list, scroll, fps, dt):
         self.weapon_system.update(fps, dt)
         self.hitbox_system.update(event_manager, component_manager, entity_list, scroll)
         self.health_system.update(component_manager, fps, dt)
 
-        self.projectile_system.update(component_manager, fps, dt)
+        self.projectile_system.update(fps, dt)

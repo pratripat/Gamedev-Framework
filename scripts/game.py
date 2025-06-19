@@ -2,7 +2,7 @@ from .systems.scene.scene_manager import SceneManager
 from .scenes.game_scene import GameScene
 from .systems.input.input_system import Input
 from .systems.core.event_manager import EventManager
-from .utils import INTIAL_WINDOW_SIZE
+from .utils import INITIAL_WINDOW_SIZE
 import pygame
 
 class Game():
@@ -10,7 +10,7 @@ class Game():
         # TEMP
         pygame.init()
 
-        self.screen = pygame.display.set_mode(INTIAL_WINDOW_SIZE, pygame.RESIZABLE | pygame.SCALED)
+        self.screen = pygame.display.set_mode(INITIAL_WINDOW_SIZE, pygame.RESIZABLE | pygame.SCALED)
         pygame.display.set_caption("Game")
         # TEMP
 

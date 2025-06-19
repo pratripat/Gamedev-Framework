@@ -5,6 +5,8 @@ from ...utils import EnemyState, GameSceneEvents
 
 import pygame, random
 
+# TEMP : GET RID OF THE MAGIC NUMBRES IN THE AI FUNCS
+
 class AISystem:
     def __init__(self, player_entity_id, component_manager, event_manager):
         self.player_entity_id = player_entity_id
@@ -43,34 +45,64 @@ class AISystem:
         vel = self.component_manager.get(eid, Velocity)
         player_pos = self.component_manager.get(self.player_entity_id, Position)
 
+        # idle 
         if ai_comp.state == EnemyState.IDLE:
             if ai_comp.timer > 0.5:
                 ai_comp.state = EnemyState.CHASE
                 ai_comp.timer = 0
-        
+        # chase player
         elif ai_comp.state == EnemyState.CHASE:
             if player_pos is None:
                 return
             
             if ai_comp.timer > 1:
                 target_pos = player_pos.vec + pygame.Vector2(random.uniform(-200, 200), random.uniform(-200, 200)) # TEMP : avoids stacking of enemies
-                dir = (player_pos.vec - pos.vec).normalize()
+                dir = (target_pos - pos.vec).normalize()
                 vel.vec = dir * ai_comp.data["speed"]
 
                 if pos.vec.distance_to(player_pos.vec) <= ai_comp.data["attack_dist"]:
                     vel.vec = (0, 0)
                     ai_comp.state = EnemyState.ATTACK
                     ai_comp.timer = 0
-
+        # attack once closer to player
         elif ai_comp.state == EnemyState.ATTACK:
-            if ai_comp.timer < 1:
+            if ai_comp.timer < 0.5:
                 self.event_manager.emit(GameSceneEvents.SHOOT, entity_id=eid)
-            elif pos.vec.distance_to(player_pos.vec) > ai_comp.data["attack_dist"]:
+            else:
                 ai_comp.state = EnemyState.CHASE
                 ai_comp.timer = 0
 
     def _sniper_behavior(self, eid, ai_comp, dt):
-        print('sniping', ai_comp.state)
+        pos = self.component_manager.get(eid, Position)
+        vel = self.component_manager.get(eid, Velocity)
+        player_pos = self.component_manager.get(self.player_entity_id, Position)
+
+        # idle
+        if ai_comp.state == EnemyState.IDLE:
+            if ai_comp.timer > 0.5:
+                ai_comp.state = EnemyState.FLEE
+                ai_comp.timer = 0
+        # flee away from the player
+        elif ai_comp.state == EnemyState.FLEE:
+            if player_pos is None:
+                return
+        
+            if ai_comp.timer > 1:
+                target_pos = player_pos.vec + pygame.Vector2(random.uniform(-200, 200), random.uniform(-200, 200))
+                dir = (pos.vec - target_pos).normalize()
+                vel.vec = dir * ai_comp.data["speed"]
+
+                if pos.vec.distance_to(player_pos.vec) > 500:
+                    vel.vec = (0, 0)
+                    ai_comp.state = EnemyState.ATTACK
+                    ai_comp.timer = 0
+        # snipe the player from far
+        elif ai_comp.state == EnemyState.ATTACK:
+            if ai_comp.timer > 0.5 and ai_comp.timer <= 2: # simulate aiming of the sniper 
+                self.event_manager.emit(GameSceneEvents.SHOOT, entity_id=eid)
+            elif ai_comp.timer > 2:
+                ai_comp.state = EnemyState.FLEE
+                ai_comp.timer = 0
 
     def _patrol_behavior(self, eid, ai_comp, dt):
         print('patrolling', ai_comp.state)

@@ -1,14 +1,15 @@
 import pygame
 from ...components.physics import Position, Velocity
 from ...components.physics import CollisionComponent
-from ...utils import Quadtree, INTIAL_WINDOW_SIZE
+from ...utils import Quadtree, INITIAL_WINDOW_SIZE, GameSceneEvents
 
 class PhysicsEngine:
-    def __init__(self, component_manager):
+    def __init__(self, component_manager, event_manager):
         self.component_manager = component_manager
+        self.event_manager = event_manager
 
     def update(self, scroll, dt):
-        quadtree = Quadtree(0, (*scroll, *INTIAL_WINDOW_SIZE))
+        quadtree = Quadtree(0, (*scroll, *INITIAL_WINDOW_SIZE))
 
         # Update all entities with Position and Velocity components
         for entity in self.component_manager.get_entities_with(Position, Velocity):
@@ -39,6 +40,8 @@ class PhysicsEngine:
             vel = self.component_manager.get(non_solid_component_entity, Velocity)
             rect = pygame.FRect(*(pos.vec + non_solid_component.offset), *non_solid_component.size)
 
+            collisions = {"top": False, "right": False, "bottom": False, "left": False}
+
             vel.realistic_vel = vel.vec.copy()
 
             rect.x += vel.x * dt
@@ -58,8 +61,10 @@ class PhysicsEngine:
                 if rect.colliderect(colliding_rect):
                     if vel.x > 0:
                         rect.right = colliding_rect.left
+                        collisions["right"] = True
                     elif vel.x < 0:
                         rect.left = colliding_rect.right
+                        collisions["left"] = True
                     else:
                         vel.realistic_vel.x = 0 # the vel of the entity is not the same as the of the desired vel
 
@@ -80,9 +85,14 @@ class PhysicsEngine:
                 if rect.colliderect(colliding_rect):
                     if vel.y > 0:
                         rect.bottom = colliding_rect.top
+                        collisions["bottom"] = True
                     elif vel.y < 0:
                         rect.top = colliding_rect.bottom
+                        collisions["top"] = True
                     else:
                         vel.realistic_vel.y = 0 # the vel of the entity is not the same as the of the desired vel
             
+            if any(collisions.values()):
+                self.event_manager.emit(GameSceneEvents.COLLISION, entity_id=non_solid_component_entity, collisions=collisions)
+
             pos.vec.update(pygame.Vector2(rect.topleft) - non_solid_component.offset)

@@ -52,7 +52,7 @@ class HealthComponent:
 
         event_manager.subscribe(GameSceneEvents.DAMAGE, self.take_damage, source=self.entity_id)
 
-    def take_damage(self, entity_id, damage, effects):
+    def take_damage(self, entity_id, proj_id, damage, effects):
         if entity_id != self.entity_id:
             return
         
