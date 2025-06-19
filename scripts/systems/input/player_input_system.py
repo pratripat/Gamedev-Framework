@@ -5,7 +5,7 @@ from ..animation.animation_state_machine import AnimationStateMachine
 from ...utils import GameSceneEvents
 
 class PlayerInputSystem:
-    def __init__(self, entity_id):
+    def __init__(self, entity_id, event_manager):
         """
         Initializes a player with a given entity ID.
 
@@ -18,6 +18,9 @@ class PlayerInputSystem:
             "left": False,
             "right": False
         }
+        self.disable_movement = False
+
+        event_manager.subscribe(GameSceneEvents.DEATH, self.on_death)
     
     def shoot(self, component_manager, event_manager):
         component_manager.get(self.entity_id, AnimationStateMachine).set_animation("shoot")
@@ -25,8 +28,15 @@ class PlayerInputSystem:
 
     def on_move(self, direction, held=True):
         self.held[direction] = held
+    
+    def on_death(self, entity_id):
+        if self.entity_id == entity_id:
+            self.disable_movement = True
 
     def update(self, physics_component_manager):
+        if self.disable_movement:
+            return
+        
         dir = pygame.Vector2(0, 0)
         if self.held["up"]: dir.y -= 1
         if self.held["down"]: dir.y += 1

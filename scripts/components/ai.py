@@ -1,11 +1,4 @@
-from enum import Enum
-
-class EnemyState(Enum):
-    IDLE = 0
-    PATROL = 1
-    CHASE = 2
-    ATTACK = 3
-    FLEE = 4
+from ..utils import EnemyState
 
 class AIComponent:
     def __init__(self, entity_id, behavior, shoot_fn):
@@ -13,3 +6,9 @@ class AIComponent:
         self.behavior = behavior
         self.shoot_fn = shoot_fn
         self.state = EnemyState.IDLE
+        self.timer = 0
+        
+        self.data = {
+            "speed": 2,
+            "attack_dist": 300
+        }

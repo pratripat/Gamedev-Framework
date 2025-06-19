@@ -57,7 +57,7 @@ COMPONENT_SCHEMAS = {
     "Velocity": {"x": {"type": float, "default": 0.0}, "y": {"type": float, "default": 0.0}, "speed": {"type": float, "default": 4.0}},
     "AnimationComponent": {"entity": {"type": str, "default": "black_pawn"}, "animation_id": {"type": str, "default": "idle"}, "center": {"type": bool, "default": True}, "entity_type": {"type": str, "default": "chess_piece"}},
     "RenderComponent": {"image_file": {"type": str, "default": ""}, "offset_x": {"type": float, "default": 0.0}, "offset_y": {"type": float, "default": 0.0}, "center": {"type": bool, "default": True}},
-    "HurtBoxComponent": {"offset_x": {"type": float, "default": 0.0}, "offset_y": {"type": float, "default": 0.0}, "width": {"type": float, "default": 16.0}, "height": {"type": float, "default": 64.0}},
+    "HurtBoxComponent": {"offset_x": {"type": float, "default": 0.0}, "offset_y": {"type": float, "default": 0.0}, "width": {"type": float, "default": 16.0}, "height": {"type": float, "default": 64.0}, "center": {"type": bool, "default": True}},
     "HealthComponent": {"max_health": {"type": int, "default": 100}},
     "CollisionComponent": {"offset_x": {"type": float, "default": 0.0}, "offset_y": {"type": float, "default": 0.0}, "width": {"type": float, "default": 16.0}, "height": {"type": float, "default": 16.0}, "solid": {"type": bool, "default": False}, "center": {"type": bool, "default": True}},
     "AnimationStateMachine": {

@@ -19,7 +19,7 @@ def spawn_projectile(eid, cm, em, direction, data, position_offset=pygame.Vector
     cm.add(
         proj_id,
         Position(proj_id, spawn_pos.x, spawn_pos.y),
-        Velocity(proj_id, direction.x * data['speed'], direction.y * data['speed']),
+        Velocity(proj_id, direction.x * data['speed'], direction.y * data['speed'], data['speed']),
         ProjectileComponent(
             source_entity=eid,
             damage=data['damage'],

@@ -20,6 +20,7 @@ class PhysicsEngine:
             if not collision_component:
                 # Simple movement without collision handling
                 position += velocity * dt
+                velocity.realistic_vel = velocity.vec.copy() # the vel of the entity is the same as the velocity vector
 
         for entity in self.component_manager.get_entities_with(CollisionComponent, Position):
             # Append the rect in the quadtree for handling collisions later
@@ -38,6 +39,8 @@ class PhysicsEngine:
             vel = self.component_manager.get(non_solid_component_entity, Velocity)
             rect = pygame.FRect(*(pos.vec + non_solid_component.offset), *non_solid_component.size)
 
+            vel.realistic_vel = vel.vec.copy()
+
             rect.x += vel.x * dt
 
             colliding_entities = []
@@ -55,10 +58,11 @@ class PhysicsEngine:
                 if rect.colliderect(colliding_rect):
                     if vel.x > 0:
                         rect.right = colliding_rect.left
-                    
-                    if vel.x < 0:
+                    elif vel.x < 0:
                         rect.left = colliding_rect.right
-            
+                    else:
+                        vel.realistic_vel.x = 0 # the vel of the entity is not the same as the of the desired vel
+
             rect.y += vel.y * dt
 
             colliding_entities = []
@@ -76,8 +80,9 @@ class PhysicsEngine:
                 if rect.colliderect(colliding_rect):
                     if vel.y > 0:
                         rect.bottom = colliding_rect.top
-                    
-                    if vel.y < 0:
+                    elif vel.y < 0:
                         rect.top = colliding_rect.bottom
+                    else:
+                        vel.realistic_vel.y = 0 # the vel of the entity is not the same as the of the desired vel
             
             pos.vec.update(pygame.Vector2(rect.topleft) - non_solid_component.offset)

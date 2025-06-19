@@ -10,6 +10,7 @@ class WeaponComponent:
 
         self.time = 0
         self.shot = False
+        self.disabled = False
 
     @property
     def can_shoot(self):

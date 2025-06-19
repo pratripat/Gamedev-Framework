@@ -14,13 +14,13 @@
         "Velocity": {
             "x": 0.0,
             "y": 0.0,
-            "speed": 4.0
+            "speed": 6.0
         },
         "HurtBoxComponent": {
-            "offset_x": -8.0,
-            "offset_y": -24.0,
-            "width": 16.0,
-            "height": 60.0,
+            "offset_x": -4.0,
+            "offset_y": -12.0,
+            "width": 8.0,
+            "height": 30.0,
             "center": false
         },
         "HealthComponent": {
@@ -28,18 +28,18 @@
         },
         "CollisionComponent": {
             "offset_x": 0.0,
-            "offset_y": 28.0,
-            "width": 46.0,
-            "height": 18.0,
+            "offset_y": 14.0,
+            "width": 23.0,
+            "height": 9.0,
             "solid": false,
             "center": true
         },
         "WeaponComponent": {
-            "cooldown": 0.01,
+            "cooldown": 0.1,
             "shoot_fn": "shoot_spread",
             "projectile_data": {
                 "damage": 10,
-                "speed": 10,
+                "speed": 13,
                 "range": 100,
                 "effects": [],
                 "size": 1,
@@ -93,10 +93,10 @@
             "entity_type": "chess_piece"
         },
         "HurtBoxComponent": {
-            "offset_x": -8.0,
-            "offset_y": -24.0,
-            "width": 16.0,
-            "height": 60.0,
+            "offset_x": -4.0,
+            "offset_y": -12.0,
+            "width": 8.0,
+            "height": 30.0,
             "center": false
         },
         "HealthComponent": {
@@ -104,18 +104,18 @@
         },
         "CollisionComponent": {
             "offset_x": 0.0,
-            "offset_y": 28.0,
-            "width": 46.0,
-            "height": 18.0,
+            "offset_y": 14.0,
+            "width": 23.0,
+            "height": 9.0,
             "solid": false,
             "center": true
         },
         "WeaponComponent": {
-            "cooldown": 0.01,
-            "shoot_fn": "shoot_spread",
+            "cooldown": 0.05,
+            "shoot_fn": "shoot_radial_spiral",
             "projectile_data": {
-                "damage": 10,
-                "speed": 5,
+                "damage": 5,
+                "speed": 10,
                 "range": 100,
                 "effects": [],
                 "size": 1,
@@ -164,10 +164,10 @@
             "entity_type": "chess_piece"
         },
         "HurtBoxComponent": {
-            "offset_x": -12.0,
-            "offset_y": -25.0,
-            "width": 24.0,
-            "height": 66.0,
+            "offset_x": -6.0,
+            "offset_y": -12.5,
+            "width": 12.0,
+            "height": 33.0,
             "center": false
         },
         "HealthComponent": {
@@ -175,15 +175,15 @@
         },
         "CollisionComponent": {
             "offset_x": 0.0,
-            "offset_y": 36.0,
-            "width": 44.0,
-            "height": 14.0,
+            "offset_y": 18.0,
+            "width": 22.0,
+            "height": 7.0,
             "solid": false,
             "center": true
         },
         "WeaponComponent": {
             "cooldown": 0.01,
-            "shoot_fn": "shoot_spread",
+            "shoot_fn": "shoot_single",
             "projectile_data": {
                 "damage": 10,
                 "speed": 5,
@@ -206,12 +206,7 @@
             "transitions": {
                 "moving": {
                     "to_animation": "idle",
-                    "cond": "vel_zero_check",
-                    "self_dest": false
-                },
-                "damage": {
-                    "to_animation": "idle",
-                    "cond": "check_invincibility_timer",
+                    "cond": "lambda eid: component_manager.get(entity_id, Velocity).vec.length_squared() == 0",
                     "self_dest": false
                 }
             }
@@ -228,6 +223,12 @@
             "width": 32.0,
             "height": 32.0,
             "solid": true,
+            "center": true
+        },
+        "RenderComponent": {
+            "image_file": "",
+            "offset_x": 0.0,
+            "offset_y": 0.0,
             "center": true
         }
     }
