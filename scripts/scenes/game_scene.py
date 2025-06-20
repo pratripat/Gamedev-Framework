@@ -71,29 +71,6 @@ class GameScene(Scene):
 
             self.physics_component_manager.get(coll_box, Position).vec = (i*32, -200)
 
-        # create some enemy entities
-        # for i in range(3):
-        #     enemy = self.entity_factory.create_enemy(
-        #         component_manager=self.physics_component_manager,
-        #         entity_manager=self.entity_manager,
-        #         event_manager=self.event_manager,
-        #         animation_handler=self.animation_handler,
-        #         input_system=input_system,
-        #         chess_piece_type="pawn"
-        #     )
-
-        #     # Set random position and velocity for the enemy
-        #     self.physics_component_manager.get(enemy, Position).x = 200
-        #     self.physics_component_manager.get(enemy, Position).y = i*100
-
-        #     self.physics_component_manager.add(
-        #         enemy, 
-        #         AIComponent(
-        #             entity_id=enemy,
-        #             behavior="chase",  # or "sniper", "patrol", etc.
-        #             shoot_fn=shoot_single
-        #         )
-        #     )
         for i in range(1):
             enemy = self.entity_factory.create_enemy(
                 component_manager=self.physics_component_manager,
@@ -112,8 +89,7 @@ class GameScene(Scene):
                 enemy, 
                 AIComponent(
                     entity_id=enemy,
-                    behavior="sniper",  # or "sniper", "patrol", etc.
-                    shoot_fn=shoot_single
+                    behavior="sniper"  # or "sniper", "patrol", etc.
                 )
             )
 
