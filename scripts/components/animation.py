@@ -3,7 +3,7 @@ import pygame
 class RenderComponent:
     def __init__(self, entity_id, surface=None, offset=(0,0), center=False):
         self.entity_id = entity_id
-        self.surface = surface
+        self.original_surface = self.surface = surface
         self.offset = pygame.Vector2(offset)
         
         if surface is None:
@@ -12,7 +12,17 @@ class RenderComponent:
 
         if center:
             self.offset -= pygame.Vector2(self.surface.get_size()) / 2
-    
+        
+    def resize_scale(self, scale):
+        if isinstance(scale, int):
+            if scale == 1: return
+            
+            self.surface = pygame.transform.scale(self.original_surface, (self.original_surface.get_width() * scale, self.original_surface.get_height() * scale))
+        elif isinstance(scale, list) or isinstance(scale, tuple) or isinstance(scale, pygame.Vector2):
+            if scale[0] == 1 and scale[1] == 1: return
+
+            self.surface = pygame.transform.scale(self.original_surface, (self.original_surface))
+
 class AnimationComponent:
     def __init__(self, entity_id, entity, animation_id, animation_handler, event_manager, offset=(0,0), center=False, entity_type=None):
         self.animation_handler = animation_handler
@@ -41,6 +51,9 @@ class AnimationComponent:
     
     def update(self, dt):
         self.animation.run(self.event_manager, self.entity_id, dt)
+    
+    def resize_scale(self, scale):
+        self.animation.resize_images(scale)
 
     @property
     def current_image(self):
