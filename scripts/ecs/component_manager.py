@@ -20,6 +20,9 @@ class ComponentManager:
         sets = [set(self._components[ct]) for ct in component_types]
         return set.union(*sets) if sets else set()
 
+    def remove(self, entity_id, component_type):
+        del self._components[component_type][entity_id]
+
     def remove_all(self, entity_id):
         for component_type in list(self._components.keys()):
             if entity_id in self._components[component_type]:

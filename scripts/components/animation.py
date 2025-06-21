@@ -15,13 +15,23 @@ class RenderComponent:
         
     def resize_scale(self, scale):
         if isinstance(scale, int):
-            if scale == 1: return
-            
-            self.surface = pygame.transform.scale(self.original_surface, (self.original_surface.get_width() * scale, self.original_surface.get_height() * scale))
-        elif isinstance(scale, list) or isinstance(scale, tuple) or isinstance(scale, pygame.Vector2):
-            if scale[0] == 1 and scale[1] == 1: return
+            if scale == 1:
+                return
+            new_size = (
+                int(self.original_surface.get_width() * scale),
+                int(self.original_surface.get_height() * scale)
+            )
+        elif isinstance(scale, (list, tuple, pygame.Vector2)):
+            if scale[0] == 1 and scale[1] == 1:
+                return
+            new_size = (
+                int(self.original_surface.get_width() * scale[0]),
+                int(self.original_surface.get_height() * scale[1])
+            )
+        else:
+            return  # Invalid scale type
 
-            self.surface = pygame.transform.scale(self.original_surface, (self.original_surface))
+        self.surface = pygame.transform.scale(self.original_surface, new_size)
 
 class AnimationComponent:
     def __init__(self, entity_id, entity, animation_id, animation_handler, event_manager, offset=(0,0), center=False, entity_type=None):
@@ -53,7 +63,7 @@ class AnimationComponent:
         self.animation.run(self.event_manager, self.entity_id, dt)
     
     def resize_scale(self, scale):
-        self.animation.resize_images(scale)
+        self.animation.change_scale(scale)
 
     @property
     def current_image(self):
