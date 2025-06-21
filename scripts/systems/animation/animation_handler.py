@@ -1,6 +1,16 @@
 import pygame, json
 from ...utils import load_image, load_images_from_spritesheet, DEFAULT_COLORKEY, ANIMATION_FOLDER, GameSceneEvents
 
+def normalize_scale(scale):
+    if isinstance(scale, (int, float)):
+        return [scale, scale]
+    elif isinstance(scale, pygame.Vector2):
+        return [scale.x, scale.y]
+    elif isinstance(scale, (list, tuple)) and len(scale) == 2:
+        return list(scale)
+    else:
+        return [1, 1]  # default safe fallback
+
 class AnimationHandler:
     def __init__(self):
         self.animations = {}
@@ -76,7 +86,9 @@ class AnimationData:
         # offset
         self.config["offset"] = pygame.Vector2(self.config["offset"])
 
-        self.resize_images(self.config.get("scale", 1))
+        # self.resize_images(self.config.get("scale", 1))
+        self.config["scale"] = normalize_scale(self.config.get("scale", 1))
+        self.resize_images(self.config["scale"])
 
     def resize_images(self, scale):
         """
@@ -84,9 +96,16 @@ class AnimationData:
         
         :param scale: Scale factor to resize the images.
         """
-        if scale == 1: return  # no need to resize if scale is 1
+        if scale[0] == 1 and scale[1] == 1:
+            return
 
-        self.images = [pygame.transform.scale(image, (int(image.get_width() * scale), int(image.get_height() * scale))) for image in self.original_images]
+        new_size = (
+            int(self.original_images[0].get_width() * scale[0]),
+            int(self.original_images[0].get_height() * scale[1])
+        )
+
+        self.images = [pygame.transform.scale(image, new_size) for image in self.original_images]
+
 
     #Returns total number of frames of the animation
     def get_frames(self):
@@ -140,8 +159,12 @@ class Animation:
         :param animation_offset: An optional offset to apply to the animation position.
         """
     
-        offset = self.animation_data.config["offset"].copy() * self.animation_data.config["scale"]
+        offset = self.animation_data.config["offset"].copy()
         image = self.image
+
+        animation_data_scale = self.animation_data.config["scale"]
+        offset[0] *= animation_data_scale[0]
+        offset[1] *= animation_data_scale[1]
 
         if any(flipped):
             image = pygame.transform.flip(self.image, *flipped)
@@ -161,7 +184,7 @@ class Animation:
             offset[0] -= image.get_width()//2
             offset[1] -= image.get_height()//2
 
-        if alpha != None:
+        if alpha is not None:
             alpha_surface = pygame.Surface(image.get_size())
             alpha_surface.convert_alpha()
             alpha_surface.set_colorkey(DEFAULT_COLORKEY)
@@ -169,18 +192,22 @@ class Animation:
             alpha_surface.blit(image, (0, 0))
             image = alpha_surface
 
-        if scale != None:
-            image = pygame.transform.scale(image, (int(image.get_width() * scale), int(image.get_height() * scale)))
-            offset[0] *= scale
-            offset[1] *= scale
+        if scale is not None:
+            scale = normalize_scale(scale)
+            image = pygame.transform.scale(image, (
+                int(image.get_width() * scale[0]),
+                int(image.get_height() * scale[1])
+            ))
+            offset[0] *= scale[0]
+            offset[1] *= scale[1]
 
-        if animation_offset != None:
+        if animation_offset is not None:
             offset = animation_offset.copy()
 
-            scale = self.animation_data.config['scale']
-            offset[0] *= scale
-            offset[1] *= scale
-
+            scale = self.animation_data.config["scale"]
+            offset[0] *= scale[0]
+            offset[1] *= scale[1]
+                     
         surface.blit(image, (position[0]+offset[0], position[1]+offset[1]))
 
     def run(self, event_manager, entity_id, dt):

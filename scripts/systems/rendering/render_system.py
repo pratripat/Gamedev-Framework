@@ -3,6 +3,7 @@ from ...utils import CENTER
 from ...components.physics import Position, Velocity
 from ...components.animation import RenderComponent, AnimationComponent
 from ..animation.animation_state_machine import AnimationStateMachine
+from .render_effect_system import RenderEffectSystem
 
 class AnimationSystem:
     def __init__(self, component_manager):
@@ -25,6 +26,11 @@ class AnimationSystem:
 class RenderSystem:
     def __init__(self, component_manager):
         self.component_manager = component_manager
+
+        self.render_effect_system = RenderEffectSystem(component_manager)
+    
+    def update(self, fps, dt):
+        self.render_effect_system.update(fps, dt)
 
     def render(self, surface, camera):
         scroll = camera.scroll

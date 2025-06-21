@@ -1,6 +1,7 @@
 import pygame
 from ...components.physics import Velocity
 from ..animation.animation_state_machine import AnimationStateMachine
+from ...components.render_effects import SquashEffect
 
 from ...utils import GameSceneEvents
 
@@ -23,7 +24,13 @@ class PlayerInputSystem:
         event_manager.subscribe(GameSceneEvents.DEATH, self.on_death)
     
     def shoot(self, component_manager, event_manager):
-        component_manager.get(self.entity_id, AnimationStateMachine).set_animation("shoot")
+        # component_manager.get(self.entity_id, AnimationStateMachine).set_animation("shoot")
+        if not component_manager.get(self.entity_id, SquashEffect):
+            component_manager.add(self.entity_id, SquashEffect(
+                start_scale=pygame.Vector2(1, 1),
+                target_scale=pygame.Vector2(0.5, 1),
+                duration=0.34
+            ))
         event_manager.emit(GameSceneEvents.SHOOT, entity_id=self.entity_id)
 
     def on_move(self, direction, held=True):

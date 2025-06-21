@@ -152,6 +152,7 @@ class GameScene(Scene):
             dt=dt
         )
         self.animation_system.update(dt)
+        self.render_system.update(fps, dt)
 
         self.camera.update(self.physics_component_manager, lerp=True, mouse=pygame.mouse.get_pos(), mouse_ratio=0.1)
     
