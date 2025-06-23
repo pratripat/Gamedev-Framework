@@ -129,6 +129,16 @@ class Quadtree:
             if object not in return_list:
                 return_list.append(object)
 
+def normalize_scale(scale):
+    if isinstance(scale, (int, float)):
+        return [scale, scale]
+    elif isinstance(scale, pygame.Vector2):
+        return [scale.x, scale.y]
+    elif isinstance(scale, (list, tuple)) and len(scale) == 2:
+        return list(scale)
+    else:
+        return [1, 1]  # default safe fallback
+
 # loads an image from a file and applies a colorkey for transparency
 def load_image(path, colorkey=DEFAULT_COLORKEY, scale=1):
     """

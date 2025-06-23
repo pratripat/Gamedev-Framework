@@ -1,4 +1,5 @@
 import pygame
+from ..utils import normalize_scale
 
 class RenderComponent:
     def __init__(self, entity_id, surface=None, offset=(0,0), center=False):
@@ -14,22 +15,14 @@ class RenderComponent:
             self.offset -= pygame.Vector2(self.surface.get_size()) / 2
         
     def resize_scale(self, scale):
-        if isinstance(scale, int):
-            if scale == 1:
-                return
-            new_size = (
-                int(self.original_surface.get_width() * scale),
-                int(self.original_surface.get_height() * scale)
-            )
-        elif isinstance(scale, (list, tuple, pygame.Vector2)):
-            if scale[0] == 1 and scale[1] == 1:
-                return
-            new_size = (
-                int(self.original_surface.get_width() * scale[0]),
-                int(self.original_surface.get_height() * scale[1])
-            )
-        else:
-            return  # Invalid scale type
+        scale = normalize_scale(scale)
+
+        if scale[0] == 1 and scale[1] == 1:
+            return
+        new_size = (
+            int(self.original_surface.get_width() * scale[0]),
+            int(self.original_surface.get_height() * scale[1])
+        )
 
         self.surface = pygame.transform.scale(self.original_surface, new_size)
 
@@ -41,12 +34,14 @@ class AnimationComponent:
         self.entity_name = entity
         self.entity_type = entity_type # chess_piece, foilage
         self.offset = pygame.Vector2(offset)
+        self.center = center
         self.animation_id = None
 
         self.set_animation(animation_id)
 
         if center:
-            self.offset -= pygame.Vector2(self.animation.image.get_size()) / 2
+            # self.offset -= pygame.Vector2(self.animation.image.get_size()) / 2
+            self.animation.set_center(True)
 
     def set_animation(self, animation_id):
         """
@@ -58,6 +53,8 @@ class AnimationComponent:
 
         self.animation_id = animation_id
         self.animation = self.animation_handler.get_animation(self.entity_name + "_" + animation_id)
+        if self.center:
+            self.animation.set_center(True)
     
     def update(self, dt):
         self.animation.run(self.event_manager, self.entity_id, dt)

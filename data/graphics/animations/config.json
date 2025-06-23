@@ -85,7 +85,7 @@
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [-25, 0]
+            "offset": [-12.5, 0]
         }
     },
     "white_knight": {
@@ -465,7 +465,7 @@
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [-25, 0]
+            "offset": [-12.5, 0]
         }
     },
     "black_rook": {
