@@ -1,15 +1,5 @@
 import pygame, json
-from ...utils import load_image, load_images_from_spritesheet, DEFAULT_COLORKEY, ANIMATION_FOLDER, GameSceneEvents
-
-def normalize_scale(scale):
-    if isinstance(scale, (int, float)):
-        return [scale, scale]
-    elif isinstance(scale, pygame.Vector2):
-        return [scale.x, scale.y]
-    elif isinstance(scale, (list, tuple)) and len(scale) == 2:
-        return list(scale)
-    else:
-        return [1, 1]  # default safe fallback
+from ...utils import load_image, load_images_from_spritesheet, DEFAULT_COLORKEY, ANIMATION_FOLDER, GameSceneEvents, normalize_scale
 
 class AnimationHandler:
     def __init__(self):
@@ -89,6 +79,8 @@ class AnimationData:
         # self.resize_images(self.config.get("scale", 1))
         self.config["scale"] = normalize_scale(self.config.get("scale", 1))
         self.resize_images(self.config["scale"])
+        self.config["offset"][0] *= self.config["scale"][0]
+        self.config["offset"][1] *= self.config["scale"][1]
 
     def resize_images(self, scale):
         """
@@ -100,8 +92,8 @@ class AnimationData:
             return
 
         new_size = (
-            int(self.original_images[0].get_width() * scale[0]),
-            int(self.original_images[0].get_height() * scale[1])
+            (self.original_images[0].get_width() * scale[0]),
+            (self.original_images[0].get_height() * scale[1])
         )
 
         self.images = [pygame.transform.scale(image, new_size) for image in self.original_images]
@@ -146,7 +138,7 @@ class Animation:
             self.image = images[i]
             break
     
-    def render(self, surface, position, flipped=[False, False], colorkey=DEFAULT_COLORKEY, angle=0, center_rotation=True, alpha=None, animation_offset=None, scale=None):
+    def render(self, surface, position, flipped=[False, False], colorkey=DEFAULT_COLORKEY, angle=0, center_rotation=True, alpha=None, animation_offset=None, scale=None, tint=None):
         """
         Render the current frame of the animation onto the given surface at the specified position.
         :param surface: The surface to render the animation onto.
@@ -162,53 +154,75 @@ class Animation:
         offset = self.animation_data.config["offset"].copy()
         image = self.image
 
-        animation_data_scale = self.animation_data.config["scale"]
-        offset[0] *= animation_data_scale[0]
-        offset[1] *= animation_data_scale[1]
-
+        # 1. Flip
         if any(flipped):
-            image = pygame.transform.flip(self.image, *flipped)
-    
+            image = pygame.transform.flip(image, *flipped)
+
+        # 2. Colorkey (before alpha so alpha surface inherits it)
         if colorkey != DEFAULT_COLORKEY:
             image.set_colorkey(colorkey)
 
+        # 3. Rotation (must come before scale, or it affects result shape)
         if angle != 0:
             image_copy = image.copy()
             image = pygame.transform.rotate(image, angle)
-
+            
             if center_rotation:
-                offset[0] = image_copy.get_width()/2-image.get_width()/2
-                offset[1] = image_copy.get_height()/2-image.get_height()/2
+                offset.x = image_copy.get_width() / 2 - image.get_width() / 2
+                offset.y = image_copy.get_height() / 2 - image.get_height() / 2
 
-        if self.animation_data.config['centered']:
-            offset[0] -= image.get_width()//2
-            offset[1] -= image.get_height()//2
-
+        # 4. Apply alpha transparency
         if alpha is not None:
-            alpha_surface = pygame.Surface(image.get_size())
-            alpha_surface.convert_alpha()
+            alpha_surface = pygame.Surface(image.get_size(), pygame.SRCALPHA)
             alpha_surface.set_colorkey(DEFAULT_COLORKEY)
             alpha_surface.set_alpha(alpha)
             alpha_surface.blit(image, (0, 0))
             image = alpha_surface
+        
+        if tint is not None:
+            # mask = pygame.mask.from_surface(image)
+            # image = mask.to_surface()
 
-        if scale is not None:
-            scale = normalize_scale(scale)
+            image = image.convert_alpha()
+
+            # Create a white surface with the same size
+            white_overlay = pygame.mask.from_surface(image).to_surface()
+
+            # Create a copy of the sprite, clear its color data
+            silhouette = image.copy()
+            silhouette.fill((255, 255, 255, 0), special_flags=pygame.BLEND_RGBA_MULT)
+
+            # Add white to the transparent base, generating the silhouette
+            silhouette.blit(white_overlay, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
+
+            image = silhouette
+
+        # 5. Determine scale
+        scale = normalize_scale(scale) if scale is not None else normalize_scale(1)
+
+        # 6. Apply scale (after rotation/alpha to preserve proportions)
+        if scale != [1, 1]:
             image = pygame.transform.scale(image, (
                 int(image.get_width() * scale[0]),
                 int(image.get_height() * scale[1])
             ))
-            offset[0] *= scale[0]
-            offset[1] *= scale[1]
 
+        # 7. Override offset (if manually supplied)
         if animation_offset is not None:
             offset = animation_offset.copy()
+    
 
-            scale = self.animation_data.config["scale"]
-            offset[0] *= scale[0]
-            offset[1] *= scale[1]
-                     
-        surface.blit(image, (position[0]+offset[0], position[1]+offset[1]))
+        # 8. Apply final scale to offset
+        offset.x *= scale[0]
+        offset.y *= scale[1]
+
+        # 9. Center alignment
+        if self.animation_data.config.get("centered", False):
+            offset.x -= image.get_width() // 2
+            offset.y -= image.get_height() // 2
+
+        # 10. Final render
+        surface.blit(image, (position[0] + offset.x, position[1] + offset.y))
 
     def run(self, event_manager, entity_id, dt):
         """
@@ -239,9 +253,13 @@ class Animation:
         self.load_image()
 
     def change_scale(self, scale):
+        scale = normalize_scale(scale)
         self.animation_data.resize_images(scale)
         self.animation_data.config['scale'] = scale
     
+    def set_center(self, bool):
+        self.animation_data.config['centered'] = bool
+
     #The current image
     @property
     def current_image(self):

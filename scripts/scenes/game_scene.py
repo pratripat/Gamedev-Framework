@@ -42,7 +42,7 @@ class GameScene(Scene):
 
         self.physics_engine = PhysicsEngine(self.physics_component_manager, self.event_manager)
         self.animation_system = AnimationSystem(self.physics_component_manager)
-        self.render_system = RenderSystem(self.physics_component_manager)
+        self.render_system = RenderSystem(event_manager, self.physics_component_manager)
         self.combat_system = CombatSystem(self.physics_component_manager, self.entity_manager, self.camera, event_manager)
 
     def start(self, input_system):
@@ -110,7 +110,7 @@ class GameScene(Scene):
         self.event_manager.subscribe(Inputs.LEFT_RELEASE, lambda: self.player_input_system.on_move("left", held=False), source=self.player)
         self.event_manager.subscribe(Inputs.RIGHT_RELEASE, lambda: self.player_input_system.on_move("right", held=False), source=self.player)
         
-        self.event_manager.subscribe(Inputs.LEFT_HOLD, lambda: self.player_input_system.shoot(self.physics_component_manager, self.event_manager), source=self.player)
+        self.event_manager.subscribe(Inputs.LEFT_HOLD, lambda: self.player_input_system.shoot(self.render_system.render_effect_system, self.event_manager), source=self.player)
 
         # Set up keybinds for input system
         input_system.set_input_binds(

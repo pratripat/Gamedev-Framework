@@ -68,7 +68,7 @@ class HealthComponent:
 
         # TEMP
         # set animation to hit
-        self.component_manager.get(self.entity_id, AnimationStateMachine).set_animation("damage")
+        # self.component_manager.get(self.entity_id, AnimationStateMachine).set_animation("damage")
 
         self.invincibility_timer = self.iframetimer
         if self.health <= 0:
