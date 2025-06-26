@@ -24,6 +24,7 @@ class HitBoxComponent:
         self.shape = shape
         self.layer = layer
         self.mask = mask
+        self.disabled = False
 
         if center:
             self.offset -= pygame.Vector2(size) / 2
@@ -35,6 +36,7 @@ class HurtBoxComponent:
         self.size = size
         self.shape = shape
         self.layer = layer
+        self.disabled = False
         
         if center:
             self.offset -= pygame.Vector2(size) / 2

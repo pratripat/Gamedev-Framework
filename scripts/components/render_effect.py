@@ -8,5 +8,5 @@ class RenderEffectComponent:
         self.blink = False                # for flickering
         self.effect_timers = {}           # active timers {'squash': 0}
         self.effect_data = {}             # active data {'squash': {'start_scale': [x, y], 'target_scale': [x2, y2], 'duration': ,return_back: bool}}
-    
+        self.disabled = False
     

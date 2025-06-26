@@ -70,7 +70,7 @@ COMPONENT_SCHEMAS = {
             "default": {
                 "moving": {
                     "to_animation": "idle",
-                    "cond": "lambda eid: component_manager.get(entity_id, Velocity).vec.length_squared() == 0",  # Represented as string for editing
+                    "cond": "vel_zero_check",  # Represented as string for editing
                     "self_dest": False
                 }
             }

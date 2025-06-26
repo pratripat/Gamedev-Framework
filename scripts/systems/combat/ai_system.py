@@ -1,5 +1,6 @@
 from ...components.ai import AIComponent
 from ...components.physics import Position, Velocity
+from ...components.timer import TimerComponent
 
 from ...utils import EnemyState, GameSceneEvents
 
@@ -50,6 +51,7 @@ class AISystem:
             if ai_comp.timer > 0.5:
                 ai_comp.state = EnemyState.CHASE
                 ai_comp.timer = 0
+                
         # chase player
         elif ai_comp.state == EnemyState.CHASE:
             if player_pos is None:

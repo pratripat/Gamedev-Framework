@@ -1,7 +1,7 @@
 import itertools
 from ..utils import GameSceneEvents
 from ..components.physics import Velocity
-from ..components.animation import AnimationComponent
+from ..components.combat import HurtBoxComponent, HitBoxComponent
 from ..systems.animation.animation_state_machine import AnimationStateMachine
 
 import itertools
@@ -34,6 +34,11 @@ class EntityManager:
         
         self.cm.get(entity_id, Velocity).vec = (0, 0)
         self.cm.get(entity_id, AnimationStateMachine).set_animation("death")
+        hbc = self.cm.get(entity_id, HurtBoxComponent)
+        if hbc: hbc.disabled = True
+        hbc = self.cm.get(entity_id, HitBoxComponent)
+        if hbc: hbc.disabled = True
+
         self.dead_entities.add(entity_id)
 
     def check_dead_entity(self, entity_id, animation_id):

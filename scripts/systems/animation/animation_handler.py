@@ -192,6 +192,8 @@ class Animation:
             silhouette = image.copy()
             silhouette.fill((255, 255, 255, 0), special_flags=pygame.BLEND_RGBA_MULT)
 
+            silhouette.set_colorkey(DEFAULT_COLORKEY)
+
             # Add white to the transparent base, generating the silhouette
             silhouette.blit(white_overlay, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
 

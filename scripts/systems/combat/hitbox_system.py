@@ -1,8 +1,9 @@
 import pygame
 from ...utils import Quadtree, INITIAL_WINDOW_SIZE, GameSceneEvents
-from ...components.combat import HurtBoxComponent, HitBoxComponent
+from ...components.combat import HurtBoxComponent, HitBoxComponent, HealthComponent
 from ...components.physics import Position
 from ...components.projectile import ProjectileComponent
+from ...components.tags import PlayerTagComponent
 
 class HitBoxSystem:
     def can_hit(self, hitbox: HitBoxComponent, hurtbox: HurtBoxComponent) -> bool:
@@ -15,8 +16,14 @@ class HitBoxSystem:
         for entity_id in entity_list:
             hurtbox = component_manager.get(entity_id, HurtBoxComponent)
             pos = component_manager.get(entity_id, Position).vec
-            if not hurtbox or not pos:
+            if not hurtbox or not pos or hurtbox.disabled:
                 continue
+
+            # Check if the entity's health has an invincibility timer greater than 0
+            is_player = component_manager.get(entity_id, PlayerTagComponent)
+            health = component_manager.get(entity_id, HealthComponent)
+            if is_player and health and health.invincibility_timer > 0:
+                continue  # Skip collision handling for invincible entities
         
             rect = pygame.Rect(*(pos + hurtbox.offset), *hurtbox.size)
             quadtree.insert(entity_id, rect)
@@ -25,7 +32,7 @@ class HitBoxSystem:
         for attacker in entity_list:
             hitbox = component_manager.get(attacker, HitBoxComponent)
             pos_a = component_manager.get(attacker, Position).vec
-            if not hitbox or not pos_a:
+            if not hitbox or not pos_a or hitbox.disabled:
                 continue
 
             hitbox_rect = pygame.Rect(*(pos_a + hitbox.offset), *hitbox.size)
@@ -48,8 +55,6 @@ class HitBoxSystem:
                 if not pos_b:
                     continue
                 
-                # hurtbox_rect = pygame.Rect(*(pos_b + hurtbox.offset), *hurtbox.size)
-
                 # Check for collision between hitbox and hurtbox
                 if hitbox_rect.colliderect(hurtbox_rect):
                     # Handle collision logic here
@@ -62,4 +67,5 @@ class HitBoxSystem:
                         event_manager.emit(GameSceneEvents.DAMAGE, entity_id=defender, proj_id=attacker, damage=projectile.damage, effects=projectile.effects)
                     else:
                         # Otherwise, emit a generic damage event
-                        print(f'[HIT BOX SYSTEM] Non projectile type has damaged entity {defender} (DEBUG)')
+                        # print(f'[HIT BOX SYSTEM] Non projectile type has damaged entity {defender} (DEBUG)')
+                        pass

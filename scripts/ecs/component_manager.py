@@ -5,8 +5,11 @@ class ComponentManager:
     def __init__(self):
         self._components = defaultdict(dict) # {component_type: {entity_id: instance}}
 
-    def add(self, entity_id, *components):
+    def add(self, entity_id, *components, check_existing=False):
         for component in components:
+            if check_existing:
+                if self._components.get(type(component),{}).get(entity_id):
+                    continue
             self._components[type(component)][entity_id] = component
 
     def get(self, entity_id, component_type):
