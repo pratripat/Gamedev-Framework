@@ -8,10 +8,15 @@ class RenderEffectSystem:
     def __init__(self, event_manager, component_manager):
         self.component_manager = component_manager
 
-        event_manager.subscribe(GameSceneEvents.SHOOT, self.trigger_squash)
-        event_manager.subscribe(GameSceneEvents.DAMAGE, self.trigger_flash)
-    
-    def trigger_squash(self, entity_id):
+        event_manager.subscribe(GameSceneEvents.SHOOT, lambda entity_id: self.trigger_squash(entity_id, (0.9, 1.05)))
+        event_manager.subscribe(GameSceneEvents.DAMAGE, self.trigger_flash, lambda entity_id, **args: self.trigger_squash(entity_id, target_scale=(1, 0.8)))
+        event_manager.subscribe(GameSceneEvents.DEATH, self.disable_render_effect)
+
+    def disable_render_effect(self, entity_id):
+        render_effect_comp = self.component_manager.get(entity_id, RenderEffectComponent)
+        render_effect_comp.disabled = True
+ 
+    def trigger_squash(self, entity_id, target_scale=(0.5,0.5)):
         weapon_comp = self.component_manager.get(entity_id, WeaponComponent)
 
         if weapon_comp is None: return 
@@ -20,7 +25,7 @@ class RenderEffectSystem:
             entity_id = entity_id, 
             effect_data = {
                 "start_scale": pygame.Vector2(1, 1),
-                "target_scale": pygame.Vector2(0.9, 1.05),
+                "target_scale": pygame.Vector2(target_scale),
                 "duration": 0.05,
                 "return_back": True
             }
@@ -41,6 +46,8 @@ class RenderEffectSystem:
         
         render_effect_comp = self.component_manager.get(entity_id, RenderEffectComponent)
 
+        if render_effect_comp.disabled: return
+
         if "squash" in render_effect_comp.effect_data:
             return
         
@@ -53,6 +60,8 @@ class RenderEffectSystem:
         
         render_effect_comp = self.component_manager.get(entity_id, RenderEffectComponent)
 
+        if render_effect_comp.disabled: return
+
         if "flash" in render_effect_comp.effect_data:
             return
         
@@ -62,7 +71,7 @@ class RenderEffectSystem:
     def update(self, fps, dt):
         for entity_id in self.component_manager.get_entities_with(RenderEffectComponent):
             render_effect_comp = self.component_manager.get(entity_id, RenderEffectComponent)
-            if render_effect_comp is None:
+            if render_effect_comp is None or render_effect_comp.disabled:
                 continue
 
             if "squash" in render_effect_comp.effect_data:

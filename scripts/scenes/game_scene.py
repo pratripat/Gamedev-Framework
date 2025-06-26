@@ -7,6 +7,7 @@ from ..ecs.component_manager import ComponentManager
 from ..components.ai import AIComponent
 
 #systems
+from ..systems.core.timer_system import TimerSystem
 from ..ecs.entity_manager import EntityManager
 from ..ecs.entity_factory import EntityFactory
 from ..systems.input.player_input_system import PlayerInputSystem
@@ -36,6 +37,8 @@ class GameScene(Scene):
         self.physics_component_manager = ComponentManager()
         self.event_manager = event_manager
         self.camera = Camera()
+        
+        self.timer_system = TimerSystem(self.physics_component_manager)
 
         self.entity_manager = EntityManager(component_manager=self.physics_component_manager, event_manager=event_manager)
         self.entity_factory = EntityFactory()
@@ -71,7 +74,28 @@ class GameScene(Scene):
 
             self.physics_component_manager.get(coll_box, Position).vec = (i*32, -200)
 
-        for i in range(1):
+        # for i in range(3):
+        #     enemy = self.entity_factory.create_enemy(
+        #         component_manager=self.physics_component_manager,
+        #         entity_manager=self.entity_manager,
+        #         event_manager=self.event_manager,
+        #         animation_handler=self.animation_handler,
+        #         input_system=input_system,
+        #         chess_piece_type="pawn"
+        #     )
+
+        #     # Set random position and velocity for the enemy
+        #     self.physics_component_manager.get(enemy, Position).x = 200
+        #     self.physics_component_manager.get(enemy, Position).y = i*100
+
+        #     self.physics_component_manager.add(
+        #         enemy, 
+        #         AIComponent(
+        #             entity_id=enemy,
+        #             behavior="sniper"  # or "sniper", "patrol", etc.
+        #         )
+        #     )
+        for i in range(30):
             enemy = self.entity_factory.create_enemy(
                 component_manager=self.physics_component_manager,
                 entity_manager=self.entity_manager,
@@ -82,16 +106,16 @@ class GameScene(Scene):
             )
 
             # Set random position and velocity for the enemy
-            self.physics_component_manager.get(enemy, Position).x = 200
+            self.physics_component_manager.get(enemy, Position).x = 400
             self.physics_component_manager.get(enemy, Position).y = i*100
 
-            self.physics_component_manager.add(
-                enemy, 
-                AIComponent(
-                    entity_id=enemy,
-                    behavior="sniper"  # or "sniper", "patrol", etc.
-                )
-            )
+            # self.physics_component_manager.add(
+            #     enemy, 
+            #     AIComponent(
+            #         entity_id=enemy,
+            #         behavior="chase"  # or "sniper", "patrol", etc.
+            #     )
+            # )
 
         self.camera.set_target(self.player)
 
@@ -140,6 +164,7 @@ class GameScene(Scene):
   
     def update(self, fps, dt):
         # Update the physics engine
+        self.timer_system.update(fps, dt)
         self.player_input_system.update(self.physics_component_manager) 
         self.ai_system.update(fps, dt)
         self.physics_engine.update(self.camera.scroll, dt)
@@ -161,17 +186,17 @@ class GameScene(Scene):
     def render(self, surface):
         self.render_system.render(surface, self.camera)
 
-        # # render all the hurtboxs and hitboxes
-        # boxes = self.physics_component_manager.get_entities_with_either(HurtBoxComponent, HitBoxComponent)
-        # for entity_id in boxes:
-        #     hurtbox = self.physics_component_manager.get(entity_id, HurtBoxComponent)
-        #     hitbox = self.physics_component_manager.get(entity_id, HitBoxComponent)
-        #     pos = self.physics_component_manager.get(entity_id, Position).vec
+        # render all the hurtboxs and hitboxes
+        boxes = self.physics_component_manager.get_entities_with_either(HurtBoxComponent, HitBoxComponent)
+        for entity_id in boxes:
+            hurtbox = self.physics_component_manager.get(entity_id, HurtBoxComponent)
+            hitbox = self.physics_component_manager.get(entity_id, HitBoxComponent)
+            pos = self.physics_component_manager.get(entity_id, Position).vec
 
-        #     if hurtbox:
-        #         pygame.draw.rect(surface, (255, 0, 0), (*pos + hurtbox.offset - self.camera.scroll, *hurtbox.size), 1)
-        #     if hitbox:
-        #         pygame.draw.rect(surface, (0, 255, 0), (*pos + hitbox.offset - self.camera.scroll, *hitbox.size), 1)
+            if hurtbox:
+                pygame.draw.rect(surface, (255, 0, 0), (*pos + hurtbox.offset - self.camera.scroll, *hurtbox.size), 1)
+            if hitbox:
+                pygame.draw.rect(surface, (255, 255, 0), (*pos + hitbox.offset - self.camera.scroll, *hitbox.size), 1)
 
         # boxes = self.physics_component_manager.get_entities_with(CollisionComponent)
         # for entity_id in boxes:

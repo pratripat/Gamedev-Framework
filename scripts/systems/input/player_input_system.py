@@ -23,14 +23,10 @@ class PlayerInputSystem:
 
         event_manager.subscribe(GameSceneEvents.DEATH, self.on_death)
     
+    def dash(self):
+        pass
+
     def shoot(self, render_effect_system, event_manager):
-        # component_manager.get(self.entity_id, AnimationStateMachine).set_animation("shoot")
-        # if not component_manager.get(self.entity_id, SquashEffect):
-        #     component_manager.add(self.entity_id, SquashEffect(
-        #         start_scale=pygame.Vector2(1, 1),
-        #         target_scale=pygame.Vector2(0.5, 1),
-        #         duration=0.34
-        #     ))
         event_manager.emit(GameSceneEvents.SHOOT, entity_id=self.entity_id)
 
     def on_move(self, direction, held=True):

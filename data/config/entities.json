@@ -36,15 +36,15 @@
         },
         "WeaponComponent": {
             "cooldown": 0.1,
-            "shoot_fn": "shoot_spread",
+            "shoot_fn": "shoot_single",
             "projectile_data": {
                 "damage": 10,
-                "speed": 13,
+                "speed": 20,
                 "range": 100,
-                "bounce": 0,
-                "penetration": 0,
+                "bounce": 1,
+                "penetration": 1,
                 "effects": [],
-                "size": 1,
+                "size": 12,
                 "image_file": "data/graphics/images/projectile.png",
                 "towards_player": true,
                 "angle": 3
@@ -113,8 +113,8 @@
             "center": true
         },
         "WeaponComponent": {
-            "cooldown": 0.05,
-            "shoot_fn": "shoot_radial_spiral",
+            "cooldown": 0.1,
+            "shoot_fn": "shoot_single",
             "projectile_data": {
                 "damage": 5,
                 "speed": 10,
@@ -122,7 +122,7 @@
                 "bounce": 0,
                 "penetration": 0,
                 "effects": [],
-                "size": 1,
+                "size": 12,
                 "image_file": "data/graphics/images/projectile.png",
                 "towards_player": true,
                 "angle": 3
@@ -195,7 +195,7 @@
                 "bounce": 0,
                 "penetration": 0,
                 "effects": [],
-                "size": 1,
+                "size": 12,
                 "image_file": "data/graphics/images/projectile.png",
                 "towards_player": true,
                 "angle": 3
@@ -212,7 +212,7 @@
             "transitions": {
                 "moving": {
                     "to_animation": "idle",
-                    "cond": "lambda eid: component_manager.get(entity_id, Velocity).vec.length_squared() == 0",
+                    "cond": "vel_zero_check",
                     "self_dest": false
                 }
             }
