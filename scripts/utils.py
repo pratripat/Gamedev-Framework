@@ -1,5 +1,6 @@
 import pygame, json, os
 from enum import Enum, IntFlag, auto
+from dataclasses import dataclass
 
 DEFAULT_COLORKEY = (0, 0, 0)
 INITIAL_WINDOW_SIZE = (1920, 1002) # (1280, 720)
@@ -57,6 +58,17 @@ class EnemyState(Enum):
     ATTACK = auto()
     FLEE = auto()
     DEAD = auto()
+
+class EmitterShapeType(Enum):
+    POINT = "point"
+    RECT = "rect"
+    CIRCLE = "circle"
+
+@dataclass
+class EmitterShape:
+    type: EmitterShapeType
+    rect: pygame.Rect = None  # for RECT
+    radius: float = 0.0       # for CIRCLE
 
 class Quadtree:
     MAX_OBJECTS = 4
@@ -138,6 +150,44 @@ def normalize_scale(scale):
         return list(scale)
     else:
         return [1, 1]  # default safe fallback
+    
+def circle_rect_collision(component, component_rect, rect):
+    center = component_rect.center
+    radius = component.size[0] / 2
+    radius_sq = radius ** 2
+
+    # Find the closest point on the rect to the circle's center
+    closest_x = max(rect.left, min(center[0], rect.right))
+    closest_y = max(rect.top, min(center[1], rect.bottom))
+
+    # Compute the distance between the circle's center and this closest point
+    dx = center[0] - closest_x
+    dy = center[1] - closest_y
+
+    # If the distance is less than or equal to the radius, they collide
+    return (dx * dx + dy * dy) <= radius_sq
+
+def circle_circle_collision(comp1, comp1_rect, comp2, comp2_rect):
+    center1 = comp1_rect.center
+    center2 = comp2_rect.center
+
+    radius1 = comp1.size[0] / 2
+    radius2 = comp2.size[0] / 2
+
+    dx = center1 - center2
+    dy = center1 - center2
+
+    return (dx * dx + dy * dy) <= (radius1 + radius2) ** 2
+
+def collision_occured(hitbox, hitbox_rect, hurtbox, hurtbox_rect):
+    if hitbox.shape == CollisionShape.RECT and hurtbox.shape == CollisionShape.CIRCLE:
+        return hitbox_rect.colliderect(hurtbox_rect)
+    elif hitbox.shape == CollisionShape.RECT and hurtbox.shape == CollisionShape.CIRCLE:
+        return circle_rect_collision(hurtbox, hurtbox_rect, hitbox_rect)
+    elif hitbox.shape == CollisionShape.CIRCLE and hurtbox.shape == CollisionShape.RECT:
+        return circle_rect_collision(hitbox, hitbox_rect, hurtbox_rect)
+    else:
+        return circle_circle_collision(hitbox, hitbox_rect, hurtbox, hurtbox_rect)
 
 # loads an image from a file and applies a colorkey for transparency
 def load_image(path, colorkey=DEFAULT_COLORKEY, scale=1):

@@ -12,6 +12,7 @@ class Game():
 
         self.screen = pygame.display.set_mode(INITIAL_WINDOW_SIZE, pygame.RESIZABLE | pygame.SCALED)
         pygame.display.set_caption("Game")
+        self.time = 1
         # TEMP
 
         self.clock = pygame.time.Clock()
@@ -56,4 +57,4 @@ class Game():
         if self.fps == 0: 
             self.dt = 0
         else: 
-            self.dt = (1 / self.fps) * self.target_fps
+            self.dt = (1 / self.fps) * self.target_fps * self.time

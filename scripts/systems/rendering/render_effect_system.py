@@ -39,6 +39,15 @@ class RenderEffectSystem:
                 "duration": HealthComponent.iframetimer
             }
         )
+    
+    def trigger_blink(self, entity_id, **args):
+        self.add_blink_effect(
+            entity_id=entity_id,
+            effect_data = {
+                "color": (255, 255, 255),
+                "duration": 1
+            }
+        )
 
     def add_squash_effect(self, entity_id, effect_data):
         if not self.component_manager.get(entity_id, RenderEffectComponent):
@@ -68,6 +77,20 @@ class RenderEffectSystem:
         render_effect_comp.effect_data["flash"] = effect_data
         render_effect_comp.effect_timers["flash"] = 0
     
+    def add_blink_effect(self, entity_id, effect_data):
+        if not self.component_manager.get(entity_id, RenderEffectComponent):
+            self.component_manager.add(entity_id, RenderEffectComponent())
+        
+        render_effect_comp = self.component_manager.get(entity_id, RenderEffectComponent)
+
+        if render_effect_comp.disabled: return
+
+        if "blink" in render_effect_comp.effect_data:
+            return
+        
+        render_effect_comp.effect_data["blink"] = effect_data
+        render_effect_comp.effect_timers["blink"] = 0
+    
     def update(self, fps, dt):
         for entity_id in self.component_manager.get_entities_with(RenderEffectComponent):
             render_effect_comp = self.component_manager.get(entity_id, RenderEffectComponent)
@@ -94,9 +117,6 @@ class RenderEffectSystem:
                     else:
                         del render_effect_comp.effect_timers["squash"]
                         del render_effect_comp.effect_data["squash"]
-
-                        if len(render_effect_comp.effect_data) == 0:
-                            self.component_manager.remove(entity_id, RenderEffectComponent)
             
             if "flash" in render_effect_comp.effect_data:
                 total = render_effect_comp.effect_data["flash"]["duration"]
@@ -112,6 +132,22 @@ class RenderEffectSystem:
                     del render_effect_comp.effect_data["flash"]
                     del render_effect_comp.effect_timers["flash"]
 
-                    if len(render_effect_comp.effect_data) == 0:
-                        self.component_manager.remove(entity_id, RenderEffectComponent)
+            if "blink" in render_effect_comp.effect_data:
+                total = render_effect_comp.effect_data["blink"]["duration"]
 
+                render_effect_comp.effect_timers["blink"] += dt / fps
+                t = min(render_effect_comp.effect_timers["blink"] / total, 1)
+
+                if any([t > frac for frac in [0.25, 0.5, 0.75, 1]]):
+                    if render_effect_comp.tint:
+                        render_effect_comp.tint = None
+                    else:
+                        render_effect_comp.tint = render_effect_comp.effect_data["blink"]["color"]
+
+                if t >= 1:
+                    render_effect_comp.tint = None
+                    del render_effect_comp.effect_data["blink"]
+                    del render_effect_comp.effect_timers["blink"]
+
+            if len(render_effect_comp.effect_data) == 0:
+                self.component_manager.remove(entity_id, RenderEffectComponent)

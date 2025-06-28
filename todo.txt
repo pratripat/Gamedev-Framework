@@ -56,9 +56,8 @@ Can be implemented with collision segments instead of projectiles.
 Bullets circle around an enemy, then shoot outward or inward.
 
 
-
-MAKE BOMB PROJECTILE
+PROJECTILE SYSTEM
 
 MAKE THE ENEMY AI SYSTEM WITH TIMERS
 
-
+TRY OUT ASEPRITE

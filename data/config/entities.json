@@ -44,7 +44,7 @@
                 "bounce": 1,
                 "penetration": 1,
                 "effects": [],
-                "size": 12,
+                "size": 1.5,
                 "image_file": "data/graphics/images/projectile.png",
                 "towards_player": true,
                 "angle": 3
@@ -122,7 +122,7 @@
                 "bounce": 0,
                 "penetration": 0,
                 "effects": [],
-                "size": 12,
+                "size": 1.5,
                 "image_file": "data/graphics/images/projectile.png",
                 "towards_player": true,
                 "angle": 3
@@ -195,7 +195,7 @@
                 "bounce": 0,
                 "penetration": 0,
                 "effects": [],
-                "size": 12,
+                "size": 1.5,
                 "image_file": "data/graphics/images/projectile.png",
                 "towards_player": true,
                 "angle": 3

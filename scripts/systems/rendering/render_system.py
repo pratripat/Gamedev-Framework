@@ -1,10 +1,13 @@
 import pygame
 from ...utils import CENTER
+
 from ...components.physics import Position, Velocity
 from ...components.animation import RenderComponent, AnimationComponent
+from ...components.render_effect import RenderEffectComponent
+
 from ..animation.animation_state_machine import AnimationStateMachine
 from .render_effect_system import RenderEffectSystem
-from ...components.render_effect import RenderEffectComponent
+from .particle_effect_system import ParticleEffectSystem
 
 class AnimationSystem:
     def __init__(self, component_manager):
@@ -21,22 +24,28 @@ class AnimationSystem:
                 suggested_anim = "moving" if is_moving else "idle"
 
                 animation_state_machine.set_animation(suggested_anim)
+        
+        for eid in self.component_manager.get_entities_with(AnimationComponent):
+            animation_comp = self.component_manager.get(eid, AnimationComponent)
 
-            animation_state_machine.animation_component.update(dt)
+            animation_comp.update(dt)
 
 class RenderSystem:
-    def __init__(self, event_manager, component_manager):
+    def __init__(self, event_manager, component_manager, entity_manager):
         self.component_manager = component_manager
 
         self.render_effect_system = RenderEffectSystem(event_manager, component_manager)
+        self.particle_effect_system = ParticleEffectSystem(component_manager, entity_manager)
     
     def update(self, fps, dt):
         self.render_effect_system.update(fps, dt)
+        self.particle_effect_system.update(fps, dt)
 
     def render(self, surface, camera):
         scroll = camera.scroll
         temp_surf_offset = pygame.Vector2(0,0)
         temp_surf = pygame.Surface(surface.get_size())
+        temp_surf.convert_alpha()
         for eid in self.component_manager.get_entities_with(Position):
             pos = self.component_manager.get(eid, Position)
             pos -= scroll
@@ -46,7 +55,7 @@ class RenderSystem:
 
             # render effect component
             rec = self.component_manager.get(eid, RenderEffectComponent)
-            if rec:
+            if rec and not rec.disabled:
                 scale = rec.scale
                 tint = rec.tint
 
@@ -69,6 +78,10 @@ class RenderSystem:
                 animation_component = self.component_manager.get(eid, AnimationComponent)
                 animation = animation_component.animation
                 animation.render(temp_surf, (pos.x + animation_component.offset.x, pos.y + animation_component.offset.y), scale=scale, tint=tint)
+
+
+        # particle effects
+        self.particle_effect_system.render(temp_surf, scroll=scroll)
 
         if camera.zoom != 1:
             temp_surf = pygame.transform.scale(temp_surf, ((surface.get_width() * camera.zoom), (surface.get_height() * camera.zoom)))
