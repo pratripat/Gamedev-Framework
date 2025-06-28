@@ -1,7 +1,6 @@
 import pygame
-from ...components.physics import Velocity
-from ..animation.animation_state_machine import AnimationStateMachine
-from ...components.render_effect import RenderEffectComponent
+from ...components.physics import Velocity, Position
+from ...weapons.bullet_patterns import spawn_bomb
 
 from ...utils import GameSceneEvents
 
@@ -26,6 +25,18 @@ class PlayerInputSystem:
     def dash(self):
         pass
 
+    def spawn_bomb(self, cm, em, anim_handler, event_manager):
+        spawn_bomb(
+            self.entity_id, 
+            cm, 
+            em, 
+            anim_handler, 
+            event_manager, 
+            data = {
+                "pos": cm.get(self.entity_id, Position).vec
+            }
+        )
+
     def shoot(self, render_effect_system, event_manager):
         event_manager.emit(GameSceneEvents.SHOOT, entity_id=self.entity_id)
 
@@ -36,7 +47,7 @@ class PlayerInputSystem:
         if self.entity_id == entity_id:
             self.disable_movement = True
 
-    def update(self, physics_component_manager):
+    def update(self, component_manager):
         if self.disable_movement:
             return
         
@@ -48,6 +59,6 @@ class PlayerInputSystem:
 
         if dir.length_squared() > 0: dir = dir.normalize()
 
-        vel = physics_component_manager.get(self.entity_id, Velocity)
+        vel = component_manager.get(self.entity_id, Velocity)
         vel.vec = dir * vel.speed # setting the velocity based on direction and speed
         

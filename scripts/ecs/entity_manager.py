@@ -2,6 +2,7 @@ import itertools
 from ..utils import GameSceneEvents
 from ..components.physics import Velocity
 from ..components.combat import HurtBoxComponent, HitBoxComponent
+from ..components.render_effect import RenderEffectComponent
 from ..systems.animation.animation_state_machine import AnimationStateMachine
 
 import itertools

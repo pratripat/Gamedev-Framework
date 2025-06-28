@@ -1,5 +1,5 @@
 import pygame
-from ...utils import Quadtree, INITIAL_WINDOW_SIZE, GameSceneEvents
+from ...utils import Quadtree, INITIAL_WINDOW_SIZE, GameSceneEvents, collision_occured
 from ...components.combat import HurtBoxComponent, HitBoxComponent, HealthComponent
 from ...components.physics import Position
 from ...components.projectile import ProjectileComponent
@@ -54,11 +54,9 @@ class HitBoxSystem:
                 pos_b = component_manager.get(defender, Position).vec
                 if not pos_b:
                     continue
-                
+
                 # Check for collision between hitbox and hurtbox
-                if hitbox_rect.colliderect(hurtbox_rect):
-                    # Handle collision logic here
-                    
+                if collision_occured(hitbox, hitbox_rect, hurtbox, hurtbox_rect):
                     # print(f'[HIT BOX SYSTEM] {attacker} hit {defender} (DEBUG)')
                     
                     projectile = component_manager.get(attacker, ProjectileComponent)

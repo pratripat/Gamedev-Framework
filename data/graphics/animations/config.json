@@ -780,5 +780,22 @@
             "flip": false,
             "offset": [0, 0]
         }
+    },
+    "bomb": {
+        "lit": {
+            "frames": [
+                10,
+                10,
+                10,
+                10,
+                10
+            ],
+            "loop": false,
+            "speed": 1,
+            "scale": 2,
+            "centered": false,
+            "flip": false,
+            "offset": [-8.5, -16.5]
+        }
     }
 }
