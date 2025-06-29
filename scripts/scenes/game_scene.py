@@ -97,27 +97,27 @@ class GameScene(Scene):
         #             behavior="sniper"  # or "sniper", "patrol", etc.
         #         )
         #     )
-        for i in range(10):
-            enemy = self.entity_factory.create_enemy(
-                component_manager=self.component_manager,
-                entity_manager=self.entity_manager,
-                event_manager=self.event_manager,
-                animation_handler=self.animation_handler,
-                input_system=input_system,
-                chess_piece_type="pawn"
-            )
+        # for i in range(10):
+        #     enemy = self.entity_factory.create_enemy(
+        #         component_manager=self.component_manager,
+        #         entity_manager=self.entity_manager,
+        #         event_manager=self.event_manager,
+        #         animation_handler=self.animation_handler,
+        #         input_system=input_system,
+        #         chess_piece_type="pawn"
+        #     )
 
-            # Set random position and velocity for the enemy
-            self.component_manager.get(enemy, Position).x = 400
-            self.component_manager.get(enemy, Position).y = i*100
+        #     # Set random position and velocity for the enemy
+        #     self.component_manager.get(enemy, Position).x = 400
+        #     self.component_manager.get(enemy, Position).y = i*100
 
-            self.component_manager.add(
-                enemy, 
-                AIComponent(
-                    entity_id=enemy,
-                    behavior="chase"  # or "sniper", "patrol", etc.
-                )
-            )
+        #     self.component_manager.add(
+        #         enemy, 
+        #         AIComponent(
+        #             entity_id=enemy,
+        #             behavior="chase"  # or "sniper", "patrol", etc.
+        #         )
+        #     )
 
         self.camera.set_target(self.player)
 
@@ -140,18 +140,18 @@ class GameScene(Scene):
 
         self.event_manager.subscribe(Inputs.RIGHT_CLICK, lambda: self.player_input_system.spawn_bomb(self.component_manager, self.entity_manager, self.animation_handler, self.event_manager))
 
-        self.event_manager.subscribe('l', lambda eid=self.entity_manager.create_entity(): self.component_manager.add(
-            eid,
-            Position(
-                eid,
-                *self.component_manager.get(self.player, Position).vec
-            ),
-            ParticleEmitter(
-                rate=100,
-                duration=10,
-                loop = False
-            ),
-        ))
+        # self.event_manager.subscribe('l', lambda eid=self.entity_manager.create_entity(): self.component_manager.add(
+        #     eid,
+        #     Position(
+        #         eid,
+        #         *self.component_manager.get(self.player, Position).vec
+        #     ),
+        #     ParticleEmitter(
+        #         rate=10,
+        #         duration=10,
+        #         loop = False
+        #     ),
+        # ))
 
         # Set up keybinds for input system
         input_system.set_input_binds(
