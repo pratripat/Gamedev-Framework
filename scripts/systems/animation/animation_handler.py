@@ -1,4 +1,4 @@
-import pygame, json
+import pygame, json, bisect
 from ...utils import load_image, load_images_from_spritesheet, DEFAULT_COLORKEY, ANIMATION_FOLDER, GameSceneEvents, normalize_scale
 
 class AnimationHandler:
@@ -120,64 +120,37 @@ class Animation:
         self.animation_data = animation_data
         self.animation_id = animation_id
         self.frame = 0
-        self.load_image()
-    
-    def load_image(self):
-        """
-        Load the images for the animation from the animation data according to the current frame.
-        """
-        images = self.animation_data.get_images()
+        self.image = None
+        self._frame_lookup = self._generate_frame_lookup()
+        self.update_image()
+
+    def _generate_frame_lookup(self):
         frames = self.animation_data.get_frames()
-        self_frame = self.frame
+        lookup = []
+        total = 0
+        for f in frames:
+            total += f
+            lookup.append(total)
+        return lookup
 
-        for i, frame in enumerate(frames):
-            if self_frame > frame:
-                self_frame -= frame
-                continue
+    def update_image(self):
+        frame_index = bisect.bisect_right(self._frame_lookup, self.frame)
+        frame_index = min(frame_index, len(self.animation_data.get_images()) - 1)
+        self.image = self.animation_data.get_images()[frame_index]
 
-            self.image = images[i]
-            break
-    
-    def render(self, surface, position, flipped=[False, False], colorkey=DEFAULT_COLORKEY, angle=0, center_rotation=True, alpha=None, animation_offset=None, scale=None, tint=None):
-        """
-        Render the current frame of the animation onto the given surface at the specified position.
-        :param surface: The surface to render the animation onto.
-        :param position: The position (x, y) where the animation should be rendered.
-        :param flipped: A list indicating whether to flip the image horizontally or vertically.
-        :param colorkey: The color key for transparency.
-        :param angle: The angle to rotate the image.
-        :param center_rotation: Whether to center the rotation around the image's center.
-        :param alpha: The alpha value for transparency.
-        :param animation_offset: An optional offset to apply to the animation position.
-        """
-    
-        offset = self.animation_data.config["offset"].copy()
-        image = self.image
+    def render(self, surface, pos, flipped=(False, False), angle=0, scale=(1, 1), alpha=None, center=True, offset=None, tint=None):
+        img = self.image
+        off = self.animation_data.config.get("offset", pygame.Vector2(0, 0)).copy()
 
-        # 1. Flip
-        if any(flipped):
-            image = pygame.transform.flip(image, *flipped)
+        if flipped != (False, False):
+            img = pygame.transform.flip(img, *flipped)
 
-        # 2. Colorkey (before alpha so alpha surface inherits it)
-        if colorkey != DEFAULT_COLORKEY:
-            image.set_colorkey(colorkey)
-
-        # 3. Rotation (must come before scale, or it affects result shape)
         if angle != 0:
-            image_copy = image.copy()
-            image = pygame.transform.rotate(image, angle)
-            
-            if center_rotation:
-                offset.x = image_copy.get_width() / 2 - image.get_width() / 2
-                offset.y = image_copy.get_height() / 2 - image.get_height() / 2
+            img = pygame.transform.rotate(img, angle)
 
-        # 4. Apply alpha transparency
         if alpha is not None:
-            alpha_surface = pygame.Surface(image.get_size(), pygame.SRCALPHA)
-            alpha_surface.set_colorkey(DEFAULT_COLORKEY)
-            alpha_surface.set_alpha(alpha)
-            alpha_surface.blit(image, (0, 0))
-            image = alpha_surface
+            img = img.copy()
+            img.set_alpha(alpha)
         
         if tint is not None:
             # mask = pygame.mask.from_surface(image)
@@ -199,70 +172,50 @@ class Animation:
 
             image = silhouette
 
-        # 5. Determine scale
-        scale = normalize_scale(scale) if scale is not None else normalize_scale(1)
-
-        # 6. Apply scale (after rotation/alpha to preserve proportions)
-        if scale != [1, 1]:
-            image = pygame.transform.scale(image, (
-                int(image.get_width() * scale[0]),
-                int(image.get_height() * scale[1])
+        if scale != (1, 1):
+            img = pygame.transform.scale(img, (
+                int(img.get_width() * scale[0]),
+                int(img.get_height() * scale[1])
             ))
 
-        # 7. Override offset (if manually supplied)
-        if animation_offset is not None:
-            offset = animation_offset.copy()
-    
+        if offset:
+            off = offset
 
-        # 8. Apply final scale to offset
-        offset.x *= scale[0]
-        offset.y *= scale[1]
+        if self.animation_data.config.get("centered", center):
+            off.x -= img.get_width() / 2
+            off.y -= img.get_height() / 2
 
-        # 9. Center alignment
-        if self.animation_data.config.get("centered", False):
-            offset.x -= image.get_width() // 2
-            offset.y -= image.get_height() // 2
+        render_pos = (pos[0] + off.x, pos[1] + off.y)
+        surface.blit(img, render_pos)
 
-        # 10. Final render
-        surface.blit(image, (position[0] + offset.x, position[1] + offset.y))
+    def run(self, event_manager, entity_id, fps, dt):
+        self.frame += self.animation_data.config['speed'] * dt * fps
 
-    def run(self, event_manager, entity_id, dt):
-        """
-        Update the animation frame based on the elapsed time.
-        :param dt: The elapsed time since the last update.
-        """
-
-        if self.frame > self.animation_data.duration():
+        if self.frame >= self.animation_data.duration():
             try:
                 event_manager.emit(GameSceneEvents.ANIMATION_FINISHED, entity_id=entity_id, animation_id=self.animation_id)
-            except Exception as e:
-                # print("[ANIMATION] Error emitting ANIMATION_FINISHED event:", e, "(DEBUG)")
+            except:
                 pass
 
-            if self.animation_data.config['loop'] == True:
+            loop = self.animation_data.config['loop']
+            if loop is True:
                 self.frame = 0
-            elif self.animation_data.config['loop'] == False:
+            elif isinstance(loop, list):
+                loop_start, loop_end = loop
+                self.frame = sum(self.animation_data.get_frames()[:loop_start+1])
+            else:
                 self.frame = self.animation_data.duration()
 
-        self.frame += self.animation_data.config['speed'] * dt
-
-        if type(self.animation_data.config['loop']) == type([]):
-            loop_indexes = self.animation_data.config['loop']
-
-            if self.frame > sum(self.animation_data.config['frames'][:loop_indexes[1]+1]):
-                self.frame = sum(self.animation_data.config['frames'][:loop_indexes[0]+1])
-
-        self.load_image()
+        self.update_image()
 
     def change_scale(self, scale):
         scale = normalize_scale(scale)
         self.animation_data.resize_images(scale)
-        self.animation_data.config['scale'] = scale
-    
-    def set_center(self, bool):
-        self.animation_data.config['centered'] = bool
+        self._frame_lookup = self._generate_frame_lookup()
 
-    #The current image
+    def set_center(self, flag: bool):
+        self.animation_data.config['centered'] = flag
+
     @property
     def current_image(self):
         return self.image

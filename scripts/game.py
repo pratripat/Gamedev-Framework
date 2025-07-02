@@ -57,4 +57,4 @@ class Game():
         if self.fps == 0: 
             self.dt = 0
         else: 
-            self.dt = (1 / self.fps) * self.target_fps * self.time
+            self.dt = (1 / self.fps) * self.time

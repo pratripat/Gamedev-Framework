@@ -140,18 +140,18 @@ class GameScene(Scene):
 
         self.event_manager.subscribe(Inputs.RIGHT_CLICK, lambda: self.player_input_system.spawn_bomb(self.component_manager, self.entity_manager, self.animation_handler, self.event_manager))
 
-        # self.event_manager.subscribe('l', lambda eid=self.entity_manager.create_entity(): self.component_manager.add(
-        #     eid,
-        #     Position(
-        #         eid,
-        #         *self.component_manager.get(self.player, Position).vec
-        #     ),
-        #     ParticleEmitter(
-        #         rate=10,
-        #         duration=10,
-        #         loop = False
-        #     ),
-        # ))
+        self.event_manager.subscribe('l', lambda eid=self.entity_manager.create_entity(): self.component_manager.add(
+            eid,
+            Position(
+                eid,
+                *self.component_manager.get(self.player, Position).vec
+            ),
+            ParticleEmitter(
+                rate=10,
+                duration=10,
+                loop = False
+            ),
+        ))
 
         # Set up keybinds for input system
         input_system.set_input_binds(
@@ -182,20 +182,19 @@ class GameScene(Scene):
   
     def update(self, fps, dt):
         # Update the physics engine
-        self.timer_system.update(fps, dt)
+        self.timer_system.update(dt)
         self.player_input_system.update(self.component_manager) 
-        self.ai_system.update(fps, dt)
-        self.physics_engine.update(self.camera.scroll, dt)
+        self.ai_system.update(dt)
+        self.physics_engine.update(self.camera.scroll, fps, dt)
         self.combat_system.update(
             event_manager=self.event_manager,
             component_manager=self.component_manager,
             entity_list=self.component_manager.get_entities_with_either(HurtBoxComponent, HitBoxComponent),
             scroll=self.camera.scroll,
-            fps=fps,
             dt=dt
         )
-        self.animation_system.update(dt)
-        self.render_system.update(fps, dt)
+        self.animation_system.update(fps, dt)
+        self.render_system.update(dt)
 
         self.camera.update(self.component_manager, lerp=True, mouse=pygame.mouse.get_pos(), mouse_ratio=0.1)
     

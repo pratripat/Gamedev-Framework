@@ -55,6 +55,8 @@ class HitBoxSystem:
                 if not pos_b:
                     continue
 
+                # if hitbox_rect.colliderect(hurtbox_rect):
+
                 # Check for collision between hitbox and hurtbox
                 if collision_occured(hitbox, hitbox_rect, hurtbox, hurtbox_rect):
                     # print(f'[HIT BOX SYSTEM] {attacker} hit {defender} (DEBUG)')

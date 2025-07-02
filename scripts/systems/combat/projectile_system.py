@@ -33,11 +33,11 @@ class ProjectileSystem:
         else:
             self.component_manager.remove_all(proj_id)
 
-    def update(self, fps, dt):
+    def update(self, dt):
         for entity_id in self.component_manager.get_entities_with(ProjectileComponent):
             projectile = self.component_manager.get(entity_id, ProjectileComponent)
 
-            projectile.lifetime -= dt / fps
+            projectile.lifetime -= dt
             if projectile.lifetime <= 0:
                 self.component_manager.remove_all(entity_id)
             

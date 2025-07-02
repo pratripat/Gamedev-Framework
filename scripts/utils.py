@@ -174,8 +174,8 @@ def circle_circle_collision(comp1, comp1_rect, comp2, comp2_rect):
     radius1 = comp1.size[0] / 2
     radius2 = comp2.size[0] / 2
 
-    dx = center1 - center2
-    dy = center1 - center2
+    dx = center1[0] - center2[0]
+    dy = center1[1] - center2[1]
 
     return (dx * dx + dy * dy) <= (radius1 + radius2) ** 2
 

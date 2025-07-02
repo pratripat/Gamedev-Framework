@@ -56,8 +56,8 @@ class AnimationComponent:
         if self.center:
             self.animation.set_center(True)
     
-    def update(self, dt):
-        self.animation.run(self.event_manager, self.entity_id, dt)
+    def update(self, fps, dt):
+        self.animation.run(self.event_manager, self.entity_id, fps, dt)
     
     def resize_scale(self, scale):
         self.animation.change_scale(scale)
