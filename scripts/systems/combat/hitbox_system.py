@@ -55,6 +55,7 @@ class HitBoxSystem:
                 if not pos_b:
                     continue
 
+                # TEMP
                 # if hitbox_rect.colliderect(hurtbox_rect):
 
                 # Check for collision between hitbox and hurtbox

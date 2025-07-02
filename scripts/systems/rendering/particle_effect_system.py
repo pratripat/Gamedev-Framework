@@ -4,7 +4,7 @@ from ...components.particle import ParticleEmitter, Particle
 from ...components.physics import Position, Velocity
 
 class ParticlePool:
-    def __init__(self, component_manager, entity_manager, capacity=1000):
+    def __init__(self, component_manager, entity_manager, capacity=100):
         self.pool = []
         self.cm = component_manager
 
@@ -22,12 +22,12 @@ class ParticlePool:
         self.pool.append(eid)
 
     def deactivate(self, eid: int):
-        if self.cm.get(eid, Particle):
-            self.cm.get(eid, Particle).age = float("inf")
-
+        particle = self.cm.get(eid, Particle)
+        if particle:
+            particle.age = float("inf")
 
 class ParticleEffectSystem:
-    def __init__(self, component_manager, entity_manager, capacity=1000):
+    def __init__(self, component_manager, entity_manager, capacity=100):
         self.cm = component_manager
         self.pool = ParticlePool(component_manager, entity_manager, capacity)
 

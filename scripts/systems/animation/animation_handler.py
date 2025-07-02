@@ -140,6 +140,7 @@ class Animation:
 
     def render(self, surface, pos, flipped=(False, False), angle=0, scale=(1, 1), alpha=None, center=True, offset=None, tint=None):
         img = self.image
+        img.set_colorkey(DEFAULT_COLORKEY)
         off = self.animation_data.config.get("offset", pygame.Vector2(0, 0)).copy()
 
         if flipped != (False, False):
@@ -156,21 +157,22 @@ class Animation:
             # mask = pygame.mask.from_surface(image)
             # image = mask.to_surface()
 
-            image = image.convert_alpha()
+            # image = image.convert_alpha()
 
-            # Create a white surface with the same size
-            white_overlay = pygame.mask.from_surface(image).to_surface()
+            # Generate a white overlay with transparency in background
+            white_overlay = pygame.mask.from_surface(img).to_surface(
+                setcolor=(255, 255, 255, 255),
+                unsetcolor=(0, 0, 0, 0)
+            )
 
-            # Create a copy of the sprite, clear its color data
-            silhouette = image.copy()
+            # Create a copy of the sprite and clear existing color
+            silhouette = img.copy()
             silhouette.fill((255, 255, 255, 0), special_flags=pygame.BLEND_RGBA_MULT)
 
-            silhouette.set_colorkey(DEFAULT_COLORKEY)
-
-            # Add white to the transparent base, generating the silhouette
+            # Add white overlay onto cleared base
             silhouette.blit(white_overlay, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
 
-            image = silhouette
+            img = silhouette
 
         if scale != (1, 1):
             img = pygame.transform.scale(img, (

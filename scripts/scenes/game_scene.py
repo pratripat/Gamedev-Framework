@@ -97,27 +97,27 @@ class GameScene(Scene):
         #             behavior="sniper"  # or "sniper", "patrol", etc.
         #         )
         #     )
-        # for i in range(10):
-        #     enemy = self.entity_factory.create_enemy(
-        #         component_manager=self.component_manager,
-        #         entity_manager=self.entity_manager,
-        #         event_manager=self.event_manager,
-        #         animation_handler=self.animation_handler,
-        #         input_system=input_system,
-        #         chess_piece_type="pawn"
-        #     )
+        for i in range(30):
+            enemy = self.entity_factory.create_enemy(
+                component_manager=self.component_manager,
+                entity_manager=self.entity_manager,
+                event_manager=self.event_manager,
+                animation_handler=self.animation_handler,
+                input_system=input_system,
+                chess_piece_type="pawn"
+            )
 
-        #     # Set random position and velocity for the enemy
-        #     self.component_manager.get(enemy, Position).x = 400
-        #     self.component_manager.get(enemy, Position).y = i*100
+            # Set random position and velocity for the enemy
+            self.component_manager.get(enemy, Position).x = 400
+            self.component_manager.get(enemy, Position).y = i*100
 
-        #     self.component_manager.add(
-        #         enemy, 
-        #         AIComponent(
-        #             entity_id=enemy,
-        #             behavior="chase"  # or "sniper", "patrol", etc.
-        #         )
-        #     )
+            self.component_manager.add(
+                enemy, 
+                AIComponent(
+                    entity_id=enemy,
+                    behavior="chase"  # or "sniper", "patrol", etc.
+                )
+            )
 
         self.camera.set_target(self.player)
 
@@ -196,7 +196,7 @@ class GameScene(Scene):
         self.animation_system.update(fps, dt)
         self.render_system.update(dt)
 
-        self.camera.update(self.component_manager, lerp=True, mouse=pygame.mouse.get_pos(), mouse_ratio=0.1)
+        self.camera.update(dt, self.component_manager, lerp=True, mouse=pygame.mouse.get_pos(), mouse_ratio=0.1)
     
         self.entity_manager.refresh_entities()
 

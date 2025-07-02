@@ -1,5 +1,5 @@
 import pygame
-from ...utils import CENTER
+from ...utils import CENTER, INITIAL_WINDOW_SIZE
 
 from ...components.physics import Position, Velocity
 from ...components.animation import RenderComponent, AnimationComponent
@@ -31,21 +31,23 @@ class AnimationSystem:
             animation_comp.update(fps, dt)
 
 class RenderSystem:
-    def __init__(self, event_manager, component_manager, entity_manager):
+    def __init__(self, event_manager, component_manager, entity_manager, surface_size=INITIAL_WINDOW_SIZE):
         self.component_manager = component_manager
 
         self.render_effect_system = RenderEffectSystem(event_manager, component_manager)
         self.particle_effect_system = ParticleEffectSystem(component_manager, entity_manager)
+
+        self.temp_surf = pygame.Surface(surface_size).convert()
 
     def update(self, dt):
         self.render_effect_system.update(dt)
         self.particle_effect_system.update(dt)
 
     def render(self, surface, camera):
+        self.temp_surf.fill((0,0,0))
+        
         scroll = camera.scroll
         temp_surf_offset = pygame.Vector2(0, 0)
-        temp_surf = pygame.Surface(surface.get_size())
-        temp_surf.convert_alpha()
 
         for eid in self.component_manager.get_entities_with(Position):
             pos = self.component_manager.get(eid, Position)
@@ -77,7 +79,7 @@ class RenderSystem:
                     tint_surf.fill(tint)
                     rcs.blit(tint_surf, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
 
-                temp_surf.blit(rcs, (pos.x + offset.x, pos.y + offset.y))
+                self.temp_surf.blit(rcs, (pos.x + offset.x, pos.y + offset.y))
 
             # Animation component
             animation_component = self.component_manager.get(eid, AnimationComponent)
@@ -87,20 +89,20 @@ class RenderSystem:
 
                 # Apply scaling to animation
                 if scale is not None and (scale[0] != 1 or scale[1] != 1):
-                    animation.render(temp_surf, animation_pos, scale=scale, tint=tint)
+                    animation.render(self.temp_surf, animation_pos, scale=scale, tint=tint)
                 else:
-                    animation.render(temp_surf, animation_pos, tint=tint)
+                    animation.render(self.temp_surf, animation_pos, tint=tint)
 
         # Particle effects
-        self.particle_effect_system.render(temp_surf, scroll=scroll)
+        self.particle_effect_system.render(self.temp_surf, scroll=scroll)
 
         # Apply camera zoom
         if camera.zoom != 1:
-            temp_surf = pygame.transform.scale(
-                temp_surf, (int(surface.get_width() * camera.zoom), int(surface.get_height() * camera.zoom))
+            self.temp_surf = pygame.transform.scale(
+                self.temp_surf, (int(surface.get_width() * camera.zoom), int(surface.get_height() * camera.zoom))
             )
             temp_surf_offset = pygame.Vector2(surface.get_width() / 2, surface.get_height() / 2) - pygame.Vector2(
-                temp_surf.get_size()
+                self.temp_surf.get_size()
             ) / 2
 
-        surface.blit(temp_surf, temp_surf_offset)
+        surface.blit(self.temp_surf, temp_surf_offset)

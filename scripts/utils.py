@@ -180,7 +180,7 @@ def circle_circle_collision(comp1, comp1_rect, comp2, comp2_rect):
     return (dx * dx + dy * dy) <= (radius1 + radius2) ** 2
 
 def collision_occured(hitbox, hitbox_rect, hurtbox, hurtbox_rect):
-    if hitbox.shape == CollisionShape.RECT and hurtbox.shape == CollisionShape.CIRCLE:
+    if hitbox.shape == CollisionShape.RECT and hurtbox.shape == CollisionShape.RECT:
         return hitbox_rect.colliderect(hurtbox_rect)
     elif hitbox.shape == CollisionShape.RECT and hurtbox.shape == CollisionShape.CIRCLE:
         return circle_rect_collision(hurtbox, hurtbox_rect, hitbox_rect)

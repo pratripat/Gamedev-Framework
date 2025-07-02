@@ -8,7 +8,7 @@ class RenderComponent:
         self.offset = pygame.Vector2(offset)
         
         if surface is None:
-            self.surface = pygame.Surface((32,32))
+            self.surface = pygame.Surface((32,32)).convert()
             self.surface.fill("white")
 
         if center:
