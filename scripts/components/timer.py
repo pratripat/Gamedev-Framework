@@ -4,8 +4,8 @@ class TimerComponent:
         self.callbacks = [callback for callback in callbacks]
         self.destroy = destroy
 
-    def update(self, fps, dt):
-        self.duration -= dt / fps
+    def update(self, dt):
+        self.duration -= dt
         if self.duration <= 0:
             self.duration = 0
             self.trigger()

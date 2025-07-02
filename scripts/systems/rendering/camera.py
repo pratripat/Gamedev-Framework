@@ -9,7 +9,7 @@ class Camera:
 
         self.zoom = 1
 
-    def update(self, component_manager, lerp=False, lerp_speed=0.15, mouse=None, mouse_ratio=0.5):
+    def update(self, dt, component_manager, lerp=False, lerp_speed=15, mouse=None, mouse_ratio=0.5):
         if self.target_entity_id is None: return
 
         desired_pos = self.scroll.copy()
@@ -24,7 +24,7 @@ class Camera:
 
         # lerp
         if lerp: 
-            self.scroll += (desired_pos - self.scroll) * lerp_speed
+            self.scroll += (desired_pos - self.scroll) * lerp_speed * dt
         else: 
             self.scroll = desired_pos
     

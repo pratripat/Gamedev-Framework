@@ -17,7 +17,8 @@ def spawn_bomb(eid, cm, em, anim_handler, event_manager, data):
     def on_burst():
         cm.remove(bomb_id, AnimationComponent)
         
-        circle_surf = pygame.Surface((diameter, diameter))
+        circle_surf = pygame.Surface((diameter, diameter)).convert()
+        circle_surf.set_colorkey((0, 0, 0))
         pygame.draw.circle(circle_surf, (255, 255, 255), (radius, radius), radius)
 
         cm.add(

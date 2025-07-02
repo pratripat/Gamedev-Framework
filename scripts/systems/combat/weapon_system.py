@@ -69,12 +69,12 @@ class WeaponSystem:
 
             weapon_component.shot = True
         
-    def update(self, fps, dt):
+    def update(self, dt):
         for entity_id in self.component_manager.get_entities_with(WeaponComponent):
             weapon = self.component_manager.get(entity_id, WeaponComponent)
 
             if weapon.shot:
-                weapon.time += dt / fps
+                weapon.time += dt
             
             if weapon.time >= weapon.cooldown:
                 weapon.time = 0

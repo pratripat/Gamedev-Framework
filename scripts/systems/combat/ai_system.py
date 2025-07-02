@@ -109,7 +109,7 @@ class AISystem:
     def _patrol_behavior(self, eid, ai_comp, dt):
         print('patrolling', ai_comp.state)
 
-    def update(self, fps, dt):
+    def update(self, dt):
         for eid in self.component_manager.get_entities_with(AIComponent):
             ai_comp = self.component_manager.get(eid, AIComponent)
             if ai_comp is None:
@@ -118,7 +118,7 @@ class AISystem:
             if ai_comp.state == EnemyState.DEAD:
                 continue
             
-            ai_comp.timer += dt / fps
+            ai_comp.timer += dt
 
             self.AI_FUNCS.get(ai_comp.behavior, self._default_behavior)(eid, ai_comp, dt)
 

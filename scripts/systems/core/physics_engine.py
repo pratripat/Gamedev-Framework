@@ -8,7 +8,7 @@ class PhysicsEngine:
         self.component_manager = component_manager
         self.event_manager = event_manager
 
-    def update(self, scroll, dt):
+    def update(self, scroll, fps, dt):
         quadtree = Quadtree(0, (*scroll, *INITIAL_WINDOW_SIZE))
 
         # Update all entities with Position and Velocity components
@@ -20,7 +20,7 @@ class PhysicsEngine:
             collision_component = self.component_manager.get(entity, CollisionComponent)
             if not collision_component:
                 # Simple movement without collision handling
-                position += velocity * dt
+                position += velocity * dt * fps
                 velocity.realistic_vel = velocity.vec.copy() # the vel of the entity is the same as the velocity vector
 
         for entity in self.component_manager.get_entities_with(CollisionComponent, Position):
@@ -44,7 +44,7 @@ class PhysicsEngine:
 
             vel.realistic_vel = vel.vec.copy()
 
-            rect.x += vel.x * dt
+            rect.x += vel.x * dt * fps
 
             colliding_entities = []
 
@@ -68,7 +68,7 @@ class PhysicsEngine:
                     else:
                         vel.realistic_vel.x = 0 # the vel of the entity is not the same as the of the desired vel
 
-            rect.y += vel.y * dt
+            rect.y += vel.y * dt * fps
 
             colliding_entities = []
 

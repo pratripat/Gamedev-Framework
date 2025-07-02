@@ -91,7 +91,7 @@ class RenderEffectSystem:
         render_effect_comp.effect_data["blink"] = effect_data
         render_effect_comp.effect_timers["blink"] = 0
     
-    def update(self, fps, dt):
+    def update(self, dt):
         for entity_id in self.component_manager.get_entities_with(RenderEffectComponent):
             render_effect_comp = self.component_manager.get(entity_id, RenderEffectComponent)
             if render_effect_comp is None or render_effect_comp.disabled:
@@ -100,7 +100,7 @@ class RenderEffectSystem:
             if "squash" in render_effect_comp.effect_data:
                 total = render_effect_comp.effect_data["squash"]["duration"]
 
-                render_effect_comp.effect_timers["squash"] += dt / fps
+                render_effect_comp.effect_timers["squash"] += dt
                 t = min(render_effect_comp.effect_timers["squash"] / total, 1)
 
                 current_scale = render_effect_comp.effect_data["squash"]["start_scale"].lerp(render_effect_comp.effect_data["squash"]["target_scale"], t)
@@ -121,7 +121,7 @@ class RenderEffectSystem:
             if "flash" in render_effect_comp.effect_data:
                 total = render_effect_comp.effect_data["flash"]["duration"]
 
-                render_effect_comp.effect_timers["flash"] += dt / fps
+                render_effect_comp.effect_timers["flash"] += dt
                 t = min(render_effect_comp.effect_timers["flash"] / total, 1)
 
 
@@ -135,7 +135,7 @@ class RenderEffectSystem:
             if "blink" in render_effect_comp.effect_data:
                 total = render_effect_comp.effect_data["blink"]["duration"]
 
-                render_effect_comp.effect_timers["blink"] += dt / fps
+                render_effect_comp.effect_timers["blink"] += dt
                 t = min(render_effect_comp.effect_timers["blink"] / total, 1)
 
                 if any([t > frac for frac in [0.25, 0.5, 0.75, 1]]):

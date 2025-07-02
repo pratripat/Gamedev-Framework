@@ -8,7 +8,7 @@ class RenderComponent:
         self.offset = pygame.Vector2(offset)
         
         if surface is None:
-            self.surface = pygame.Surface((32,32))
+            self.surface = pygame.Surface((32,32)).convert()
             self.surface.fill("white")
 
         if center:
@@ -56,8 +56,8 @@ class AnimationComponent:
         if self.center:
             self.animation.set_center(True)
     
-    def update(self, dt):
-        self.animation.run(self.event_manager, self.entity_id, dt)
+    def update(self, fps, dt):
+        self.animation.run(self.event_manager, self.entity_id, fps, dt)
     
     def resize_scale(self, scale):
         self.animation.change_scale(scale)

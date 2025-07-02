@@ -63,8 +63,10 @@ class ParticleEmitter:
         spawn_x, spawn_y = self.get_random_position_within_shape(self.shape, origin_pos[0], origin_pos[1])
 
         pos.vec = pygame.Vector2(spawn_x, spawn_y)
-        unit_vec = pygame.Vector2(random.uniform(0,self.particle_config.vel), 0)
-        vel.vec = rotate_vector(unit_vec, random.uniform(0,360))
+        # unit_vec = pygame.Vector2(random.uniform(0,self.particle_config.vel), 0)
+        # vel.vec = rotate_vector(unit_vec, random.uniform(0,360))
+        vel.x = random.uniform(-5, 5)
+        vel.y = random.uniform(-5, 5)
         particle.age = 0
         particle.lifetime = random.uniform(0.5, 1.5)
         particle.color = pygame.Color(255, 255, 255)

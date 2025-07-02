@@ -33,14 +33,14 @@ class Game():
         self.scene_manager.play_scene(input_system=self.input_system)
 
         while 1:
-            self.clock.tick(self.target_fps)
-            # self.clock.tick()
+            # self.clock.tick(self.target_fps)
+            self.clock.tick()
             self.calculate_dt()
             self.update()
             self.render()
     
     def render(self):
-        self.screen.fill((0, 0, 0))
+        # self.screen.fill((0, 0, 0))
         self.scene_manager.render_scene(self.screen)
         pygame.display.update()
 
@@ -52,9 +52,9 @@ class Game():
 
     def calculate_dt(self):
         self.fps = self.clock.get_fps()
-        # print(self.fps)
+        print(self.fps)
         
         if self.fps == 0: 
             self.dt = 0
         else: 
-            self.dt = (1 / self.fps) * self.target_fps * self.time
+            self.dt = (1 / self.fps) * self.time

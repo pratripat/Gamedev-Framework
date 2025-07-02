@@ -4,7 +4,7 @@ from ...components.particle import ParticleEmitter, Particle
 from ...components.physics import Position, Velocity
 
 class ParticlePool:
-    def __init__(self, component_manager, entity_manager, capacity=1000):
+    def __init__(self, component_manager, entity_manager, capacity=100):
         self.pool = []
         self.cm = component_manager
 
@@ -22,18 +22,16 @@ class ParticlePool:
         self.pool.append(eid)
 
     def deactivate(self, eid: int):
-        if self.cm.get(eid, Particle):
-            self.cm.get(eid, Particle).age = float("inf")
-
+        particle = self.cm.get(eid, Particle)
+        if particle:
+            particle.age = float("inf")
 
 class ParticleEffectSystem:
-    def __init__(self, component_manager, entity_manager, capacity=1000):
+    def __init__(self, component_manager, entity_manager, capacity=100):
         self.cm = component_manager
         self.pool = ParticlePool(component_manager, entity_manager, capacity)
 
-    def update(self, fps, dt):
-        delta = dt / fps
-
+    def update(self, dt):
         # Emit particles
         for eid in self.cm.get_entities_with(ParticleEmitter, Position):
             emitter = self.cm.get(eid, ParticleEmitter)
@@ -42,8 +40,8 @@ class ParticleEffectSystem:
             if not emitter.active:
                 continue
 
-            emitter.elapsed += delta
-            emitter.time_since_emit += delta
+            emitter.elapsed += dt
+            emitter.time_since_emit += dt
 
             if emitter.elapsed > emitter.duration:
                 if emitter.loop:
@@ -65,13 +63,13 @@ class ParticleEffectSystem:
             pos = self.cm.get(eid, Position)
             vel = self.cm.get(eid, Velocity)
 
-            particle.age += delta
+            particle.age += dt
             if particle.age >= particle.lifetime:
                 self.pool.release(eid)
                 continue
 
-            pos.x += vel.x * delta
-            pos.y += vel.y * delta
+            pos.x += vel.x * dt
+            pos.y += vel.y * dt
 
             if particle.fade:
                 alpha = 255 * (1 - particle.age / particle.lifetime)
@@ -88,4 +86,3 @@ class ParticleEffectSystem:
             pygame.draw.circle(particle_surf, particle.color, (size, size), size)
 
             screen.blit(particle_surf, (pos.x - scroll.x - size, pos.y - scroll.y - size))
-
