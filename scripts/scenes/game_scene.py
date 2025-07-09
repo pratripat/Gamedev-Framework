@@ -111,13 +111,13 @@ class GameScene(Scene):
             self.component_manager.get(enemy, Position).x = 400
             self.component_manager.get(enemy, Position).y = i*100
 
-            self.component_manager.add(
-                enemy, 
-                AIComponent(
-                    entity_id=enemy,
-                    behavior="chase"  # or "sniper", "patrol", etc.
-                )
-            )
+            # self.component_manager.add(
+            #     enemy, 
+            #     AIComponent(
+            #         entity_id=enemy,
+            #         behavior="chase"  # or "sniper", "patrol", etc.
+            #     )
+            # )
 
         self.camera.set_target(self.player)
 
@@ -150,7 +150,7 @@ class GameScene(Scene):
                 rate=10,
                 duration=10,
                 loop = False
-            ),
+            )
         ))
 
         # Set up keybinds for input system

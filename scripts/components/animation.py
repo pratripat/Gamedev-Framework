@@ -8,11 +8,13 @@ class RenderComponent:
         self.offset = pygame.Vector2(offset)
         
         if surface is None:
-            self.surface = pygame.Surface((32,32)).convert()
+            self.surface = pygame.Surface((32,32))
             self.surface.fill("white")
 
         if center:
             self.offset -= pygame.Vector2(self.surface.get_size()) / 2
+
+        self.surface.convert()
         
     def resize_scale(self, scale):
         scale = normalize_scale(scale)

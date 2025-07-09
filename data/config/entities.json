@@ -39,15 +39,14 @@
             "shoot_fn": "shoot_single",
             "projectile_data": {
                 "damage": 10,
-                "speed": 20,
+                "speed": 15,
                 "range": 100,
-                "bounce": 1,
-                "penetration": 1,
                 "effects": [],
                 "size": 1.5,
                 "image_file": "data/graphics/images/projectile.png",
                 "towards_player": true,
-                "angle": 3
+                "angle": 3,
+                "bounce": 1
             }
         },
         "AnimationStateMachine": {
@@ -63,18 +62,11 @@
                     "to_animation": "idle",
                     "cond": "vel_zero_check",
                     "self_dest": false
-                },
-                "shoot": {
-                    "to_animation": "idle",
-                    "cond": "left_held_release",
-                    "self_dest": false
-                },
-                "damage": {
-                    "to_animation": "idle",
-                    "cond": "check_invincibility_timer",
-                    "self_dest": false
                 }
             }
+        },
+        "YSortComponent": {
+            "offset": [0, 37]
         }
     },
     "enemy_pawn": {
@@ -116,11 +108,9 @@
             "cooldown": 0.1,
             "shoot_fn": "shoot_single",
             "projectile_data": {
-                "damage": 5,
-                "speed": 10,
+                "damage": 10,
+                "speed": 5,
                 "range": 100,
-                "bounce": 0,
-                "penetration": 0,
                 "effects": [],
                 "size": 1.5,
                 "image_file": "data/graphics/images/projectile.png",
@@ -141,13 +131,11 @@
                     "to_animation": "idle",
                     "cond": "vel_zero_check",
                     "self_dest": false
-                },
-                "damage": {
-                    "to_animation": "idle",
-                    "cond": "check_invincibility_timer",
-                    "self_dest": false
                 }
             }
+        },
+        "YSortComponent": {
+            "offset": [0, 37]
         }
     },
     "enemy_rook": {
@@ -216,6 +204,9 @@
                     "self_dest": false
                 }
             }
+        },
+        "YSortComponent": {
+            "offset": [0, 37]
         }
     },
     "collision_box": {
@@ -236,6 +227,9 @@
             "offset_x": 0.0,
             "offset_y": 0.0,
             "center": true
+        },
+        "YSortComponent": {
+            "offset": [0, 37]
         }
     }
 }

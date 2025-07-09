@@ -42,6 +42,7 @@ COMPONENT_ORDER = [
     "Velocity",
     "AnimationComponent",
     "RenderComponent",
+    "YSortComponent",
     "HurtBoxComponent",
     "HealthComponent",
     "CollisionComponent",
@@ -57,6 +58,7 @@ COMPONENT_SCHEMAS = {
     "Velocity": {"x": {"type": float, "default": 0.0}, "y": {"type": float, "default": 0.0}, "speed": {"type": float, "default": 4.0}},
     "AnimationComponent": {"entity": {"type": str, "default": "black_pawn"}, "animation_id": {"type": str, "default": "idle"}, "center": {"type": bool, "default": True}, "entity_type": {"type": str, "default": "chess_piece"}},
     "RenderComponent": {"image_file": {"type": str, "default": ""}, "offset_x": {"type": float, "default": 0.0}, "offset_y": {"type": float, "default": 0.0}, "center": {"type": bool, "default": True}},
+    "YSortComponent": {"offset": {"type": tuple, "default": (0, 0)}},
     "HurtBoxComponent": {"offset_x": {"type": float, "default": 0.0}, "offset_y": {"type": float, "default": 0.0}, "width": {"type": float, "default": 16.0}, "height": {"type": float, "default": 64.0}, "center": {"type": bool, "default": True}},
     "HealthComponent": {"max_health": {"type": int, "default": 100}},
     "CollisionComponent": {"offset_x": {"type": float, "default": 0.0}, "offset_y": {"type": float, "default": 0.0}, "width": {"type": float, "default": 16.0}, "height": {"type": float, "default": 16.0}, "solid": {"type": bool, "default": False}, "center": {"type": bool, "default": True}},
@@ -368,7 +370,7 @@ class EntityEditor:
             center = comp.get("center", True)
             width, height = self.preview_animation.image.get_size()
             pos = ((DISPLAY_WIDTH - width * self.zoom_factor) / 2, (DISPLAY_HEIGHT - height * self.zoom_factor) / 2) if center else (DISPLAY_WIDTH/2, DISPLAY_HEIGHT/2)
-            self.preview_animation.run(None, None, 2)
+            self.preview_animation.run(None, None, 2, 2)
             self.preview_animation.render(self.preview_surface, pos, scale=self.zoom_factor)
         
         if self.preview_image:

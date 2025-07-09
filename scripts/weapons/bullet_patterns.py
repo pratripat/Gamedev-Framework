@@ -1,10 +1,12 @@
 import pygame
-from ..utils import get_unit_direction_towards, rotate_vector, load_image, CollisionShape, CollisionLayer
+from ..utils import get_unit_direction_towards, rotate_vector, load_image, CollisionShape, CollisionLayer, EmitterShape, EmitterShapeType
 from ..components.physics import Position, Velocity, CollisionComponent
 from ..components.animation import RenderComponent, AnimationComponent
 from ..components.projectile import ProjectileComponent
 from ..components.combat import HitBoxComponent
 from ..components.timer import TimerComponent
+from ..components.particle import ParticleConfig
+from ..systems.rendering.particle_effect_system import ParticleEmitter
 
 def spawn_bomb(eid, cm, em, anim_handler, event_manager, data):
     bomb_id = em.create_entity()
@@ -17,7 +19,7 @@ def spawn_bomb(eid, cm, em, anim_handler, event_manager, data):
     def on_burst():
         cm.remove(bomb_id, AnimationComponent)
         
-        circle_surf = pygame.Surface((diameter, diameter)).convert()
+        circle_surf = pygame.Surface((diameter, diameter))
         circle_surf.set_colorkey((0, 0, 0))
         pygame.draw.circle(circle_surf, (255, 255, 255), (radius, radius), radius)
 
@@ -41,6 +43,13 @@ def spawn_bomb(eid, cm, em, anim_handler, event_manager, data):
                 shape=CollisionShape.CIRCLE,
                 layer=CollisionLayer.PROJECTILE,
                 mask=CollisionLayer.create_mask(CollisionLayer.ENEMY | CollisionLayer.PLAYER)
+            ),
+            ParticleEmitter(
+                rate=50,
+                duration=2,
+                loop=False,
+                particle_config=ParticleConfig(vel=1, size=radius * 0.25),
+                shape=EmitterShape(type=EmitterShapeType.CIRCLE, radius=radius)
             )
         )
 
