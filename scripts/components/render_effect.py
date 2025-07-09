@@ -1,4 +1,6 @@
 import pygame
+from dataclasses import dataclass
+from typing import Tuple
 
 class RenderEffectComponent:
     def __init__(self):
@@ -10,3 +12,7 @@ class RenderEffectComponent:
         self.effect_data = {}             # active data {'squash': {'start_scale': [x, y], 'target_scale': [x2, y2], 'duration': ,return_back: bool}}
         self.disabled = False
     
+@dataclass
+class YSortRender:
+    entity_id: int
+    offset: Tuple[int, int] = (0, 0)  # Y-sorting pivot offset (usually toward character's feet)

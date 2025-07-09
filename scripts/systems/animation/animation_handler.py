@@ -174,11 +174,13 @@ class Animation:
 
             img = silhouette
 
-        if scale != (1, 1):
-            img = pygame.transform.scale(img, (
-                int(img.get_width() * scale[0]),
-                int(img.get_height() * scale[1])
-            ))
+        if scale:
+            scale = normalize_scale(scale)
+            if scale != (1, 1):
+                img = pygame.transform.scale(img, (
+                    int(img.get_width() * scale[0]),
+                    int(img.get_height() * scale[1])
+                ))
 
         if offset:
             off = offset

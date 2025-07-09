@@ -32,6 +32,7 @@ class ParticleEmitter:
     max_particles: int = 100
     active: bool = True
     shape: EmitterShape = field(default_factory=lambda: EmitterShape(EmitterShapeType.POINT))
+    particle_counter: int = 0
 
     def get_random_position_within_shape(self, shape: EmitterShape, origin_x: float, origin_y: float):
         if shape.type == EmitterShapeType.POINT:
@@ -44,7 +45,7 @@ class ParticleEmitter:
 
         elif shape.type == EmitterShapeType.CIRCLE:
             angle = random.uniform(0, 2 * math.pi)
-            radius = shape.radius * math.sqrt(random.uniform(0, 1))
+            radius = shape.radius * random.uniform(0, 1)
             rx = origin_x + radius * math.cos(angle)
             ry = origin_y + radius * math.sin(angle)
             return rx, ry
@@ -62,13 +63,15 @@ class ParticleEmitter:
 
         spawn_x, spawn_y = self.get_random_position_within_shape(self.shape, origin_pos[0], origin_pos[1])
 
+        pc = self.particle_config
+
         pos.vec = pygame.Vector2(spawn_x, spawn_y)
-        # unit_vec = pygame.Vector2(random.uniform(0,self.particle_config.vel), 0)
-        # vel.vec = rotate_vector(unit_vec, random.uniform(0,360))
-        vel.x = random.uniform(-5, 5)
-        vel.y = random.uniform(-5, 5)
+        vel.x = random.uniform(-pc.vel, pc.vel)
+        vel.y = random.uniform(-pc.vel, pc.vel)
         particle.age = 0
-        particle.lifetime = random.uniform(0.5, 1.5)
-        particle.color = pygame.Color(255, 255, 255)
-        particle.size = random.uniform(6, 12)
-        particle.fade = True
+        particle.lifetime = random.uniform(pc.lifetime-1, pc.lifetime+1)
+        particle.color = pygame.Color(*pc.color)
+        particle.size = random.uniform(pc.size*0.8, pc.size*1.2)
+        particle.fade = pc.fade
+
+        self.particle_counter += 1

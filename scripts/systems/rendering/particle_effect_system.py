@@ -48,6 +48,7 @@ class ParticleEffectSystem:
                     emitter.elapsed = 0
                 else:
                     emitter.active = False
+                    self.cm.remove_all(eid)
                     continue
 
             particles_to_emit = int(emitter.time_since_emit * emitter.rate)

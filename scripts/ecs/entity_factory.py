@@ -3,6 +3,7 @@ from ..components.physics import Position, Velocity, CollisionComponent
 from ..components.animation import AnimationComponent, RenderComponent
 from ..components.combat import WeaponComponent, HitBoxComponent, HurtBoxComponent, HealthComponent
 from ..components.tags import PlayerTagComponent, EnemyTagComponent
+from ..components.render_effect import YSortRender
 from .component_manager import ComponentManager
 
 from ..systems.animation.animation_state_machine import AnimationStateMachine
@@ -88,6 +89,10 @@ class EntityFactory:
             size=(data["width"], data["height"]),
             solid=data.get("solid", False),
             center=data.get("center", False)
+        ),
+        "YSortComponent": lambda eid, data, ctx: YSortRender(
+            entity_id=eid,
+            offset=data["offset"],
         )
     }
 
