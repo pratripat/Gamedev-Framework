@@ -71,7 +71,7 @@ def spawn_bomb(eid, cm, em, anim_handler, event_manager, data):
         )
     )
 
-def spawn_projectile(eid, cm, em, direction, data, position_offset=pygame.Vector2(0,0)):
+def spawn_projectile(eid, cm, em, rm, direction, data, position_offset=pygame.Vector2(0,0)):
     pos = data.get("start_pos", pygame.Vector2(0, 0))
     spawn_pos = pos + position_offset
 
@@ -97,7 +97,7 @@ def spawn_projectile(eid, cm, em, direction, data, position_offset=pygame.Vector
         ),
         RenderComponent(
             proj_id,
-            load_image(data["image_file"], scale=data["size"]),
+            rm.get_image(data["image_file"], scale=data["size"]),
             center = True
         ),
         HitBoxComponent(
@@ -120,22 +120,22 @@ def spawn_projectile(eid, cm, em, direction, data, position_offset=pygame.Vector
 
     return proj_id
 
-def shoot_single(eid, cm, em, data):
+def shoot_single(eid, cm, em, rm, data):
     dir = get_unit_direction_towards(data["start_pos"], data["target_pos"])
-    return [spawn_projectile(eid, cm, em, dir, data)]
+    return [spawn_projectile(eid, cm, em, rm, dir, data)]
 
-def shoot_spread(eid, cm, em, data):
+def shoot_spread(eid, cm, em, rm, data):
     dir = get_unit_direction_towards(data["start_pos"], data["target_pos"])
     max_angle = data.get("angle", 15)
     dirs = [rotate_vector(dir, angle) for angle in [-max_angle, 0, max_angle]]
     
     projs = []
     for d in dirs:
-        projs.append(spawn_projectile(eid, cm, em, d, data))
+        projs.append(spawn_projectile(eid, cm, em, rm, d, data))
     
     return projs
 
-def shoot_radial(eid, cm, em, data):
+def shoot_radial(eid, cm, em, rm, data):
     dir = pygame.Vector2(1, 0)
     if data.get("on_player", False): dir = get_unit_direction_towards(data["start_pos"], data["target_pos"])
     
@@ -146,7 +146,7 @@ def shoot_radial(eid, cm, em, data):
         angle = (360 / number) * i
         d = rotate_vector(dir, angle)
 
-        projs.append(spawn_projectile(eid, cm, em, d, data))
+        projs.append(spawn_projectile(eid, cm, em, rm, d, data))
     
     return projs
 
@@ -156,7 +156,7 @@ class SpiralShooter:
         self.bullets_per_shot = bullets_per_shot
         self.angle_increment = angle_increment
 
-    def __call__(self, eid, cm, em, data):
+    def __call__(self, eid, cm, em, rm, data):
         dir = pygame.Vector2(1, 0)
         dir = rotate_vector(dir, self.current_angle)
         if data.get("on_player", False): dir = get_unit_direction_towards(data["start_pos"], data["target_pos"])
@@ -166,7 +166,7 @@ class SpiralShooter:
             angle = (360 / self.bullets_per_shot) * i
             d = rotate_vector(dir, angle)
 
-            projs.append(spawn_projectile(eid, cm, em, d, data))
+            projs.append(spawn_projectile(eid, cm, em, rm, d, data))
         
         self.current_angle += self.angle_increment
         

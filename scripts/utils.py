@@ -6,6 +6,7 @@ DEFAULT_COLORKEY = (0, 0, 0)
 INITIAL_WINDOW_SIZE = (1920, 1002) # (1280, 720)
 CENTER = pygame.Vector2(INITIAL_WINDOW_SIZE) * 0.5
 ANIMATION_FOLDER = "data/graphics/animations"
+SCALE = 2
 
 # Define keybinds for player inputs
 class Inputs(Enum):
@@ -268,6 +269,34 @@ def load_images_from_spritesheet(file_path, colorkey=DEFAULT_COLORKEY, scale=1):
                 images.append(image)
 
     return images
+
+def load_images_from_tilemap(filename, tile_size=32, skip_empty=True):
+    """
+    Load tile images from a spritesheet, optionally skipping empty tiles.
+
+    :param filepath: Path to the spritesheet image.
+    :param tile_size: Width and height of each tile (assumes square tiles).
+    :param skip_empty: Whether to skip fully transparent or empty tiles.
+    :return: List of Pygame Surfaces, one per non-empty tile.
+    """
+    spritesheet = pygame.image.load(filename).convert()
+    sheet_width, sheet_height = spritesheet.get_size()
+
+    tiles = []
+    for y in range(0, sheet_height, tile_size):
+        for x in range(0, sheet_width, tile_size):
+            tile = pygame.Surface((tile_size, tile_size))
+            tile.set_colorkey((0,0,0))
+            tile.blit(spritesheet, (0, 0), (x, y, tile_size, tile_size))
+
+            if skip_empty:
+                # Check if the tile is completely transparent
+                if not pygame.mask.from_surface(tile).count():
+                    continue
+
+            tiles.append(tile)
+
+    return tiles
 
 def get_unit_direction_towards(start_pos: pygame.Vector2, end_pos: pygame.Vector2):
     """

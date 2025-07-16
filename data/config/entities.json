@@ -231,5 +231,23 @@
         "YSortComponent": {
             "offset": [0, 37]
         }
+    },
+    "foliage": {
+        "Position": {
+            "x": 0.0,
+            "y": 0.0
+        },
+        "RenderComponent": {
+            "image_file": "data/graphics/spritesheets/foliage.png",
+            "offset_x": 0.0,
+            "offset_y": 0.0
+        },
+        "CollisionComponent": {
+            "offset_x": -16.0,
+            "offset_y": 35.0,
+            "width": 40.0,
+            "height": 38.0,
+            "solid": true
+        }
     }
 }
