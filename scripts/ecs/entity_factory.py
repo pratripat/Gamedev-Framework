@@ -9,7 +9,7 @@ from .component_manager import ComponentManager
 from ..systems.animation.animation_state_machine import AnimationStateMachine
 from ..weapons.bullet_patterns import SHOOT_FUNCTIONS
 
-from ..utils import CollisionShape, CollisionLayer, load_image
+from ..utils import CollisionShape, CollisionLayer
 
 import json, copy
 
@@ -46,11 +46,14 @@ class EntityFactory:
     COMPONENT_BUILDERS = {
         "PlayerTagComponent": lambda eid, data, ctx: PlayerTagComponent(),
         "EnemyTagComponent": lambda eid, data, ctx: EnemyTagComponent(),
-        "Position": lambda eid, data, ctx: Position(entity_id=eid, **data),
+        "Position": lambda eid, data, ctx: Position(entity_id=eid, x=ctx["pos"][0], y=ctx["pos"][1]),
         "Velocity": lambda eid, data, ctx: Velocity(entity_id=eid, **data),
         "RenderComponent": lambda eid, data, ctx: RenderComponent(
             entity_id=eid,
-            surface=load_image(data["image_file"]),
+            surface=(
+                ctx.get("image", None) or
+                ctx["resource_manager"].get_image(data["image_file"])
+            ),
             offset=(data["offset_x"], data["offset_y"]),
             center=data.get("center", True)
         ),
@@ -99,27 +102,37 @@ class EntityFactory:
     def __init__(self):
         self.data = json.load(open("data/config/entities.json", "r"))
 
-    def create_player(self, component_manager, entity_manager, event_manager, animation_handler, input_system):
+    def create_player(self, pos, component_manager, entity_manager, event_manager, animation_handler, input_system, resource_manager):
         player = entity_manager.create_entity(player=True)
 
         # Add components to the player entity
         player_component_data = self.data["player"]
 
-        self.add_components_to_entity(player, player_component_data, component_manager, entity_manager, event_manager, animation_handler, input_system, player=True)
+        self.add_components_to_entity(player, pos, player_component_data, component_manager, entity_manager, event_manager, animation_handler, input_system, resource_manager, player=True)
 
         return player
 
-    def create_enemy(self, component_manager, entity_manager, event_manager, animation_handler, input_system, chess_piece_type="pawn"):
+    def create_enemy(self, pos, component_manager, entity_manager, event_manager, animation_handler, input_system, resource_manager, chess_piece_type="pawn"):
         enemy = entity_manager.create_entity()
 
         # Add components to the enemy entity
         enemy_component_data = self.data["enemy_" + chess_piece_type]
 
-        self.add_components_to_entity(enemy, enemy_component_data, component_manager, entity_manager, event_manager, animation_handler, input_system)
+        self.add_components_to_entity(enemy, pos, enemy_component_data, component_manager, entity_manager, event_manager, animation_handler, input_system, resource_manager)
 
         return enemy
 
-    def create_entity(self, entity, component_manager, entity_manager, event_manager, animation_handler, input_system):
+    def create_foliage(self, pos, component_manager, entity_manager, event_manager, animation_handler, input_system, resource_manager, image):
+        foliage = entity_manager.create_entity()
+
+        # Add components to the foliage entity
+        foliage_component_data = self.data["foliage"]
+
+        self.add_components_to_entity(foliage, pos, foliage_component_data, component_manager, entity_manager, event_manager, animation_handler, input_system, resource_manager, image=image)
+
+        return foliage
+
+    def create_entity(self, pos, entity, component_manager, entity_manager, event_manager, animation_handler, input_system, resource_manager):
         """
         Create a generic entity with the given data.
         """
@@ -128,18 +141,21 @@ class EntityFactory:
         entity_component_data = self.data.get(entity, {})
 
         # Add components to the entity
-        self.add_components_to_entity(entity_id, entity_component_data, component_manager, entity_manager, event_manager, animation_handler, input_system)
+        self.add_components_to_entity(entity_id, pos, entity_component_data, component_manager, entity_manager, event_manager, animation_handler, input_system, resource_manager)
 
         return entity_id
 
-    def add_components_to_entity(self, entity_id, entity_data, component_manager, entity_manager, event_manager, animation_handler, input_system, player=False):
+    def add_components_to_entity(self, entity_id, pos, entity_data, component_manager, entity_manager, event_manager, animation_handler, input_system, resource_manager, player=False, image=None):
         ctx = {
+            "pos": pos,
             "component_manager": component_manager,
             "entity_manager": entity_manager,
             "event_manager": event_manager,
             "animation_handler": animation_handler,
             "input_system": input_system,
-            "player": player
+            "resource_manager": resource_manager,
+            "player": player,
+            "image": image
         }
         
         for component_name, component_data in entity_data.items():
@@ -149,3 +165,14 @@ class EntityFactory:
                 component_manager.add(entity_id, comp)
             else:
                 print(f"[ENTITY FACTORY] No builder found for component '{component_name}' in entity '{entity_id}' with data: {component_data}")
+
+        pos = component_manager.get(entity_id, Position)
+        rc = (
+            component_manager.get(entity_id, RenderComponent) or
+            component_manager.get(entity_id, AnimationComponent)
+        )
+        if pos and rc:
+            print(entity_id)
+            img = rc.surface
+            pos.x += img.get_width() / 2
+            pos.y += img.get_height() / 2

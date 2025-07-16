@@ -17,8 +17,9 @@ from ..systems.rendering.render_system import AnimationSystem, RenderSystem
 from ..systems.rendering.camera import Camera
 from ..systems.combat.combat_system import CombatSystem
 from ..systems.combat.ai_system import AISystem
-
 from ..systems.rendering.particle_effect_system import ParticleEmitter
+
+from ..systems.scene.level_manager import Level
 
 from ..weapons.bullet_patterns import *
 
@@ -30,58 +31,54 @@ class GameScene(Scene):
     """
     Represents the main game scene, managing entities, components, and physics.
     """
-    def __init__(self, event_manager):
+    def __init__(self, ctx):
         """
         Initializes the game scene with an entity manager, component manager, and physics engine.
         """
-        super().__init__(id="game")
-        self.animation_handler = AnimationHandler()
+        super().__init__(id="game", ctx=ctx)
         self.component_manager = ComponentManager()
-        self.event_manager = event_manager
         self.camera = Camera()
         
         self.timer_system = TimerSystem(self.component_manager)
 
-        self.entity_manager = EntityManager(component_manager=self.component_manager, event_manager=event_manager)
+        self.entity_manager = EntityManager(component_manager=self.component_manager, event_manager=self.ctx.event_manager)
         self.entity_factory = EntityFactory()
 
-        self.physics_engine = PhysicsEngine(self.component_manager, self.event_manager)
+        self.physics_engine = PhysicsEngine(self.component_manager, self.ctx.event_manager)
         self.animation_system = AnimationSystem(self.component_manager)
-        self.render_system = RenderSystem(event_manager, self.component_manager, self.entity_manager)
-        self.combat_system = CombatSystem(self.component_manager, self.entity_manager, self.camera, event_manager)
+        self.render_system = RenderSystem(self.ctx.event_manager, self.component_manager, self.entity_manager)
+        self.combat_system = CombatSystem(self.component_manager, self.entity_manager, self.camera, self.ctx.event_manager, self.ctx.resource_manager)
 
-    def start(self, input_system):
+        self.level = Level(self.ctx)
+        self.current_level = 'data/levels/2.json'
+
+    def start(self):
         print(f"[SCENE] Starting scene: '{self.id}' (DEBUG)")
 
-        # Create a player entity
-        self.player = self.entity_factory.create_player(
-            component_manager=self.component_manager,
-            entity_manager=self.entity_manager,
-            event_manager=self.event_manager,
-            animation_handler=self.animation_handler,
-            input_system=input_system
-        )
-        self.player_input_system = PlayerInputSystem(entity_id=self.player, event_manager=self.event_manager)
-        self.ai_system = AISystem(player_entity_id=self.player, component_manager=self.component_manager, event_manager=self.event_manager)
+        self.player = self.level.load(self.current_level, self.component_manager, self.entity_factory, self.entity_manager)
 
-        for i in range(10):
-            coll_box = self.entity_factory.create_entity(
-                entity="collision_box",
-                component_manager=self.component_manager,
-                entity_manager=self.entity_manager,
-                event_manager=self.event_manager,
-                animation_handler=self.animation_handler,
-                input_system=input_system
-            )
+        self.player_input_system = PlayerInputSystem(entity_id=self.player, event_manager=self.ctx.event_manager)
+        self.ai_system = AISystem(player_entity_id=self.player, component_manager=self.component_manager, event_manager=self.ctx.event_manager)
 
-            self.component_manager.get(coll_box, Position).vec = (i*32, -200)
+        # for i in range(10):
+        #     coll_box = self.entity_factory.create_entity(
+        #         entity="collision_box",
+        #         component_manager=self.component_manager,
+        #         entity_manager=self.entity_manager,
+        #         event_manager=self.ctx.event_manager,
+        #         animation_handler=self.ctx.animation_handler,
+        #         input_system=self.ctx.input_system,
+        #         resource_manager=self.ctx.resource_manager
+        #     )
+
+        #     self.component_manager.get(coll_box, Position).vec = (i*32, -200)
 
         # for i in range(3):
         #     enemy = self.entity_factory.create_enemy(
         #         component_manager=self.component_manager,
         #         entity_manager=self.entity_manager,
-        #         event_manager=self.event_manager,
-        #         animation_handler=self.animation_handler,
+        #         event_manager=self.ctx.event_manager,
+        #         animation_handler=self.ctx.animation_handler,
         #         input_system=input_system,
         #         chess_piece_type="pawn"
         #     )
@@ -97,19 +94,20 @@ class GameScene(Scene):
         #             behavior="sniper"  # or "sniper", "patrol", etc.
         #         )
         #     )
-        for i in range(30):
-            enemy = self.entity_factory.create_enemy(
-                component_manager=self.component_manager,
-                entity_manager=self.entity_manager,
-                event_manager=self.event_manager,
-                animation_handler=self.animation_handler,
-                input_system=input_system,
-                chess_piece_type="pawn"
-            )
+        # for i in range(30):
+        #     enemy = self.entity_factory.create_enemy(
+        #         component_manager=self.component_manager,
+        #         entity_manager=self.entity_manager,
+        #         event_manager=self.ctx.event_manager,
+        #         animation_handler=self.ctx.animation_handler,
+        #         input_system=self.ctx.input_system,
+        #         resource_manager=self.ctx.resource_manager,
+        #         chess_piece_type="pawn"
+        #     )
 
-            # Set random position and velocity for the enemy
-            self.component_manager.get(enemy, Position).x = 400
-            self.component_manager.get(enemy, Position).y = i*100
+        #     # Set random position and velocity for the enemy
+        #     self.component_manager.get(enemy, Position).x = 400
+        #     self.component_manager.get(enemy, Position).y = i*100
 
             # self.component_manager.add(
             #     enemy, 
@@ -126,21 +124,21 @@ class GameScene(Scene):
         # keybinds
 
         # Subscribe to player input events
-        self.event_manager.subscribe(Inputs.UP, lambda: self.player_input_system.on_move("up"), source=self.player)
-        self.event_manager.subscribe(Inputs.DOWN, lambda: self.player_input_system.on_move("down"), source=self.player)
-        self.event_manager.subscribe(Inputs.LEFT, lambda: self.player_input_system.on_move("left"), source=self.player)
-        self.event_manager.subscribe(Inputs.RIGHT, lambda: self.player_input_system.on_move("right"), source=self.player)
+        self.ctx.event_manager.subscribe(Inputs.UP, lambda: self.player_input_system.on_move("up"), source=self.player)
+        self.ctx.event_manager.subscribe(Inputs.DOWN, lambda: self.player_input_system.on_move("down"), source=self.player)
+        self.ctx.event_manager.subscribe(Inputs.LEFT, lambda: self.player_input_system.on_move("left"), source=self.player)
+        self.ctx.event_manager.subscribe(Inputs.RIGHT, lambda: self.player_input_system.on_move("right"), source=self.player)
 
-        self.event_manager.subscribe(Inputs.UP_RELEASE, lambda: self.player_input_system.on_move("up", held=False), source=self.player)
-        self.event_manager.subscribe(Inputs.DOWN_RELEASE, lambda: self.player_input_system.on_move("down", held=False), source=self.player)
-        self.event_manager.subscribe(Inputs.LEFT_RELEASE, lambda: self.player_input_system.on_move("left", held=False), source=self.player)
-        self.event_manager.subscribe(Inputs.RIGHT_RELEASE, lambda: self.player_input_system.on_move("right", held=False), source=self.player)
+        self.ctx.event_manager.subscribe(Inputs.UP_RELEASE, lambda: self.player_input_system.on_move("up", held=False), source=self.player)
+        self.ctx.event_manager.subscribe(Inputs.DOWN_RELEASE, lambda: self.player_input_system.on_move("down", held=False), source=self.player)
+        self.ctx.event_manager.subscribe(Inputs.LEFT_RELEASE, lambda: self.player_input_system.on_move("left", held=False), source=self.player)
+        self.ctx.event_manager.subscribe(Inputs.RIGHT_RELEASE, lambda: self.player_input_system.on_move("right", held=False), source=self.player)
         
-        self.event_manager.subscribe(Inputs.LEFT_HOLD, lambda: self.player_input_system.shoot(self.render_system.render_effect_system, self.event_manager), source=self.player)
+        self.ctx.event_manager.subscribe(Inputs.LEFT_HOLD, lambda: self.player_input_system.shoot(self.ctx.event_manager), source=self.player)
 
-        self.event_manager.subscribe(Inputs.RIGHT_CLICK, lambda: self.player_input_system.spawn_bomb(self.component_manager, self.entity_manager, self.animation_handler, self.event_manager))
+        self.ctx.event_manager.subscribe(Inputs.RIGHT_CLICK, lambda: self.player_input_system.spawn_bomb(self.component_manager, self.entity_manager, self.ctx.animation_handler, self.ctx.event_manager))
 
-        self.event_manager.subscribe('l', lambda eid=self.entity_manager.create_entity(): self.component_manager.add(
+        self.ctx.event_manager.subscribe('l', lambda eid=self.entity_manager.create_entity(): self.component_manager.add(
             eid,
             Position(
                 eid,
@@ -154,7 +152,7 @@ class GameScene(Scene):
         ))
 
         # Set up keybinds for input system
-        input_system.set_input_binds(
+        self.ctx.input_system.set_input_binds(
             keys_held = {
                 pygame.K_w: Inputs.UP,
                 pygame.K_s: Inputs.DOWN,
@@ -177,7 +175,6 @@ class GameScene(Scene):
                 pygame.BUTTON_RIGHT: Inputs.RIGHT_HOLD
             }
         )
-
         # TEMP
   
     def update(self, fps, dt):
@@ -187,7 +184,7 @@ class GameScene(Scene):
         self.ai_system.update(dt)
         self.physics_engine.update(self.camera.scroll, fps, dt)
         self.combat_system.update(
-            event_manager=self.event_manager,
+            event_manager=self.ctx.event_manager,
             component_manager=self.component_manager,
             entity_list=self.component_manager.get_entities_with_either(HurtBoxComponent, HitBoxComponent),
             scroll=self.camera.scroll,
@@ -201,7 +198,7 @@ class GameScene(Scene):
         self.entity_manager.refresh_entities()
 
     def render(self, surface):
-        self.render_system.render(surface, self.camera)
+        self.render_system.render(surface, self.level.tilemap, self.camera)
 
         # render all the hurtboxs and hitboxes
         # boxes = self.component_manager.get_entities_with_either(HurtBoxComponent, HitBoxComponent)
@@ -215,10 +212,10 @@ class GameScene(Scene):
         #     if hitbox:
         #         pygame.draw.rect(surface, (255, 255, 0), (*pos + hitbox.offset - self.camera.scroll, *hitbox.size), 1)
 
-        # boxes = self.component_manager.get_entities_with(CollisionComponent)
-        # for entity_id in boxes:
-        #     collision_component = self.component_manager.get(entity_id, CollisionComponent)
-        #     pos = self.component_manager.get(entity_id, Position).vec
+        boxes = self.component_manager.get_entities_with(CollisionComponent)
+        for entity_id in boxes:
+            collision_component = self.component_manager.get(entity_id, CollisionComponent)
+            pos = self.component_manager.get(entity_id, Position).vec
 
-        #     if collision_component:
-        #         pygame.draw.rect(surface, (255, 255, 255), (*pos + collision_component.offset - self.camera.scroll, *collision_component.size), 1)
+            if collision_component:
+                pygame.draw.rect(surface, (255, 255, 255), (*pos + collision_component.offset - self.camera.scroll, *collision_component.size), 1)

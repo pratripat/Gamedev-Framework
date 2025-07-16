@@ -1,6 +1,6 @@
-import pygame
+import pygame, math
 from ...components.physics import Position
-from ...utils import CENTER
+from ...utils import CENTER, INITIAL_WINDOW_SIZE
 
 class Camera:
     def __init__(self):
@@ -24,7 +24,8 @@ class Camera:
 
         # lerp
         if lerp: 
-            self.scroll += (desired_pos - self.scroll) * lerp_speed * dt
+            alpha = 1 - math.exp(-lerp_speed * dt)
+            self.scroll += (desired_pos - self.scroll) * alpha
         else: 
             self.scroll = desired_pos
     
@@ -33,5 +34,9 @@ class Camera:
 
     def set_zoom(self, zoom: float):
         self.zoom = max(0.1, zoom)
+    
+    @property
+    def rect(self):
+        return pygame.Rect(*self.scroll, *INITIAL_WINDOW_SIZE)
     
 

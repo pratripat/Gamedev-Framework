@@ -1,6 +1,7 @@
 class Scene(): 
-    def __init__(self, id: str):
+    def __init__(self, id: str, ctx):
         self.id = id
+        self.ctx = ctx
 
     def start(self):
         print(f"[SCENE] Starting scene: '{self.id}' (DEBUG)")

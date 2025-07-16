@@ -62,3 +62,11 @@ class EntityManager:
                 self.em.unsubscribe_all_for(eid)
                 self.cm.remove_all(eid)
         self.to_remove.clear()
+
+    def clear_entities(self):
+        self.entities.clear()
+        self.to_remove.clear()
+        self.dead_entities.clear()
+        self.player_id = None
+        self.cm.clear_all()
+        self.em.unsubscribe_all_for(None)

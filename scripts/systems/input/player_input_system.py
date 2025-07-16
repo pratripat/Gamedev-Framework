@@ -37,7 +37,7 @@ class PlayerInputSystem:
             }
         )
 
-    def shoot(self, render_effect_system, event_manager):
+    def shoot(self, event_manager):
         event_manager.emit(GameSceneEvents.SHOOT, entity_id=self.entity_id)
 
     def on_move(self, direction, held=True):

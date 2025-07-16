@@ -72,3 +72,12 @@ class AnimationComponent:
         :return: The current image of the animation.
         """
         return self.animation.current_image
+
+    @property
+    def surface(self):
+        """
+        Returns the current image of the animation.
+        
+        :return: The current image of the animation.
+        """
+        return self.animation.current_image

@@ -4,8 +4,8 @@ from .health_system import HealthSystem
 from .projectile_system import ProjectileSystem
 
 class CombatSystem:
-    def __init__(self, component_manager, entity_manager, camera, event_manager):
-        self.weapon_system = WeaponSystem(component_manager, entity_manager, camera, event_manager)
+    def __init__(self, component_manager, entity_manager, camera, event_manager, resource_manager):
+        self.weapon_system = WeaponSystem(component_manager, entity_manager, camera, event_manager, resource_manager)
         self.hitbox_system = HitBoxSystem()
         self.health_system = HealthSystem()
         self.projectile_system = ProjectileSystem(component_manager, event_manager)

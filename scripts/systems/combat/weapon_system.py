@@ -6,9 +6,10 @@ from ...components.tags import PlayerTagComponent
 from ...utils import CollisionLayer, GameSceneEvents
 
 class WeaponSystem:
-    def __init__(self, component_manager, entity_manager, camera, event_manager):
+    def __init__(self, component_manager, entity_manager, camera, event_manager, resource_manager):
         self.component_manager = component_manager
         self.entity_manager = entity_manager
+        self.resource_manager = resource_manager
         self.camera = camera
 
         event_manager.subscribe(GameSceneEvents.SHOOT, self.on_shoot)
@@ -41,7 +42,7 @@ class WeaponSystem:
                 projectile_data['mask'] = CollisionLayer.create_mask(CollisionLayer.ENEMY)
 
                 # making the proj
-                projectiles = weapon_component.shoot_fn(entity_id, self.component_manager, self.entity_manager, projectile_data)
+                projectiles = weapon_component.shoot_fn(entity_id, self.component_manager, self.entity_manager, self.resource_manager, projectile_data)
                 # making sure all the projs have the same vel as that of the entity
                 for proj_id in projectiles:
                     proj_vel = self.component_manager.get(proj_id, Velocity).vec
@@ -65,7 +66,7 @@ class WeaponSystem:
                 projectile_data['layer'] = CollisionLayer.ENEMY
                 projectile_data['mask'] = CollisionLayer.create_mask(CollisionLayer.PLAYER)
 
-                weapon_component.shoot_fn(entity_id, self.component_manager, self.entity_manager, projectile_data)
+                weapon_component.shoot_fn(entity_id, self.component_manager, self.entity_manager, self.resource_manager, projectile_data)
 
             weapon_component.shot = True
         

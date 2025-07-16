@@ -32,4 +32,7 @@ class ComponentManager:
                 del self._components[component_type][entity_id]
         # Remove empty component types
         self._components = defaultdict(dict, {k: v for k, v in self._components.items() if v})
+    
+    def clear_all(self):
+        self._components.clear()
         

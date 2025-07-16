@@ -37,13 +37,13 @@ class RenderSystem:
         self.render_effect_system = RenderEffectSystem(event_manager, component_manager)
         self.particle_effect_system = ParticleEffectSystem(component_manager, entity_manager)
 
-        self.temp_surf = pygame.Surface(surface_size).convert()
+        self.temp_surf = pygame.Surface(surface_size).convert_alpha()
 
     def update(self, dt):
         self.render_effect_system.update(dt)
         self.particle_effect_system.update(dt)
     
-    def render(self, surface, camera):
+    def render(self, surface, tilemap, camera):
         self.temp_surf.fill((0, 0, 0))
 
         scroll = camera.scroll
@@ -53,6 +53,9 @@ class RenderSystem:
         # Queues
         normal_queue = []
         ysort_queue = []
+
+        # Render tilemap
+        tilemap.render(self.temp_surf, camera)
 
         for eid in self.component_manager.get_entities_with(Position):
             pos = self.component_manager.get(eid, Position)
@@ -143,68 +146,3 @@ class RenderSystem:
             ) / 2
 
         surface.blit(self.temp_surf, temp_surf_offset)
-
-
-    # def render(self, surface, camera):
-    #     self.temp_surf.fill((0,0,0))
-        
-    #     scroll = camera.scroll
-    #     temp_surf_offset = pygame.Vector2(0, 0)
-
-    #     for eid in self.component_manager.get_entities_with(Position):
-    #         pos = self.component_manager.get(eid, Position)
-    #         pos -= scroll
-
-    #         scale = None
-    #         tint = None
-
-    #         # Render effect component
-    #         rec = self.component_manager.get(eid, RenderEffectComponent)
-    #         if rec and not rec.disabled:
-    #             scale = rec.scale
-    #             tint = rec.tint
-
-    #         # Render component
-    #         render_component = self.component_manager.get(eid, RenderComponent)
-    #         if render_component:
-    #             offset = render_component.offset
-    #             rcs = render_component.surface
-    #             if not (scale is None or (scale[0] == 1 and scale[1] == 1)):
-    #                 offset[0] *= scale[0]
-    #                 offset[1] *= scale[1]
-    #                 rcs = pygame.transform.scale(
-    #                     rcs, (int(rcs.get_width() * scale[0]), int(rcs.get_height() * scale[1]))
-    #                 )
-
-    #             if tint is not None:
-    #                 tint_surf = pygame.Surface(rcs.get_size(), pygame.SRCALPHA)
-    #                 tint_surf.fill(tint)
-    #                 rcs.blit(tint_surf, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
-
-    #             self.temp_surf.blit(rcs, (pos.x + offset.x, pos.y + offset.y))
-
-    #         # Animation component
-    #         animation_component = self.component_manager.get(eid, AnimationComponent)
-    #         if animation_component:
-    #             animation = animation_component.animation
-    #             animation_pos = pygame.Vector2(pos.x + animation_component.offset.x, pos.y + animation_component.offset.y)
-
-    #             # Apply scaling to animation
-    #             if scale is not None and (scale[0] != 1 or scale[1] != 1):
-    #                 animation.render(self.temp_surf, animation_pos, scale=scale, tint=tint)
-    #             else:
-    #                 animation.render(self.temp_surf, animation_pos, tint=tint)
-
-    #     # Particle effects
-    #     self.particle_effect_system.render(self.temp_surf, scroll=scroll)
-
-    #     # Apply camera zoom
-    #     if camera.zoom != 1:
-    #         self.temp_surf = pygame.transform.scale(
-    #             self.temp_surf, (int(surface.get_width() * camera.zoom), int(surface.get_height() * camera.zoom))
-    #         )
-    #         temp_surf_offset = pygame.Vector2(surface.get_width() / 2, surface.get_height() / 2) - pygame.Vector2(
-    #             self.temp_surf.get_size()
-    #         ) / 2
-
-    #     surface.blit(self.temp_surf, temp_surf_offset)
