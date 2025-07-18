@@ -1,8 +1,9 @@
 import pygame
+from ...utils import TILE_SIZE, CHUNK_SIZE
 
 class Tilemap:
-    TILE_SIZE = 64
-    CHUNK_SIZE = 16
+    TILE_SIZE = TILE_SIZE
+    CHUNK_SIZE = CHUNK_SIZE
     CHUNK_RES = TILE_SIZE * CHUNK_SIZE
 
     def __init__(self, layers, tilemaps, resource_manager, exception_layers=[]):

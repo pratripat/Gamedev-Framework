@@ -55,7 +55,7 @@ class GameScene(Scene):
     def start(self):
         print(f"[SCENE] Starting scene: '{self.id}' (DEBUG)")
 
-        self.player = self.level.load(self.current_level, self.component_manager, self.entity_factory, self.entity_manager)
+        self.player = self.level.load(self.current_level, self.component_manager, self.entity_factory, self.entity_manager, self.render_system.render_effect_system)
 
         self.player_input_system = PlayerInputSystem(entity_id=self.player, event_manager=self.ctx.event_manager)
         self.ai_system = AISystem(player_entity_id=self.player, component_manager=self.component_manager, event_manager=self.ctx.event_manager)
@@ -212,10 +212,11 @@ class GameScene(Scene):
         #     if hitbox:
         #         pygame.draw.rect(surface, (255, 255, 0), (*pos + hitbox.offset - self.camera.scroll, *hitbox.size), 1)
 
-        boxes = self.component_manager.get_entities_with(CollisionComponent)
-        for entity_id in boxes:
-            collision_component = self.component_manager.get(entity_id, CollisionComponent)
-            pos = self.component_manager.get(entity_id, Position).vec
+        # render all the collision boxes
+        # boxes = self.component_manager.get_entities_with(CollisionComponent)
+        # for entity_id in boxes:
+        #     collision_component = self.component_manager.get(entity_id, CollisionComponent)
+        #     pos = self.component_manager.get(entity_id, Position).vec
 
-            if collision_component:
-                pygame.draw.rect(surface, (255, 255, 255), (*pos + collision_component.offset - self.camera.scroll, *collision_component.size), 1)
+        #     if collision_component:
+        #         pygame.draw.rect(surface, (255, 255, 255), (*pos + collision_component.offset - self.camera.scroll, *collision_component.size), 1)
