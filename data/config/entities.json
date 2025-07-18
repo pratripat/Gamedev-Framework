@@ -248,6 +248,15 @@
             "width": 40.0,
             "height": 38.0,
             "solid": true
+        },
+        "YSortComponent": {
+            "offset": [0, 54]
+        },
+        "ProximityFadeComponent": {
+            "targets": ["player", "enemy"],
+            "min_dist": 0,
+            "max_dist": 200,
+            "alpha_range": [255, 100]
         }
     }
 }

@@ -3,11 +3,12 @@ from ...utils import CENTER, INITIAL_WINDOW_SIZE
 
 from ...components.physics import Position, Velocity
 from ...components.animation import RenderComponent, AnimationComponent
-from ...components.render_effect import RenderEffectComponent, YSortRender
+from ...components.render_effect import RenderEffectComponent, YSortRender, ShadowComponent
 
 from ..animation.animation_state_machine import AnimationStateMachine
 from .render_effect_system import RenderEffectSystem
 from .particle_effect_system import ParticleEffectSystem
+from .proximity_fade_system import ProximityFadeSystem
 
 class AnimationSystem:
     def __init__(self, component_manager):
@@ -36,12 +37,14 @@ class RenderSystem:
 
         self.render_effect_system = RenderEffectSystem(event_manager, component_manager)
         self.particle_effect_system = ParticleEffectSystem(component_manager, entity_manager)
+        self.proximity_fade_system = ProximityFadeSystem(component_manager)
 
         self.temp_surf = pygame.Surface(surface_size).convert_alpha()
 
     def update(self, dt):
         self.render_effect_system.update(dt)
         self.particle_effect_system.update(dt)
+        self.proximity_fade_system.update()
     
     def render(self, surface, tilemap, camera):
         self.temp_surf.fill((0, 0, 0))
@@ -67,6 +70,7 @@ class RenderSystem:
             anim = self.component_manager.get(eid, AnimationComponent)
             rec = self.component_manager.get(eid, RenderEffectComponent)
             ysort = self.component_manager.get(eid, YSortRender)
+            shadow = self.component_manager.get(eid, ShadowComponent)
 
             # Skip entities with no visible component
             if render is None and anim is None:
@@ -75,6 +79,7 @@ class RenderSystem:
             # Effects
             scale = rec.scale if rec and not rec.disabled else None
             tint = rec.tint if rec and not rec.disabled else None
+            alpha = rec.alpha if rec and not rec.disabled and rec.alpha else None
 
             # Sprite render
             if render:
@@ -94,6 +99,10 @@ class RenderSystem:
                     tint_surf = pygame.Surface(surf.get_size(), pygame.SRCALPHA)
                     tint_surf.fill(tint)
                     surf.blit(tint_surf, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+                
+                if alpha:
+                    surf = surf.copy()
+                    surf.set_alpha(alpha)
 
                 draw_pos = screen_pos + offset
                 if screen_rect.colliderect(pygame.Rect(draw_pos, surf.get_size())):
@@ -109,9 +118,17 @@ class RenderSystem:
                 if screen_rect.collidepoint(anim_pos):
                     if ysort:
                         sort_y = world_pos.y + ysort.offset[1]
-                        ysort_queue.append((sort_y, anim, anim_pos, True, scale, tint))
+                        ysort_queue.append((sort_y, anim, anim_pos, True, scale, tint, alpha))
                     else:
-                        normal_queue.append((anim, anim_pos, True, scale, tint))
+                        normal_queue.append((anim, anim_pos, True, scale, tint, alpha))
+            
+            # Shadow render
+            if shadow:
+                shadow_pos = screen_pos + pygame.Vector2(shadow.offset)
+                if screen_rect.collidepoint(shadow_pos):
+                    shadow_surf = shadow.surface
+                    shadow_surf.set_alpha(shadow.alpha)
+                    self.temp_surf.blit(shadow_surf, shadow_pos)
 
         # Sort and draw ysort
         ysort_queue.sort(key=lambda item: item[0])
@@ -120,8 +137,8 @@ class RenderSystem:
                 _, surf, pos = item
                 self.temp_surf.blit(surf, pos)
             else:  # animation
-                _, anim, pos, _, scale, tint = item
-                anim.animation.render(self.temp_surf, pos, scale=scale, tint=tint)
+                _, anim, pos, _, scale, tint, alpha = item
+                anim.animation.render(self.temp_surf, pos, scale=scale, tint=tint, alpha=alpha)
 
         # Draw normal
         for item in normal_queue:
@@ -129,8 +146,8 @@ class RenderSystem:
                 surf, pos = item
                 self.temp_surf.blit(surf, pos)
             else:  # animation
-                anim, pos, _, scale, tint = item
-                anim.animation.render(self.temp_surf, pos, scale=scale, tint=tint)
+                anim, pos, _, scale, tint, alpha = item
+                anim.animation.render(self.temp_surf, pos, scale=scale, tint=tint, alpha=alpha)
 
         # Particle effects
         self.particle_effect_system.render(self.temp_surf, scroll=scroll)

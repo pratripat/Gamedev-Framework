@@ -4,12 +4,13 @@ from ...components.physics import Position
 from ...components.ai import AIComponent
 from ...components.animation import RenderComponent
 from ...components.render_effect import YSortRender
+from ..core.collision_grid import CollisionGrid
 
 class Level:
     def __init__(self, ctx):
         self.ctx = ctx
     
-    def load(self, path, component_manager, entity_factory, entity_manager):
+    def load(self, path, component_manager, entity_factory, entity_manager, render_effect_system):
         data = json.load(open(path, "r"))
 
         layers = data["layers"]
@@ -17,6 +18,9 @@ class Level:
 
         # loading tilemap
         self.tilemap = Tilemap(layers, tilemaps, self.ctx.resource_manager, exception_layers=["player", "enemies", "foliage"])
+
+        self.collision_grid = CollisionGrid(layers.get("wall", {}))
+        self.collision_grid.create_collision_boxes(entity_manager, component_manager)
 
         # player loading
         player = None
@@ -48,13 +52,13 @@ class Level:
                     chess_piece_type = ['pawn', 'rook', 'knight', 'bishop'][spritesheet_index]
                 )
 
-                # component_manager.add(
-                #     enemy, 
-                #     AIComponent(
-                #         entity_id=enemy,
-                #         behavior="chase"  # or "sniper", "patrol", etc.
-                #     )
-                # )
+                component_manager.add(
+                    enemy, 
+                    AIComponent(
+                        entity_id=enemy,
+                        behavior="sniper"  # or "sniper", "patrol", etc.
+                    )
+                )
         
         # foliage loading
         foliage_data = layers.get("foliage", [])
@@ -69,6 +73,7 @@ class Level:
                     animation_handler = self.ctx.animation_handler,
                     input_system = self.ctx.input_system,
                     resource_manager = self.ctx.resource_manager,
+                    render_effect_system = render_effect_system,
                     image = image
                 )
             

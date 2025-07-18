@@ -3,7 +3,7 @@ from ..components.physics import Position, Velocity, CollisionComponent
 from ..components.animation import AnimationComponent, RenderComponent
 from ..components.combat import WeaponComponent, HitBoxComponent, HurtBoxComponent, HealthComponent
 from ..components.tags import PlayerTagComponent, EnemyTagComponent
-from ..components.render_effect import YSortRender
+from ..components.render_effect import YSortRender, ShadowComponent, ProximityFadeComponent
 from .component_manager import ComponentManager
 
 from ..systems.animation.animation_state_machine import AnimationStateMachine
@@ -11,7 +11,7 @@ from ..weapons.bullet_patterns import SHOOT_FUNCTIONS
 
 from ..utils import CollisionShape, CollisionLayer
 
-import json, copy
+import json, copy, pygame
 
 # function factory for getting cond for transitions
 def make_vel_zero_check(entity_id, component_manager, input_system):
@@ -96,6 +96,19 @@ class EntityFactory:
         "YSortComponent": lambda eid, data, ctx: YSortRender(
             entity_id=eid,
             offset=data["offset"],
+        ),
+        "ShadowComponent": lambda eid, data, ctx: ShadowComponent(
+            entity_id=eid,
+            surface=data["surface"],
+            offset=data["offset"],
+            alpha=data["alpha"],
+            center=data["center"]
+        ),
+        "ProximityFadeComponent": lambda eid, data, ctx: ProximityFadeComponent(
+            targets=data["targets"],
+            min_dist_squared=data["min_dist"]**2,
+            max_dist_squared=data["max_dist"]**2,
+            alpha_range=data.get("alpha_range", (0, 255))
         )
     }
 
@@ -108,6 +121,22 @@ class EntityFactory:
         # Add components to the player entity
         player_component_data = self.data["player"]
 
+        # TEMP
+        size = [52, 24]
+        color = (80, 80, 80)
+        alpha = 200
+        shadow_surf = pygame.Surface(size).convert_alpha()
+        pygame.draw.ellipse(shadow_surf, color, (0, 0, *size))
+        shadow_surf.set_colorkey((0, 0, 0))  # Set black as transparent
+        shadow_surf.set_alpha(alpha)  # Set shadow transparency
+
+        player_component_data["ShadowComponent"] = {
+            "surface": shadow_surf,
+            "offset": (0, 36),
+            "alpha": alpha,
+            "center": True
+        }
+
         self.add_components_to_entity(player, pos, player_component_data, component_manager, entity_manager, event_manager, animation_handler, input_system, resource_manager, player=True)
 
         return player
@@ -118,17 +147,35 @@ class EntityFactory:
         # Add components to the enemy entity
         enemy_component_data = self.data["enemy_" + chess_piece_type]
 
+        # TEMP
+        size = [52, 24]
+        color = (80, 80, 80)
+        alpha = 200
+        shadow_surf = pygame.Surface(size).convert_alpha()
+        pygame.draw.ellipse(shadow_surf, color, (0, 0, *size))
+        shadow_surf.set_colorkey((0, 0, 0))  # Set black as transparent
+        shadow_surf.set_alpha(alpha)  # Set shadow transparency
+
+        enemy_component_data["ShadowComponent"] = {
+            "surface": shadow_surf,
+            "offset": (0, 36),
+            "alpha": alpha,
+            "center": True
+        }
+
         self.add_components_to_entity(enemy, pos, enemy_component_data, component_manager, entity_manager, event_manager, animation_handler, input_system, resource_manager)
 
         return enemy
 
-    def create_foliage(self, pos, component_manager, entity_manager, event_manager, animation_handler, input_system, resource_manager, image):
+    def create_foliage(self, pos, component_manager, entity_manager, event_manager, animation_handler, input_system, resource_manager, render_effect_system, image):
         foliage = entity_manager.create_entity()
 
         # Add components to the foliage entity
         foliage_component_data = self.data["foliage"]
 
         self.add_components_to_entity(foliage, pos, foliage_component_data, component_manager, entity_manager, event_manager, animation_handler, input_system, resource_manager, image=image)
+
+        render_effect_system.add_proximity_fade_component(foliage)
 
         return foliage
 
@@ -172,7 +219,6 @@ class EntityFactory:
             component_manager.get(entity_id, AnimationComponent)
         )
         if pos and rc:
-            print(entity_id)
             img = rc.surface
             pos.x += img.get_width() / 2
             pos.y += img.get_height() / 2

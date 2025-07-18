@@ -6,6 +6,7 @@ from ..components.projectile import ProjectileComponent
 from ..components.combat import HitBoxComponent
 from ..components.timer import TimerComponent
 from ..components.particle import ParticleConfig
+from ..components.render_effect import YSortRender
 from ..systems.rendering.particle_effect_system import ParticleEmitter
 
 def spawn_bomb(eid, cm, em, anim_handler, event_manager, data):
@@ -63,6 +64,10 @@ def spawn_bomb(eid, cm, em, anim_handler, event_manager, data):
             "lit",
             animation_handler=anim_handler,
             event_manager=event_manager
+        ),
+        YSortRender(
+            bomb_id,
+            offset=(0, 0)
         ),
         TimerComponent(
             timer,

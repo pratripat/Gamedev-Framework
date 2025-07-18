@@ -7,6 +7,8 @@ INITIAL_WINDOW_SIZE = (1920, 1002) # (1280, 720)
 CENTER = pygame.Vector2(INITIAL_WINDOW_SIZE) * 0.5
 ANIMATION_FOLDER = "data/graphics/animations"
 SCALE = 2
+TILE_SIZE = 64
+CHUNK_SIZE = 16
 
 # Define keybinds for player inputs
 class Inputs(Enum):

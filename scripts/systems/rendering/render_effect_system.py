@@ -1,4 +1,4 @@
-from ...components.render_effect import RenderEffectComponent
+from ...components.render_effect import RenderEffectComponent, ProximityFadeComponent
 from ...components.combat import WeaponComponent, HealthComponent
 from ...utils import GameSceneEvents
 
@@ -90,6 +90,25 @@ class RenderEffectSystem:
         
         render_effect_comp.effect_data["blink"] = effect_data
         render_effect_comp.effect_timers["blink"] = 0
+    
+    def add_proximity_fade_component(self, entity_id):
+        if not self.component_manager.get(entity_id, RenderEffectComponent):
+            self.component_manager.add(entity_id, RenderEffectComponent())
+        
+        render_effect_comp = self.component_manager.get(entity_id, RenderEffectComponent)
+        pfc = self.component_manager.get(entity_id, ProximityFadeComponent)
+
+        if render_effect_comp.disabled or not pfc: return
+
+        if "proximity_fade" in render_effect_comp.effect_data:
+            return
+        
+        render_effect_comp.effect_data["proximity_fade"] = {
+            "targets": pfc.targets,
+            "min_dist_squared": pfc.min_dist_squared,
+            "max_dist_squared": pfc.max_dist_squared,
+            "alpha_range": pfc.alpha_range
+        }
     
     def update(self, dt):
         for entity_id in self.component_manager.get_entities_with(RenderEffectComponent):
