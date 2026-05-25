@@ -1,12 +1,12 @@
 import pygame
-from ..utils import get_unit_direction_towards, rotate_vector, load_image, CollisionShape, CollisionLayer, EmitterShape, EmitterShapeType
+from ..utils import get_unit_direction_towards, rotate_vector, get_blob_shadow_surface, CollisionShape, CollisionLayer, EmitterShape, EmitterShapeType
 from ..components.physics import Position, Velocity, CollisionComponent
 from ..components.animation import RenderComponent, AnimationComponent
 from ..components.projectile import ProjectileComponent
 from ..components.combat import HitBoxComponent
 from ..components.timer import TimerComponent
 from ..components.particle import ParticleConfig
-from ..components.render_effect import YSortRender
+from ..components.render_effect import YSortRender, ShadowComponent
 from ..systems.rendering.particle_effect_system import ParticleEmitter
 
 def spawn_bomb(eid, cm, em, anim_handler, event_manager, data):
@@ -69,6 +69,13 @@ def spawn_bomb(eid, cm, em, anim_handler, event_manager, data):
             bomb_id,
             offset=(0, 0)
         ),
+        ShadowComponent(
+            entity_id=bomb_id,
+            surface=get_blob_shadow_surface(size=[36, 24]),
+            offset=(0, 16),
+            alpha=200,
+            center=True
+        ),
         TimerComponent(
             timer,
             on_burst,
@@ -104,6 +111,10 @@ def spawn_projectile(eid, cm, em, rm, direction, data, position_offset=pygame.Ve
             proj_id,
             rm.get_image(data["image_file"], scale=data["size"]),
             center = True
+        ),
+        YSortRender(
+            proj_id,
+            offset=(0, 0)
         ),
         HitBoxComponent(
             entity_id=proj_id,

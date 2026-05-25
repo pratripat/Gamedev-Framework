@@ -61,3 +61,9 @@ PROJECTILE SYSTEM
 MAKE THE ENEMY AI SYSTEM WITH TIMERS
 
 TRY OUT ASEPRITE
+
+y sort walls 
+
+remove collisions on water for projectiles
+
+add dash

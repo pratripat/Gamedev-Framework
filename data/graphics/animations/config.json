@@ -30,33 +30,6 @@
             "flip": false,
             "offset": [0, 0]
         },
-        "shoot": {
-            "frames": [
-                2,
-                2,
-                2,
-                3,
-                1
-            ],
-            "loop": true,
-            "speed": 1,
-            "scale": 2,
-            "centered": false,
-            "flip": false,
-            "offset": [0, 0]
-        },
-        "damage": {
-            "frames": [
-                5,
-                5
-            ],
-            "loop": true,
-            "speed": 1,
-            "scale": 2,
-            "centered": false,
-            "flip": false,
-            "offset": [0, 0]
-        },
         "death": {
             "frames": [
                 5,
@@ -235,32 +208,35 @@
             "flip": false,
             "offset": [0, 0]
         },
-        "shoot": {
-            "frames": [
-                2,
-                2,
-                2,
-                3,
-                1
-            ],
-            "loop": true,
-            "speed": 1,
-            "scale": 2,
-            "centered": false,
-            "flip": false,
-            "offset": [0, 0]
-        },
-        "damage": {
+        "death": {
             "frames": [
                 5,
-                5
+                5,
+                20,
+                5,
+                5,
+                5,
+                5,
+                5,
+                5,
+                20,
+                5,
+                5,
+                5,
+                5,
+                5,
+                5,
+                5,
+                5,
+                5,
+                50
             ],
-            "loop": true,
+            "loop": false,
             "speed": 1,
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [0, 0]
+            "offset": [-12.5, 0]
         }
     },
     "white_bishop": {
@@ -410,33 +386,6 @@
             "flip": false,
             "offset": [0, 0]
         },
-        "shoot": {
-            "frames": [
-                2,
-                2,
-                2,
-                3,
-                1
-            ],
-            "loop": true,
-            "speed": 1,
-            "scale": 2,
-            "centered": false,
-            "flip": false,
-            "offset": [0, 0]
-        },
-        "damage": {
-            "frames": [
-                5,
-                5
-            ],
-            "loop": true,
-            "speed": 1,
-            "scale": 2,
-            "centered": false,
-            "flip": false,
-            "offset": [0, 0]
-        },
         "death": {
             "frames": [
                 5,
@@ -499,32 +448,35 @@
             "flip": false,
             "offset": [0, 0]
         },
-        "shoot": {
-            "frames": [
-                2,
-                2,
-                2,
-                3,
-                1
-            ],
-            "loop": true,
-            "speed": 1,
-            "scale": 2,
-            "centered": false,
-            "flip": false,
-            "offset": [0, 0]
-        },
-        "damage": {
+        "death": {
             "frames": [
                 5,
-                5
+                5,
+                20,
+                5,
+                5,
+                5,
+                5,
+                5,
+                5,
+                20,
+                5,
+                5,
+                5,
+                5,
+                5,
+                5,
+                5,
+                5,
+                5,
+                50
             ],
-            "loop": true,
+            "loop": false,
             "speed": 1,
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [0, 0]
+            "offset": [-12.5, 0]
         }
     },
     "black_knight": {

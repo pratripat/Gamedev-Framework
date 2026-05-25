@@ -6,7 +6,7 @@ DEFAULT_COLORKEY = (0, 0, 0)
 INITIAL_WINDOW_SIZE = (1920, 1002) # (1280, 720)
 CENTER = pygame.Vector2(INITIAL_WINDOW_SIZE) * 0.5
 ANIMATION_FOLDER = "data/graphics/animations"
-SCALE = 2
+SCALE = 3
 TILE_SIZE = 64
 CHUNK_SIZE = 16
 
@@ -24,6 +24,7 @@ class Inputs(Enum):
     RIGHT_CLICK = "right_click"
     LEFT_HOLD = "left_hold"
     RIGHT_HOLD = "right_hold"
+    SPACE = "space"
 
 class CollisionShape(Enum):
     RECT = "rect"
@@ -299,6 +300,15 @@ def load_images_from_tilemap(filename, tile_size=32, skip_empty=True):
             tiles.append(tile)
 
     return tiles
+
+def get_blob_shadow_surface(size=[52, 24], color=(80, 80, 80), alpha=200):
+    # TEMP
+    shadow_surf = pygame.Surface(size).convert_alpha()
+    pygame.draw.ellipse(shadow_surf, color, (0, 0, *size))
+    shadow_surf.set_colorkey((0, 0, 0))  # Set black as transparent
+    shadow_surf.set_alpha(alpha)  # Set shadow transparency
+
+    return shadow_surf
 
 def get_unit_direction_towards(start_pos: pygame.Vector2, end_pos: pygame.Vector2):
     """

@@ -9,6 +9,10 @@ from ..core.collision_grid import CollisionGrid
 class Level:
     def __init__(self, ctx):
         self.ctx = ctx
+        self.tilemap = None
+        self.collision_grid = None
+
+        self.collidables = ["wall", "water"]
     
     def load(self, path, component_manager, entity_factory, entity_manager, render_effect_system):
         data = json.load(open(path, "r"))
@@ -19,7 +23,9 @@ class Level:
         # loading tilemap
         self.tilemap = Tilemap(layers, tilemaps, self.ctx.resource_manager, exception_layers=["player", "enemies", "foliage"])
 
-        self.collision_grid = CollisionGrid(layers.get("wall", {}))
+        collidables = []
+        for layer_id in self.collidables: collidables += layers.get(layer_id, [])
+        self.collision_grid = CollisionGrid(collidables)
         self.collision_grid.create_collision_boxes(entity_manager, component_manager)
 
         # player loading
@@ -52,13 +58,13 @@ class Level:
                     chess_piece_type = ['pawn', 'rook', 'knight', 'bishop'][spritesheet_index]
                 )
 
-                component_manager.add(
-                    enemy, 
-                    AIComponent(
-                        entity_id=enemy,
-                        behavior="sniper"  # or "sniper", "patrol", etc.
-                    )
-                )
+                # component_manager.add(
+                #     enemy, 
+                #     AIComponent(
+                #         entity_id=enemy,
+                #         behavior="sniper"  # or "sniper", "patrol", etc.
+                #     )
+                # )
         
         # foliage loading
         foliage_data = layers.get("foliage", [])

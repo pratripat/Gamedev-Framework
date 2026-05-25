@@ -4,12 +4,13 @@ from ..components.animation import AnimationComponent, RenderComponent
 from ..components.combat import WeaponComponent, HitBoxComponent, HurtBoxComponent, HealthComponent
 from ..components.tags import PlayerTagComponent, EnemyTagComponent
 from ..components.render_effect import YSortRender, ShadowComponent, ProximityFadeComponent
+from ..components.ai import AIComponent
 from .component_manager import ComponentManager
 
 from ..systems.animation.animation_state_machine import AnimationStateMachine
 from ..weapons.bullet_patterns import SHOOT_FUNCTIONS
 
-from ..utils import CollisionShape, CollisionLayer
+from ..utils import CollisionShape, CollisionLayer, get_blob_shadow_surface
 
 import json, copy, pygame
 
@@ -67,6 +68,10 @@ class EntityFactory:
             entity_type=data.get("entity_type", "chess_piece")
         ),
         "AnimationStateMachine": build_animation_state_machine,
+        "AIComponent": lambda eid, data, ctx: AIComponent(
+            entity_id=eid,
+            behavior=data["behavior"]
+        ),
         "HurtBoxComponent": lambda eid, data, ctx: HurtBoxComponent(
             entity_id=eid,
             offset=(data["offset_x"], data["offset_y"]),
@@ -121,17 +126,9 @@ class EntityFactory:
         # Add components to the player entity
         player_component_data = self.data["player"]
 
-        # TEMP
-        size = [52, 24]
-        color = (80, 80, 80)
         alpha = 200
-        shadow_surf = pygame.Surface(size).convert_alpha()
-        pygame.draw.ellipse(shadow_surf, color, (0, 0, *size))
-        shadow_surf.set_colorkey((0, 0, 0))  # Set black as transparent
-        shadow_surf.set_alpha(alpha)  # Set shadow transparency
-
         player_component_data["ShadowComponent"] = {
-            "surface": shadow_surf,
+            "surface": get_blob_shadow_surface(alpha=alpha),
             "offset": (0, 36),
             "alpha": alpha,
             "center": True
@@ -147,17 +144,10 @@ class EntityFactory:
         # Add components to the enemy entity
         enemy_component_data = self.data["enemy_" + chess_piece_type]
 
-        # TEMP
-        size = [52, 24]
-        color = (80, 80, 80)
         alpha = 200
-        shadow_surf = pygame.Surface(size).convert_alpha()
-        pygame.draw.ellipse(shadow_surf, color, (0, 0, *size))
-        shadow_surf.set_colorkey((0, 0, 0))  # Set black as transparent
-        shadow_surf.set_alpha(alpha)  # Set shadow transparency
 
         enemy_component_data["ShadowComponent"] = {
-            "surface": shadow_surf,
+            "surface": get_blob_shadow_surface(alpha=alpha),
             "offset": (0, 36),
             "alpha": alpha,
             "center": True

@@ -94,3 +94,17 @@ class CollisionComponent:
 
         if center:
             self.offset -= self.size / 2
+
+class KnockbackComponent:
+    def __init__(self, vec: pygame.Vector2, force: int, duration: int=0.3):
+        self.vx = vec.x * force
+        self.vy = vec.y * force
+        self.duration = duration   # seconds remaining
+
+    def update(self, dt):
+        if self.duration <= 0:
+            return 0, 0
+        self.duration -= dt
+        self.vx *= 0.80
+        self.vy *= 0.80
+        return self.vx, self.vy
