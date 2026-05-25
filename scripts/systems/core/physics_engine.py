@@ -1,12 +1,26 @@
 import pygame
-from ...components.physics import Position, Velocity
+
+from scripts.components.tags import EnemyTagComponent
+from scripts.ecs.component_manager import ComponentManager
+from ...components.physics import KnockbackComponent, Position, Velocity
 from ...components.physics import CollisionComponent
-from ...utils import Quadtree, INITIAL_WINDOW_SIZE, GameSceneEvents
+from ...utils import Quadtree, INITIAL_WINDOW_SIZE, GameSceneEvents, get_unit_direction_towards
 
 class PhysicsEngine:
-    def __init__(self, component_manager, event_manager):
+    def __init__(self, component_manager: ComponentManager, event_manager):
         self.component_manager = component_manager
         self.event_manager = event_manager
+
+        self.event_manager.subscribe(GameSceneEvents.DAMAGE, self._knockback)
+    
+    def _knockback(self, entity_id, proj_id, **kwargs):
+        # Knockback only if the entity that got hit is a enemy
+        if self.component_manager.get(entity_id, EnemyTagComponent):
+            proj_vel = get_unit_direction_towards(pygame.Vector2(0, 0), self.component_manager.get(proj_id, Velocity).vec)
+            self.component_manager.add(
+                entity_id,
+                KnockbackComponent(proj_vel, 0.8)
+            )
 
     def update(self, scroll, fps, dt):
         quadtree = Quadtree(0, (*scroll, *INITIAL_WINDOW_SIZE))
@@ -39,6 +53,11 @@ class PhysicsEngine:
             pos = self.component_manager.get(non_solid_component_entity, Position)
             vel = self.component_manager.get(non_solid_component_entity, Velocity)
             rect = pygame.FRect(*(pos.vec + non_solid_component.offset), *non_solid_component.size)
+
+            # making sure knockback vel gets added
+            kbc = self.component_manager.get(non_solid_component_entity, KnockbackComponent)
+            if kbc:
+                vel += kbc.update(dt)
 
             collisions = {"top": False, "right": False, "bottom": False, "left": False}
 

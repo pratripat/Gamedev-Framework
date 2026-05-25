@@ -24,7 +24,7 @@
             "center": false
         },
         "HealthComponent": {
-            "max_health": 100
+            "max_health": 10000
         },
         "CollisionComponent": {
             "offset_x": 0.0,
@@ -44,8 +44,6 @@
                 "effects": [],
                 "size": 1.5,
                 "image_file": "data/graphics/images/projectile.png",
-                "towards_player": true,
-                "angle": 3,
                 "bounce": 1
             }
         },
@@ -66,7 +64,10 @@
             }
         },
         "YSortComponent": {
-            "offset": [0, 37]
+            "offset": [
+                0,
+                37
+            ]
         }
     },
     "enemy_pawn": {
@@ -105,14 +106,14 @@
             "center": true
         },
         "WeaponComponent": {
-            "cooldown": 0.1,
+            "cooldown": 1,
             "shoot_fn": "shoot_single",
             "projectile_data": {
                 "damage": 10,
-                "speed": 5,
-                "range": 100,
+                "speed": 7,
+                "range": 150,
                 "effects": [],
-                "size": 1.5,
+                "size": 1,
                 "image_file": "data/graphics/images/projectile.png",
                 "towards_player": true,
                 "angle": 3
@@ -134,8 +135,14 @@
                 }
             }
         },
+        "AIComponent": {
+            "behavior": "sniper"
+        },
         "YSortComponent": {
-            "offset": [0, 37]
+            "offset": [
+                0,
+                37
+            ]
         }
     },
     "enemy_rook": {
@@ -174,7 +181,7 @@
             "center": true
         },
         "WeaponComponent": {
-            "cooldown": 0.01,
+            "cooldown": 0.1,
             "shoot_fn": "shoot_single",
             "projectile_data": {
                 "damage": 10,
@@ -205,8 +212,14 @@
                 }
             }
         },
+        "AIComponent": {
+            "behavior": "chase"
+        },
         "YSortComponent": {
-            "offset": [0, 37]
+            "offset": [
+                0,
+                37
+            ]
         }
     },
     "collision_box": {
@@ -229,7 +242,10 @@
             "center": true
         },
         "YSortComponent": {
-            "offset": [0, 37]
+            "offset": [
+                0,
+                37
+            ]
         }
     },
     "foliage": {
@@ -250,13 +266,22 @@
             "solid": true
         },
         "YSortComponent": {
-            "offset": [0, 54]
+            "offset": [
+                0,
+                54
+            ]
         },
         "ProximityFadeComponent": {
-            "targets": ["player", "enemy"],
+            "targets": [
+                "player",
+                "enemy"
+            ],
             "min_dist": 0,
             "max_dist": 200,
-            "alpha_range": [255, 100]
+            "alpha_range": [
+                255,
+                100
+            ]
         }
     }
 }

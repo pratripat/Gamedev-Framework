@@ -136,7 +136,8 @@ class GameScene(Scene):
         
         self.ctx.event_manager.subscribe(Inputs.LEFT_HOLD, lambda: self.player_input_system.shoot(self.ctx.event_manager), source=self.player)
 
-        self.ctx.event_manager.subscribe(Inputs.RIGHT_CLICK, lambda: self.player_input_system.spawn_bomb(self.component_manager, self.entity_manager, self.ctx.animation_handler, self.ctx.event_manager))
+        # self.ctx.event_manager.subscribe(Inputs.RIGHT_CLICK, lambda: self.player_input_system.spawn_bomb(self.component_manager, self.entity_manager, self.ctx.animation_handler, self.ctx.event_manager))
+        self.ctx.event_manager.subscribe(Inputs.SPACE, lambda: self.player_input_system.spawn_bomb(self.component_manager, self.entity_manager, self.ctx.animation_handler, self.ctx.event_manager))
 
         self.ctx.event_manager.subscribe('l', lambda eid=self.entity_manager.create_entity(): self.component_manager.add(
             eid,
@@ -153,6 +154,9 @@ class GameScene(Scene):
 
         # Set up keybinds for input system
         self.ctx.input_system.set_input_binds(
+            keys_pressed = {
+                pygame.K_SPACE: Inputs.SPACE
+            },
             keys_held = {
                 pygame.K_w: Inputs.UP,
                 pygame.K_s: Inputs.DOWN,

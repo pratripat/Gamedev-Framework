@@ -74,7 +74,7 @@ class CollisionGrid:
                         x * self.tile_size,
                         y * self.tile_size,
                         width * self.tile_size,
-                        height * self.tile_size                        
+                        height * self.tile_size
                     )
 
                     rects.append(rect)
