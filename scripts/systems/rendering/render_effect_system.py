@@ -1,3 +1,4 @@
+from scripts.components.physics import Velocity
 from ...components.render_effect import RenderEffectComponent, ProximityFadeComponent
 from ...components.combat import WeaponComponent, HealthComponent
 from ...utils import GameSceneEvents
@@ -9,87 +10,59 @@ class RenderEffectSystem:
         self.component_manager = component_manager
 
         event_manager.subscribe(GameSceneEvents.SHOOT, lambda entity_id: self.trigger_squash(entity_id, (0.9, 1.05)))
-        event_manager.subscribe(GameSceneEvents.DAMAGE, self.trigger_flash, lambda entity_id, **args: self.trigger_squash(entity_id, target_scale=(1, 0.8)))
-        event_manager.subscribe(GameSceneEvents.DEATH, self.disable_render_effect)
+        event_manager.subscribe(
+            GameSceneEvents.DAMAGE,
+            self.trigger_flash,
+            lambda entity_id, **args: self.trigger_squash(entity_id, target_scale=(1, 0.8)),
+            lambda entity_id, proj_id, **args: self.trigger_rotate(entity_id, angle=10 * (1 if component_manager.get(proj_id, Velocity).x < 0 else -1), lerp=True, duration=0.2),
+        )
+        event_manager.subscribe(GameSceneEvents.DEATH, 
+            self.disable_render_effect,
+        )
 
     def disable_render_effect(self, entity_id):
         render_effect_comp = self.component_manager.get(entity_id, RenderEffectComponent)
         render_effect_comp.disabled = True
  
-    def trigger_squash(self, entity_id, target_scale=(0.5,0.5)):
-        weapon_comp = self.component_manager.get(entity_id, WeaponComponent)
-
-        if weapon_comp is None: return 
-
-        self.add_squash_effect(
-            entity_id = entity_id, 
-            effect_data = {
-                "start_scale": pygame.Vector2(1, 1),
-                "target_scale": pygame.Vector2(target_scale),
-                "duration": 0.05,
-                "return_back": True
-            }
-        )
-    
     def trigger_flash(self, entity_id, **args):
-        self.add_flash_effect(
-            entity_id = entity_id,
-            effect_data = {
-                "color": (255, 255, 255),
-                "duration": HealthComponent.iframetimer
-            }
-        )
+        self.add_effect(entity_id, "flash", {
+            "color": (255, 255, 255),
+            "duration": HealthComponent.iframetimer
+        })
+
+    def trigger_squash(self, entity_id, target_scale=(0.5, 0.5)):
+        if not self.component_manager.get(entity_id, WeaponComponent): return
+        self.add_effect(entity_id, "squash", {
+            "start_scale": pygame.Vector2(1, 1),
+            "target_scale": pygame.Vector2(target_scale),
+            "duration": 0.05,
+            "return_back": True
+        })
     
     def trigger_blink(self, entity_id, **args):
-        self.add_blink_effect(
-            entity_id=entity_id,
-            effect_data = {
+        self.add_effect(entity_id, "blink", {
                 "color": (255, 255, 255),
                 "duration": 1
             }
         )
 
-    def add_squash_effect(self, entity_id, effect_data):
+    def trigger_rotate(self, entity_id, angle=45, lerp=True, duration=0.3):
+        self.add_effect(entity_id, "rotate", {
+            "target_angle": angle,
+            "lerp": lerp,
+            "duration": duration
+        })
+
+    def add_effect(self, entity_id, effect_type, effect_data):
         if not self.component_manager.get(entity_id, RenderEffectComponent):
             self.component_manager.add(entity_id, RenderEffectComponent())
         
-        render_effect_comp = self.component_manager.get(entity_id, RenderEffectComponent)
-
-        if render_effect_comp.disabled: return
-
-        if "squash" in render_effect_comp.effect_data:
+        rec = self.component_manager.get(entity_id, RenderEffectComponent)
+        if rec.disabled or effect_type in rec.effect_data:
             return
         
-        render_effect_comp.effect_data["squash"] = effect_data
-        render_effect_comp.effect_timers["squash"] = 0
-    
-    def add_flash_effect(self, entity_id, effect_data):
-        if not self.component_manager.get(entity_id, RenderEffectComponent):
-            self.component_manager.add(entity_id, RenderEffectComponent())
-        
-        render_effect_comp = self.component_manager.get(entity_id, RenderEffectComponent)
-
-        if render_effect_comp.disabled: return
-
-        if "flash" in render_effect_comp.effect_data:
-            return
-        
-        render_effect_comp.effect_data["flash"] = effect_data
-        render_effect_comp.effect_timers["flash"] = 0
-    
-    def add_blink_effect(self, entity_id, effect_data):
-        if not self.component_manager.get(entity_id, RenderEffectComponent):
-            self.component_manager.add(entity_id, RenderEffectComponent())
-        
-        render_effect_comp = self.component_manager.get(entity_id, RenderEffectComponent)
-
-        if render_effect_comp.disabled: return
-
-        if "blink" in render_effect_comp.effect_data:
-            return
-        
-        render_effect_comp.effect_data["blink"] = effect_data
-        render_effect_comp.effect_timers["blink"] = 0
+        rec.effect_data[effect_type] = effect_data
+        rec.effect_timers[effect_type] = 0
     
     def add_proximity_fade_component(self, entity_id):
         if not self.component_manager.get(entity_id, RenderEffectComponent):
@@ -167,6 +140,22 @@ class RenderEffectSystem:
                     render_effect_comp.tint = None
                     del render_effect_comp.effect_data["blink"]
                     del render_effect_comp.effect_timers["blink"]
+                
+            if "rotate" in render_effect_comp.effect_data:
+                data = render_effect_comp.effect_data["rotate"]
+                total = data["duration"]
+                render_effect_comp.effect_timers["rotate"] += dt
+                t = min(render_effect_comp.effect_timers["rotate"] / total, 1)
+
+                if data["lerp"]:
+                    render_effect_comp.rotation = data["target_angle"] * t
+                else:
+                    render_effect_comp.rotation = data["target_angle"]
+
+                if t >= 1:
+                    render_effect_comp.rotation = 0.0
+                    del render_effect_comp.effect_data["rotate"]
+                    del render_effect_comp.effect_timers["rotate"]
 
             if len(render_effect_comp.effect_data) == 0:
                 self.component_manager.remove(entity_id, RenderEffectComponent)

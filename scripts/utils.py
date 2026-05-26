@@ -3,7 +3,7 @@ from enum import Enum, IntFlag, auto
 from dataclasses import dataclass
 
 DEFAULT_COLORKEY = (0, 0, 0)
-INITIAL_WINDOW_SIZE = (1920, 1002) # (1280, 720)
+INITIAL_WINDOW_SIZE = (1280, 720) # (1920, 1002) # (1280, 720)
 CENTER = pygame.Vector2(INITIAL_WINDOW_SIZE) * 0.5
 ANIMATION_FOLDER = "data/graphics/animations"
 SCALE = 3

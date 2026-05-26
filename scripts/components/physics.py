@@ -105,6 +105,7 @@ class KnockbackComponent:
         if self.duration <= 0:
             return 0, 0
         self.duration -= dt
+        # print(self.duration)
         self.vx *= 0.80
         self.vy *= 0.80
         return self.vx, self.vy

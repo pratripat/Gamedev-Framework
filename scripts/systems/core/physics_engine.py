@@ -19,7 +19,7 @@ class PhysicsEngine:
             proj_vel = get_unit_direction_towards(pygame.Vector2(0, 0), self.component_manager.get(proj_id, Velocity).vec)
             self.component_manager.add(
                 entity_id,
-                KnockbackComponent(proj_vel, 0.8)
+                KnockbackComponent(proj_vel, 5, duration=0.2)
             )
 
     def update(self, scroll, fps, dt):
@@ -57,7 +57,9 @@ class PhysicsEngine:
             # making sure knockback vel gets added
             kbc = self.component_manager.get(non_solid_component_entity, KnockbackComponent)
             if kbc:
-                vel += kbc.update(dt)
+                vel.vec = kbc.update(dt)
+                if kbc.duration <= 0:
+                    self.component_manager.remove(non_solid_component_entity, KnockbackComponent)
 
             collisions = {"top": False, "right": False, "bottom": False, "left": False}
 

@@ -80,11 +80,17 @@ class RenderSystem:
             scale = rec.scale if rec and not rec.disabled else None
             tint = rec.tint if rec and not rec.disabled else None
             alpha = rec.alpha if rec and not rec.disabled and rec.alpha else None
+            rotation = rec.rotation if rec and not rec.disabled else 0.0
 
             # Sprite render
             if render:
                 surf = render.surface
                 offset = render.offset.copy()
+
+                if rotation:
+                    old_center = pygame.Vector2(surf.get_rect(topleft=draw_pos).center)
+                    surf = pygame.transform.rotate(surf, rotation)
+                    draw_pos = old_center - pygame.Vector2(surf.get_size()) / 2
 
                 if scale and (scale[0] != 1 or scale[1] != 1):
                     offset[0] *= scale[0]
@@ -93,6 +99,8 @@ class RenderSystem:
                         int(surf.get_width() * scale[0]),
                         int(surf.get_height() * scale[1])
                     ))
+
+                draw_pos = screen_pos + offset  # ✅ move up here
 
                 if tint:
                     surf = surf.copy()
@@ -118,9 +126,9 @@ class RenderSystem:
                 if screen_rect.collidepoint(anim_pos):
                     if ysort:
                         sort_y = world_pos.y + ysort.offset[1]
-                        ysort_queue.append((sort_y, anim, anim_pos, True, scale, tint, alpha))
+                        ysort_queue.append((sort_y, anim, anim_pos, True, scale, tint, alpha, rotation))  # ✅ add rotation
                     else:
-                        normal_queue.append((anim, anim_pos, True, scale, tint, alpha))
+                        normal_queue.append((anim, anim_pos, True, scale, tint, alpha, rotation))  # ✅ add rotation
             
             # Shadow render
             if shadow:
@@ -137,8 +145,8 @@ class RenderSystem:
                 _, surf, pos = item
                 self.temp_surf.blit(surf, pos)
             else:  # animation
-                _, anim, pos, _, scale, tint, alpha = item
-                anim.animation.render(self.temp_surf, pos, scale=scale, tint=tint, alpha=alpha)
+                _, anim, pos, _, scale, tint, alpha, rotation = item
+                anim.animation.render(self.temp_surf, pos, scale=scale, tint=tint, alpha=alpha, angle=rotation)
 
         # Draw normal
         for item in normal_queue:
@@ -146,8 +154,8 @@ class RenderSystem:
                 surf, pos = item
                 self.temp_surf.blit(surf, pos)
             else:  # animation
-                anim, pos, _, scale, tint, alpha = item
-                anim.animation.render(self.temp_surf, pos, scale=scale, tint=tint, alpha=alpha)
+                anim, pos, _, scale, tint, alpha, rotation = item
+                anim.animation.render(self.temp_surf, pos, scale=scale, tint=tint, alpha=alpha, angle=rotation)
 
         # Particle effects
         self.particle_effect_system.render(self.temp_surf, scroll=scroll)
