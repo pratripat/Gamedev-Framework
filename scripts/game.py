@@ -34,14 +34,17 @@ class Game():
     def run(self):
         self.ctx.scene_manager.play_scene()
 
-        while 1:
-            self.clock.tick(self.target_fps)
-            # self.clock.tick()
+        while True:
+            # Calculate frame time (ms -> seconds) and current FPS
             self.calculate_dt()
             self.update()
             self.render()
     
     def render(self):
+        # expose timing info to scenes for diagnostics (fps, dt)
+        self.ctx.fps = getattr(self, 'fps', 0)
+        self.ctx.dt = getattr(self, 'dt', 0)
+
         self.ctx.scene_manager.render_scene(self.screen)
         pygame.display.update()
 
@@ -52,10 +55,8 @@ class Game():
         self.ctx.scene_manager.update_scene(fps=self.target_fps, dt=self.dt)
 
     def calculate_dt(self):
+        # tick() returns milliseconds passed since last call; convert to seconds
+        ms = self.clock.tick(self.target_fps)
+        self.dt = ms / 1000.0
+        # current smoothed FPS (may be 0 briefly on startup)
         self.fps = self.clock.get_fps()
-        # print(self.fps)
-        
-        if self.fps == 0: 
-            self.dt = 0
-        else: 
-            self.dt = (1 / self.fps) * self.time

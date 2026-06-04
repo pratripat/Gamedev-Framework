@@ -3,10 +3,12 @@ from ...utils import TILE_SIZE
 from ...components.physics import Position, CollisionComponent
 
 class CollisionGrid:
-    def __init__(self, walls, tile_size=TILE_SIZE):
+    def __init__(self, walls, tile_size=None):
         self.grid = []
         self.offset = (0, 0)
-        self.tile_size = tile_size
+        # Use global SCALE to adjust tile size so collision grid matches visual scale
+        from ...utils import TILE_SIZE, SCALE
+        self.tile_size = tile_size if tile_size is not None else TILE_SIZE * SCALE
 
         self.fill_grid(walls)
 
@@ -81,7 +83,7 @@ class CollisionGrid:
         
         return rects
     
-    def create_collision_boxes(self, entity_manager, component_manager):
+    def create_collision_boxes(self, entity_manager, component_manager, blocks_projectiles=True):
         collision_rects = self.merge_collision_grids()
 
         for rect in collision_rects:    
@@ -98,7 +100,8 @@ class CollisionGrid:
                     offset=(0, 0),
                     size=(rect.width, rect.height),
                     solid=True,
-                    center=True
+                    center=True,
+                    blocks_projectiles=blocks_projectiles
                 )
             )
 

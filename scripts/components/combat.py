@@ -95,6 +95,7 @@ class AttackPatternComponent:
         self.patterns = patterns
         self.current_index = 0
         self.loop = loop
+        self.active = False           # Controlled by the AI system
         self.disabled = False
 
     @property
@@ -106,4 +107,7 @@ class AttackPatternComponent:
             self.current_index += 1
         elif self.loop:
             self.current_index = 0
+        # reset timers on advance
+        self.current.shoot_timer = 0
+        self.current.phase_timer = 0
 

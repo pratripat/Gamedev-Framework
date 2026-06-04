@@ -66,8 +66,23 @@ class ParticleEmitter:
         pc = self.particle_config
 
         pos.vec = pygame.Vector2(spawn_x, spawn_y)
-        vel.x = random.uniform(-pc.vel, pc.vel)
-        vel.y = random.uniform(-pc.vel, pc.vel)
+
+        # Prefer outward radial velocities for circle emitters so particles don't pile up at origin
+        if self.shape.type == EmitterShapeType.CIRCLE:
+            # direction from origin to spawn point
+            dir_vec = pygame.Vector2(spawn_x - origin_pos[0], spawn_y - origin_pos[1])
+            if dir_vec.length_squared() > 0.0001:
+                speed = random.uniform(pc.vel * 0.8, pc.vel * 1.4)
+                vel_vec = dir_vec.normalize() * speed
+                vel.x = vel_vec.x
+                vel.y = vel_vec.y
+            else:
+                vel.x = random.uniform(-pc.vel, pc.vel)
+                vel.y = random.uniform(-pc.vel, pc.vel)
+        else:
+            vel.x = random.uniform(-pc.vel, pc.vel)
+            vel.y = random.uniform(-pc.vel, pc.vel)
+
         particle.age = 0
         particle.lifetime = random.uniform(pc.lifetime-1, pc.lifetime+1)
         particle.color = pygame.Color(*pc.color)

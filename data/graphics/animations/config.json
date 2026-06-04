@@ -9,7 +9,10 @@
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [0, 0]
+            "offset": [
+                0,
+                0
+            ]
         },
         "moving": {
             "frames": [
@@ -28,7 +31,10 @@
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [0, 0]
+            "offset": [
+                0,
+                0
+            ]
         },
         "death": {
             "frames": [
@@ -58,7 +64,10 @@
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [-12.5, 0]
+            "offset": [
+                -12.5,
+                0
+            ]
         }
     },
     "white_knight": {
@@ -71,7 +80,10 @@
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [0, 0]
+            "offset": [
+                0,
+                0
+            ]
         },
         "idleflipped": {
             "frames": [
@@ -82,7 +94,10 @@
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [0, 0]
+            "offset": [
+                0,
+                0
+            ]
         },
         "moving": {
             "frames": [
@@ -101,7 +116,10 @@
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [0, 0]
+            "offset": [
+                0,
+                0
+            ]
         },
         "movingflipped": {
             "frames": [
@@ -120,7 +138,10 @@
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [0, 0]
+            "offset": [
+                0,
+                0
+            ]
         },
         "shoot": {
             "frames": [
@@ -135,7 +156,10 @@
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [0, 0]
+            "offset": [
+                0,
+                0
+            ]
         },
         "shootflipped": {
             "frames": [
@@ -150,7 +174,10 @@
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [0, 0]
+            "offset": [
+                0,
+                0
+            ]
         },
         "damage": {
             "frames": [
@@ -162,7 +189,10 @@
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [0, 0]
+            "offset": [
+                0,
+                0
+            ]
         },
         "damageflipped": {
             "frames": [
@@ -174,7 +204,10 @@
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [0, 0]
+            "offset": [
+                0,
+                0
+            ]
         }
     },
     "white_rook": {
@@ -187,7 +220,10 @@
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [0, 0]
+            "offset": [
+                0,
+                0
+            ]
         },
         "moving": {
             "frames": [
@@ -206,7 +242,10 @@
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [0, 0]
+            "offset": [
+                0,
+                0
+            ]
         },
         "death": {
             "frames": [
@@ -236,7 +275,10 @@
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [-12.5, 0]
+            "offset": [
+                -12.5,
+                0
+            ]
         }
     },
     "white_bishop": {
@@ -249,7 +291,10 @@
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [0, 0]
+            "offset": [
+                0,
+                0
+            ]
         },
         "idleflipped": {
             "frames": [
@@ -260,7 +305,10 @@
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [0, 0]
+            "offset": [
+                0,
+                0
+            ]
         },
         "moving": {
             "frames": [
@@ -279,7 +327,10 @@
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [0, 0]
+            "offset": [
+                0,
+                0
+            ]
         },
         "movingflipped": {
             "frames": [
@@ -298,7 +349,10 @@
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [0, 0]
+            "offset": [
+                0,
+                0
+            ]
         },
         "shoot": {
             "frames": [
@@ -313,7 +367,10 @@
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [0, 0]
+            "offset": [
+                0,
+                0
+            ]
         },
         "shootflipped": {
             "frames": [
@@ -328,7 +385,10 @@
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [0, 0]
+            "offset": [
+                0,
+                0
+            ]
         },
         "damage": {
             "frames": [
@@ -340,7 +400,10 @@
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [0, 0]
+            "offset": [
+                0,
+                0
+            ]
         },
         "damageflipped": {
             "frames": [
@@ -352,7 +415,10 @@
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [0, 0]
+            "offset": [
+                0,
+                0
+            ]
         }
     },
     "black_pawn": {
@@ -365,7 +431,10 @@
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [0, 0]
+            "offset": [
+                0,
+                0
+            ]
         },
         "moving": {
             "frames": [
@@ -384,7 +453,10 @@
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [0, 0]
+            "offset": [
+                0,
+                0
+            ]
         },
         "death": {
             "frames": [
@@ -414,7 +486,10 @@
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [-12.5, 0]
+            "offset": [
+                -12.5,
+                0
+            ]
         }
     },
     "black_rook": {
@@ -427,7 +502,10 @@
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [0, 0]
+            "offset": [
+                0,
+                0
+            ]
         },
         "moving": {
             "frames": [
@@ -446,7 +524,10 @@
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [0, 0]
+            "offset": [
+                0,
+                0
+            ]
         },
         "death": {
             "frames": [
@@ -476,7 +557,10 @@
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [-12.5, 0]
+            "offset": [
+                -12.5,
+                0
+            ]
         }
     },
     "black_knight": {
@@ -489,7 +573,10 @@
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [0, 0]
+            "offset": [
+                0,
+                0
+            ]
         },
         "idleflipped": {
             "frames": [
@@ -500,7 +587,10 @@
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [0, 0]
+            "offset": [
+                0,
+                0
+            ]
         },
         "moving": {
             "frames": [
@@ -519,7 +609,10 @@
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [0, 0]
+            "offset": [
+                0,
+                0
+            ]
         },
         "movingflipped": {
             "frames": [
@@ -538,7 +631,10 @@
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [0, 0]
+            "offset": [
+                0,
+                0
+            ]
         },
         "shoot": {
             "frames": [
@@ -553,7 +649,10 @@
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [0, 0]
+            "offset": [
+                0,
+                0
+            ]
         },
         "shootflipped": {
             "frames": [
@@ -568,7 +667,10 @@
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [0, 0]
+            "offset": [
+                0,
+                0
+            ]
         },
         "damage": {
             "frames": [
@@ -580,7 +682,10 @@
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [0, 0]
+            "offset": [
+                0,
+                0
+            ]
         },
         "damageflipped": {
             "frames": [
@@ -592,7 +697,10 @@
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [0, 0]
+            "offset": [
+                0,
+                0
+            ]
         }
     },
     "black_bishop": {
@@ -605,7 +713,10 @@
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [0, 0]
+            "offset": [
+                0,
+                0
+            ]
         },
         "idleflipped": {
             "frames": [
@@ -616,7 +727,10 @@
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [0, 0]
+            "offset": [
+                0,
+                0
+            ]
         },
         "moving": {
             "frames": [
@@ -635,7 +749,10 @@
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [0, 0]
+            "offset": [
+                0,
+                0
+            ]
         },
         "movingflipped": {
             "frames": [
@@ -654,7 +771,10 @@
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [0, 0]
+            "offset": [
+                0,
+                0
+            ]
         },
         "shoot": {
             "frames": [
@@ -669,7 +789,10 @@
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [0, 0]
+            "offset": [
+                0,
+                0
+            ]
         },
         "shootflipped": {
             "frames": [
@@ -684,7 +807,10 @@
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [0, 0]
+            "offset": [
+                0,
+                0
+            ]
         }
     },
     "vegetation": {
@@ -697,8 +823,11 @@
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [0, 0]
-        }, 
+            "offset": [
+                0,
+                0
+            ]
+        },
         "1": {
             "frames": [
                 1
@@ -708,7 +837,10 @@
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [0, 0]
+            "offset": [
+                0,
+                0
+            ]
         },
         "2": {
             "frames": [
@@ -719,7 +851,10 @@
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [0, 0]
+            "offset": [
+                0,
+                0
+            ]
         },
         "3": {
             "frames": [
@@ -730,7 +865,10 @@
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [0, 0]
+            "offset": [
+                0,
+                0
+            ]
         }
     },
     "bomb": {
@@ -747,7 +885,10 @@
             "scale": 2,
             "centered": false,
             "flip": false,
-            "offset": [-8.5, -16.5]
+            "offset": [
+                -8.5,
+                -16.5
+            ]
         }
     }
 }

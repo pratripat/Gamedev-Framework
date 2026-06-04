@@ -23,10 +23,15 @@ class Level:
         # loading tilemap
         self.tilemap = Tilemap(layers, tilemaps, self.ctx.resource_manager, exception_layers=["player", "enemies", "foliage"])
 
-        collidables = []
-        for layer_id in self.collidables: collidables += layers.get(layer_id, [])
-        self.collision_grid = CollisionGrid(collidables)
-        self.collision_grid.create_collision_boxes(entity_manager, component_manager)
+        # Create collision boxes per collidable layer so some layers (like water) can be non-blocking for projectiles
+        self.collision_grid = []
+        for layer_id in self.collidables:
+            layer_collidables = layers.get(layer_id, [])
+            cg = CollisionGrid(layer_collidables)
+            # water should NOT block projectiles (they fly over it); other layers block projectiles
+            blocks_projectiles = False if layer_id == "water" else True
+            cg.create_collision_boxes(entity_manager, component_manager, blocks_projectiles=blocks_projectiles)
+            self.collision_grid.append((layer_id, cg))
 
         # player loading
         player = None

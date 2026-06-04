@@ -12,10 +12,10 @@ class CombatSystem:
         self.projectile_system = ProjectileSystem(component_manager, event_manager)
         self.attack_pattern_system = AttackPatternSystem(component_manager, entity_manager, resource_manager)
 
-    def update(self, event_manager, component_manager, entity_list, scroll, dt):
+    def update(self, event_manager, component_manager, entity_list, scroll, dt, fps=None):
         self.weapon_system.update(dt)
+        self.attack_pattern_system.update(dt)
+        # Update projectiles first so their positions are ready when hitboxes are checked
+        self.projectile_system.update(dt, fps)
         self.hitbox_system.update(event_manager, component_manager, entity_list, scroll)
         self.health_system.update(component_manager, dt)
-        self.attack_pattern_system.update(dt)
-
-        self.projectile_system.update(dt)

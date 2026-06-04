@@ -86,11 +86,12 @@ class Velocity(Vector2Component):
         self.realistic_vel = self.vec.copy()
 
 class CollisionComponent:
-    def __init__(self, entity_id, offset, size, solid=False, center=False):
+    def __init__(self, entity_id, offset, size, solid=False, center=False, blocks_projectiles=True):
         self.entity_id = entity_id
         self.offset = pygame.Vector2(offset)
         self.size = pygame.Vector2(size)
         self.solid = solid
+        self.blocks_projectiles = blocks_projectiles
 
         if center:
             self.offset -= self.size / 2

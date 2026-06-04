@@ -1,5 +1,5 @@
 import pygame
-from ..utils import get_unit_direction_towards, rotate_vector, get_blob_shadow_surface, CollisionShape, CollisionLayer, EmitterShape, EmitterShapeType
+from ..utils import get_unit_direction_towards, rotate_vector, get_blob_shadow_surface, CollisionShape, CollisionLayer, EmitterShape, EmitterShapeType, SCALE
 from ..components.physics import Position, Velocity, CollisionComponent
 from ..components.animation import RenderComponent, AnimationComponent
 from ..components.projectile import ProjectileComponent
@@ -54,6 +54,12 @@ def spawn_bomb(eid, cm, em, anim_handler, event_manager, data):
             )
         )
 
+        # Notify systems that this bomb has burst (used by input cooldown)
+        try:
+            event_manager.emit('bomb_burst', entity_id=bomb_id)
+        except Exception:
+            pass
+
     cm.add(
         bomb_id,
         Position(bomb_id, *pos),
@@ -83,6 +89,8 @@ def spawn_bomb(eid, cm, em, anim_handler, event_manager, data):
         )
     )
 
+    return bomb_id
+
 def spawn_projectile(eid, cm, em, rm, direction, data, position_offset=pygame.Vector2(0,0)):
     pos = data.get("start_pos", pygame.Vector2(0, 0))
     spawn_pos = pos + position_offset
@@ -96,6 +104,9 @@ def spawn_projectile(eid, cm, em, rm, direction, data, position_offset=pygame.Ve
     projectile_scale = 15
 
     proj_id = em.create_entity()
+    # Compute hitbox/collision sizes in pixels, accounting for global SCALE
+    size_px = data["size"] * projectile_scale * SCALE
+
     cm.add(
         proj_id,
         Position(proj_id, spawn_pos.x, spawn_pos.y),
@@ -119,7 +130,7 @@ def spawn_projectile(eid, cm, em, rm, direction, data, position_offset=pygame.Ve
         HitBoxComponent(
             entity_id=proj_id,
             offset=(0,0),
-            size=(data["size"]*projectile_scale, data["size"]*projectile_scale),
+            size=(size_px, size_px),
             shape=CollisionShape.CIRCLE,
             layer=layer,
             mask=mask
@@ -127,7 +138,7 @@ def spawn_projectile(eid, cm, em, rm, direction, data, position_offset=pygame.Ve
         CollisionComponent(
             entity_id=proj_id,
             offset=(0, 0),
-            size=(data["size"]*projectile_scale, data["size"]*projectile_scale),
+            size=(size_px, size_px),
             center=True
         )
     )
