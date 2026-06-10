@@ -82,6 +82,13 @@ class ProjectileSystem:
                 if not other_comp or not other_comp.solid or not getattr(other_comp, "blocks_projectiles", True):
                     continue
 
+                # SPECIAL: If target has a health component and is invincible (e.g. dashing), 
+                # let projectiles pass through them without being destroyed or bouncing.
+                from ...components.combat import HealthComponent
+                other_health = self.component_manager.get(other_entity, HealthComponent)
+                if other_health and other_health.invincibility_timer > 0:
+                    continue
+
                 if rect.colliderect(other_rect):
                     if vel.x > 0:
                         rect.right = other_rect.left
@@ -113,6 +120,13 @@ class ProjectileSystem:
                 other_comp = self.component_manager.get(other_entity, CollisionComponent)
                 # Skip non-solid and collision boxes that don't block projectiles (e.g., water)
                 if not other_comp or not other_comp.solid or not getattr(other_comp, "blocks_projectiles", True):
+                    continue
+
+                # SPECIAL: If target has a health component and is invincible (e.g. dashing), 
+                # let projectiles pass through them without being destroyed or bouncing.
+                from ...components.combat import HealthComponent
+                other_health = self.component_manager.get(other_entity, HealthComponent)
+                if other_health and other_health.invincibility_timer > 0:
                     continue
 
                 if rect.colliderect(other_rect):

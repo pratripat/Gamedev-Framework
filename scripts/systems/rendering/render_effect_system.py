@@ -14,11 +14,12 @@ class RenderEffectSystem:
             GameSceneEvents.DAMAGE,
             self.trigger_flash,
             lambda entity_id, **args: self.trigger_squash(entity_id, target_scale=(1, 0.8)),
-            lambda entity_id, proj_id, **args: self.trigger_rotate(entity_id, angle=10 * (1 if component_manager.get(proj_id, Velocity).x < 0 else -1), lerp=True, duration=0.2),
+            lambda entity_id, proj_id, **args: self.trigger_rotate(entity_id, angle=10 * (1 if (component_manager.get(proj_id, Velocity) and component_manager.get(proj_id, Velocity).x < 0) else -1), lerp=True, duration=0.2),
         )
         event_manager.subscribe(GameSceneEvents.DEATH, 
             self.disable_render_effect,
         )
+        event_manager.subscribe(GameSceneEvents.DASH_START, lambda entity_id, duration: self.trigger_dash_blink(entity_id, duration))
 
     def disable_render_effect(self, entity_id):
         render_effect_comp = self.component_manager.get(entity_id, RenderEffectComponent)
@@ -51,6 +52,12 @@ class RenderEffectSystem:
             "target_angle": angle,
             "lerp": lerp,
             "duration": duration
+        })
+
+    def trigger_dash_blink(self, entity_id, duration):
+        self.add_effect(entity_id, "dash_blink", {
+            "duration": duration,
+            "flicker_speed": 40.0
         })
 
     def add_effect(self, entity_id, effect_type, effect_data):
@@ -156,6 +163,21 @@ class RenderEffectSystem:
                     render_effect_comp.rotation = 0.0
                     del render_effect_comp.effect_data["rotate"]
                     del render_effect_comp.effect_timers["rotate"]
+
+            if "dash_blink" in render_effect_comp.effect_data:
+                data = render_effect_comp.effect_data["dash_blink"]
+                render_effect_comp.effect_timers["dash_blink"] += dt
+                t = render_effect_comp.effect_timers["dash_blink"]
+                
+                if int(t * data["flicker_speed"]) % 2 == 0:
+                    render_effect_comp.alpha = 100
+                else:
+                    render_effect_comp.alpha = 255
+
+                if t >= data["duration"]:
+                    render_effect_comp.alpha = None
+                    del render_effect_comp.effect_data["dash_blink"]
+                    del render_effect_comp.effect_timers["dash_blink"]
 
             if len(render_effect_comp.effect_data) == 0:
                 self.component_manager.remove(entity_id, RenderEffectComponent)

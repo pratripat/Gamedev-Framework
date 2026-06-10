@@ -1,4 +1,4 @@
-import json, pygame
+import json, pygame, os, glob
 from ..rendering.tilemap import Tilemap
 from ...components.physics import Position
 from ...components.ai import AIComponent
@@ -32,6 +32,53 @@ class Level:
             blocks_projectiles = False if layer_id == "water" else True
             cg.create_collision_boxes(entity_manager, component_manager, blocks_projectiles=blocks_projectiles)
             self.collision_grid.append((layer_id, cg))
+
+        # Auto-generate water animation frames (tileable Worley overlay) and build chunk-based water animations
+        try:
+            from ...utils.water_animator import generate_tileable_worley_frames, load_water_frames
+            import hashlib
+            import glob
+
+            if "water" in self.tilemap.layers and any(self.tilemap.layers["water"].values()):
+                from ...utils import TILE_SIZE
+                
+                # Parameters for "Dark Bluish" noise
+                NUM_FRAMES = 12
+                CELLS = 4
+                BASE_COLOR = (2, 8, 15)
+                HIGHLIGHT = (30, 90, 180) 
+                INTENSITY = 0.8
+
+                # Optional: Try to load pre-generated frames if they match our needs
+                # (Disabled for now to ensure the new dark bluish effect is always applied)
+                worley_frames = None
+                # gen_dirs = sorted(glob.glob("data/graphics/generated_water_*"))
+                # if gen_dirs:
+                #     latest_dir = gen_dirs[-1]
+                #     worley_frames = load_water_frames(latest_dir, scale=TILE_SIZE/32.0)
+                
+                if not worley_frames:
+                    # Generate a deterministic seed from the level path so results are stable
+                    seed_hash = int(hashlib.md5(path.encode('utf-8')).hexdigest(), 16) % 100000
+                    print(f"[LEVEL] Generating dark bluish water frames (seed={seed_hash})")
+                    worley_frames = generate_tileable_worley_frames(
+                        size=TILE_SIZE, 
+                        num_frames=NUM_FRAMES, 
+                        cells=CELLS, 
+                        base_color=BASE_COLOR, 
+                        highlight_color=HIGHLIGHT, 
+                        intensity=INTENSITY, 
+                        seed=seed_hash, 
+                        mode='negative'
+                    )
+
+                # Pass the tile-sized frames to tilemap; tilemap will composite them per-chunk (tiled) so tiles align
+                self.tilemap.set_water_frames(worley_frames, fps=6, intensity=INTENSITY)
+        except Exception as e:
+            # Numpy may be missing or import failed; fall back to static water tiles
+            import traceback
+            print(f"[LEVEL] Water animator not available: {e}")
+            traceback.print_exc()
 
         # player loading
         player = None

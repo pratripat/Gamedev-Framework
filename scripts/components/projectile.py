@@ -5,6 +5,7 @@ class ProjectileComponent:
         self.damage = damage
         self.effects = effects
         self.lifetime = lifetime
+        self.hits = set() # Track which entities have already been hit
         self.data = {
             "bounce": bounce,
             "penetration": penetration

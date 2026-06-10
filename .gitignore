@@ -11,3 +11,6 @@ __pycache__/
 
 # Ignore .pyc and .pyo files
 *.py[cod]
+
+# Generated assets
+data/graphics/generated_water_*

@@ -68,6 +68,10 @@ class HitBoxSystem:
                     
                     projectile = component_manager.get(attacker, ProjectileComponent)
                     if projectile:
+                        if defender in projectile.hits:
+                            continue
+                        projectile.hits.add(defender)
+                        
                         # If the attacker is a projectile, emit a damage event with the projectile's data
                         event_manager.emit(GameSceneEvents.DAMAGE, entity_id=defender, proj_id=attacker, damage=projectile.damage, effects=projectile.effects)
                     else:

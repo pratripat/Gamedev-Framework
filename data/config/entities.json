@@ -350,6 +350,7 @@
                 255,
                 100
             ]
-        }
+        },
+        "WindAffectedComponent": {}
     }
 }

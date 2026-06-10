@@ -41,3 +41,8 @@ class ProximityFadeComponent:
 
         for i, target in enumerate(self.targets):
             self.targets[i] = PlayerTagComponent if target == "player" else EnemyTagComponent if target == "enemy" else target
+
+
+class WindAffectedComponent:
+    """Tag component. Add to any entity that should sway with wind (foliage, grass, etc.)"""
+    pass

@@ -1,4 +1,5 @@
 import pygame
+import os
 from ...utils import load_image, load_images_from_spritesheet, load_images_from_tilemap, SCALE #, load_sound
 
 class ResourceManager: 
@@ -11,6 +12,16 @@ class ResourceManager:
     def get_image(self, path, scale=1, **kwargs):
         # Apply global SCALE multiplicatively so every asset respects one global scale
         effective_scale = scale * SCALE
+
+        # Handle potential absolute paths from level data by making them relative to project root
+        if path and os.path.isabs(path):
+            if not os.path.exists(path):
+                # Try to find 'data/' in the path and use that as relative
+                if 'data/' in path:
+                    path = path[path.find('data/'):]
+                else:
+                    # Just take the filename as a last resort? No, better to use the relative part
+                    path = os.path.basename(path)
 
         if path not in self.images:
             image = load_image(path)
@@ -36,6 +47,14 @@ class ResourceManager:
     def get_spritesheet(self, path, index=None, scale=1, **kwargs): 
         effective_scale = scale * SCALE
 
+        # Handle potential absolute paths
+        if path and os.path.isabs(path):
+            if not os.path.exists(path):
+                if 'data/' in path:
+                    path = path[path.find('data/'):]
+                else:
+                    path = os.path.basename(path)
+
         if path not in self.spritesheets:
             images = load_images_from_spritesheet(path)
             if not (path and len(images)):
@@ -56,6 +75,14 @@ class ResourceManager:
     
     def get_tilemap(self, path, index=None, scale=1, **kwargs):
         effective_scale = scale * SCALE
+
+        # Handle potential absolute paths
+        if path and os.path.isabs(path):
+            if not os.path.exists(path):
+                if 'data/' in path:
+                    path = path[path.find('data/'):]
+                else:
+                    path = os.path.basename(path)
 
         if path and path not in self.tilemaps:
             images = load_images_from_tilemap(path)

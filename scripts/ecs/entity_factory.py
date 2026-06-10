@@ -3,7 +3,7 @@ from ..components.physics import Position, Velocity, CollisionComponent
 from ..components.animation import AnimationComponent, RenderComponent
 from ..components.combat import AttackPattern, AttackPatternComponent, WeaponComponent, HitBoxComponent, HurtBoxComponent, HealthComponent
 from ..components.tags import PlayerTagComponent, EnemyTagComponent
-from ..components.render_effect import YSortRender, ShadowComponent, ProximityFadeComponent
+from ..components.render_effect import YSortRender, ShadowComponent, ProximityFadeComponent, WindAffectedComponent
 from ..components.ai import AIComponent
 from .component_manager import ComponentManager
 
@@ -127,7 +127,8 @@ class EntityFactory:
             min_dist_squared=data["min_dist"]**2,
             max_dist_squared=data["max_dist"]**2,
             alpha_range=data.get("alpha_range", (0, 255))
-        )
+        ),
+        "WindAffectedComponent": lambda eid, data, ctx: WindAffectedComponent(),
     }
 
     def __init__(self):

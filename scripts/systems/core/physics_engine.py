@@ -17,7 +17,19 @@ class PhysicsEngine:
     def _knockback(self, entity_id, proj_id, **kwargs):
         # Knockback only if the entity that got hit is a enemy
         if self.component_manager.get(entity_id, EnemyTagComponent):
-            proj_vel = get_unit_direction_towards(pygame.Vector2(0, 0), self.component_manager.get(proj_id, Velocity).vec)
+            # Safe check for Velocity component (bomb bursts are static)
+            proj_vel_comp = self.component_manager.get(proj_id, Velocity)
+            if proj_vel_comp:
+                proj_vel = get_unit_direction_towards(pygame.Vector2(0, 0), proj_vel_comp.vec)
+            else:
+                # Fallback for static explosions: knockback AWAY from the explosion center
+                proj_pos = self.component_manager.get(proj_id, Position)
+                target_pos = self.component_manager.get(entity_id, Position)
+                if proj_pos and target_pos:
+                    proj_vel = get_unit_direction_towards(proj_pos.vec, target_pos.vec)
+                else:
+                    proj_vel = pygame.Vector2(0, 0)
+
             self.component_manager.add(
                 entity_id,
                 KnockbackComponent(proj_vel, 5, duration=0.2)

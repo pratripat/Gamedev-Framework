@@ -18,27 +18,35 @@ def spawn_bomb(eid, cm, em, anim_handler, event_manager, data):
     pos = data.get("pos", (0, 0))
 
     def on_burst():
-        cm.remove(bomb_id, AnimationComponent)
+        # Notify systems that this bomb has burst (used by input cooldown)
+        try:
+            event_manager.emit('bomb_burst', entity_id=bomb_id)
+        except Exception:
+            pass
+            
+        # Create a new entity for the explosion burst so it's clean and separate from the bomb
+        burst_id = em.create_entity()
         
         circle_surf = pygame.Surface((diameter, diameter))
         circle_surf.set_colorkey((0, 0, 0))
         pygame.draw.circle(circle_surf, (255, 255, 255), (radius, radius), radius)
 
         cm.add(
-            bomb_id,
+            burst_id,
+            Position(burst_id, *pos),
             ProjectileComponent(
-                bomb_id,
+                burst_id,
                 damage = data.get("damage", 30),
-                lifetime = 0.2,
+                lifetime = 0.1, # Short burst duration
                 penetration=100
             ),
             RenderComponent(
-                bomb_id,
+                burst_id,
                 surface=circle_surf,
                 center=True
             ),
             HitBoxComponent(
-                bomb_id,
+                burst_id,
                 offset=(0,0),
                 size=(diameter, diameter),
                 shape=CollisionShape.CIRCLE,
@@ -47,18 +55,15 @@ def spawn_bomb(eid, cm, em, anim_handler, event_manager, data):
             ),
             ParticleEmitter(
                 rate=50,
-                duration=2,
+                duration=0.5,
                 loop=False,
                 particle_config=ParticleConfig(vel=1, size=radius * 0.25),
                 shape=EmitterShape(type=EmitterShapeType.CIRCLE, radius=radius)
             )
         )
-
-        # Notify systems that this bomb has burst (used by input cooldown)
-        try:
-            event_manager.emit('bomb_burst', entity_id=bomb_id)
-        except Exception:
-            pass
+        
+        # Remove the bomb entity
+        em.delete_entity(bomb_id)
 
     cm.add(
         bomb_id,
