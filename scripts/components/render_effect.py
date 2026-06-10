@@ -9,6 +9,7 @@ class RenderEffectComponent:
         self.alpha = None                 # for transparency
         self.tint = None                  # for color tint
         self.blink = False                # for flickering
+        self.rotation = 0.0               # degrees, consumed by render system
         self.effect_timers = {}           # active timers {'squash': 0}
         self.effect_data = {}             # active data {'squash': {'start_scale': [x, y], 'target_scale': [x2, y2], 'duration': ,return_back: bool}}
         self.disabled = False
@@ -40,3 +41,8 @@ class ProximityFadeComponent:
 
         for i, target in enumerate(self.targets):
             self.targets[i] = PlayerTagComponent if target == "player" else EnemyTagComponent if target == "enemy" else target
+
+
+class WindAffectedComponent:
+    """Tag component. Add to any entity that should sway with wind (foliage, grass, etc.)"""
+    pass

@@ -15,9 +15,11 @@ class HitBoxSystem:
         # insert all hitboxes to qt
         for entity_id in entity_list:
             hurtbox = component_manager.get(entity_id, HurtBoxComponent)
-            pos = component_manager.get(entity_id, Position).vec
-            if not hurtbox or not pos or hurtbox.disabled:
+            pos_comp = component_manager.get(entity_id, Position)
+            if not hurtbox or not pos_comp or hurtbox.disabled:
                 continue
+
+            pos = pos_comp.vec
 
             # Check if the entity's health has an invincibility timer greater than 0
             is_player = component_manager.get(entity_id, PlayerTagComponent)
@@ -31,9 +33,11 @@ class HitBoxSystem:
         # for each hitbox, retrieve nearby hurtboxes
         for attacker in entity_list:
             hitbox = component_manager.get(attacker, HitBoxComponent)
-            pos_a = component_manager.get(attacker, Position).vec
-            if not hitbox or not pos_a or hitbox.disabled:
+            pos_comp_a = component_manager.get(attacker, Position)
+            if not hitbox or not pos_comp_a or hitbox.disabled:
                 continue
+
+            pos_a = pos_comp_a.vec
 
             hitbox_rect = pygame.Rect(*(pos_a + hitbox.offset), *hitbox.size)
             nearby_hurtboxes = []
@@ -64,6 +68,10 @@ class HitBoxSystem:
                     
                     projectile = component_manager.get(attacker, ProjectileComponent)
                     if projectile:
+                        if defender in projectile.hits:
+                            continue
+                        projectile.hits.add(defender)
+                        
                         # If the attacker is a projectile, emit a damage event with the projectile's data
                         event_manager.emit(GameSceneEvents.DAMAGE, entity_id=defender, proj_id=attacker, damage=projectile.damage, effects=projectile.effects)
                     else:

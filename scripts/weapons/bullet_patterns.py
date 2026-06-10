@@ -1,5 +1,5 @@
 import pygame
-from ..utils import get_unit_direction_towards, rotate_vector, get_blob_shadow_surface, CollisionShape, CollisionLayer, EmitterShape, EmitterShapeType
+from ..utils import get_unit_direction_towards, rotate_vector, get_blob_shadow_surface, CollisionShape, CollisionLayer, EmitterShape, EmitterShapeType, SCALE
 from ..components.physics import Position, Velocity, CollisionComponent
 from ..components.animation import RenderComponent, AnimationComponent
 from ..components.projectile import ProjectileComponent
@@ -18,27 +18,35 @@ def spawn_bomb(eid, cm, em, anim_handler, event_manager, data):
     pos = data.get("pos", (0, 0))
 
     def on_burst():
-        cm.remove(bomb_id, AnimationComponent)
+        # Notify systems that this bomb has burst (used by input cooldown)
+        try:
+            event_manager.emit('bomb_burst', entity_id=bomb_id)
+        except Exception:
+            pass
+            
+        # Create a new entity for the explosion burst so it's clean and separate from the bomb
+        burst_id = em.create_entity()
         
         circle_surf = pygame.Surface((diameter, diameter))
         circle_surf.set_colorkey((0, 0, 0))
         pygame.draw.circle(circle_surf, (255, 255, 255), (radius, radius), radius)
 
         cm.add(
-            bomb_id,
+            burst_id,
+            Position(burst_id, *pos),
             ProjectileComponent(
-                bomb_id,
+                burst_id,
                 damage = data.get("damage", 30),
-                lifetime = 0.2,
+                lifetime = 0.1, # Short burst duration
                 penetration=100
             ),
             RenderComponent(
-                bomb_id,
+                burst_id,
                 surface=circle_surf,
                 center=True
             ),
             HitBoxComponent(
-                bomb_id,
+                burst_id,
                 offset=(0,0),
                 size=(diameter, diameter),
                 shape=CollisionShape.CIRCLE,
@@ -47,12 +55,15 @@ def spawn_bomb(eid, cm, em, anim_handler, event_manager, data):
             ),
             ParticleEmitter(
                 rate=50,
-                duration=2,
+                duration=0.5,
                 loop=False,
                 particle_config=ParticleConfig(vel=1, size=radius * 0.25),
                 shape=EmitterShape(type=EmitterShapeType.CIRCLE, radius=radius)
             )
         )
+        
+        # Remove the bomb entity
+        em.delete_entity(bomb_id)
 
     cm.add(
         bomb_id,
@@ -83,6 +94,8 @@ def spawn_bomb(eid, cm, em, anim_handler, event_manager, data):
         )
     )
 
+    return bomb_id
+
 def spawn_projectile(eid, cm, em, rm, direction, data, position_offset=pygame.Vector2(0,0)):
     pos = data.get("start_pos", pygame.Vector2(0, 0))
     spawn_pos = pos + position_offset
@@ -96,6 +109,9 @@ def spawn_projectile(eid, cm, em, rm, direction, data, position_offset=pygame.Ve
     projectile_scale = 15
 
     proj_id = em.create_entity()
+    # Compute hitbox/collision sizes in pixels, accounting for global SCALE
+    size_px = data["size"] * projectile_scale * SCALE
+
     cm.add(
         proj_id,
         Position(proj_id, spawn_pos.x, spawn_pos.y),
@@ -119,7 +135,7 @@ def spawn_projectile(eid, cm, em, rm, direction, data, position_offset=pygame.Ve
         HitBoxComponent(
             entity_id=proj_id,
             offset=(0,0),
-            size=(data["size"]*projectile_scale, data["size"]*projectile_scale),
+            size=(size_px, size_px),
             shape=CollisionShape.CIRCLE,
             layer=layer,
             mask=mask
@@ -127,7 +143,7 @@ def spawn_projectile(eid, cm, em, rm, direction, data, position_offset=pygame.Ve
         CollisionComponent(
             entity_id=proj_id,
             offset=(0, 0),
-            size=(data["size"]*projectile_scale, data["size"]*projectile_scale),
+            size=(size_px, size_px),
             center=True
         )
     )

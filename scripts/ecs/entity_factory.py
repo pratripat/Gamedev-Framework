@@ -1,16 +1,16 @@
 #components
 from ..components.physics import Position, Velocity, CollisionComponent
 from ..components.animation import AnimationComponent, RenderComponent
-from ..components.combat import WeaponComponent, HitBoxComponent, HurtBoxComponent, HealthComponent
+from ..components.combat import AttackPattern, AttackPatternComponent, WeaponComponent, HitBoxComponent, HurtBoxComponent, HealthComponent
 from ..components.tags import PlayerTagComponent, EnemyTagComponent
-from ..components.render_effect import YSortRender, ShadowComponent, ProximityFadeComponent
+from ..components.render_effect import YSortRender, ShadowComponent, ProximityFadeComponent, WindAffectedComponent
 from ..components.ai import AIComponent
 from .component_manager import ComponentManager
 
 from ..systems.animation.animation_state_machine import AnimationStateMachine
 from ..weapons.bullet_patterns import SHOOT_FUNCTIONS
 
-from ..utils import CollisionShape, CollisionLayer, get_blob_shadow_surface
+from ..utils import CollisionShape, CollisionLayer, get_blob_shadow_surface, SCALE
 
 import json, copy, pygame
 
@@ -53,9 +53,9 @@ class EntityFactory:
             entity_id=eid,
             surface=(
                 ctx.get("image", None) or
-                ctx["resource_manager"].get_image(data["image_file"])
+                ctx["resource_manager"].get_image(data["image_file"], scale=data.get("image_scale", 1))
             ),
-            offset=(data["offset_x"], data["offset_y"]),
+            offset=(data["offset_x"] * SCALE, data["offset_y"] * SCALE),
             center=data.get("center", True)
         ),
         "AnimationComponent": lambda eid, data, ctx: AnimationComponent(
@@ -74,8 +74,8 @@ class EntityFactory:
         ),
         "HurtBoxComponent": lambda eid, data, ctx: HurtBoxComponent(
             entity_id=eid,
-            offset=(data["offset_x"], data["offset_y"]),
-            size=(data["width"], data["height"]),
+            offset=(data["offset_x"] * SCALE, data["offset_y"] * SCALE),
+            size=(data["width"] * SCALE, data["height"] * SCALE),
             shape=CollisionShape.RECT,
             layer=CollisionLayer.PLAYER if ctx.get("player", False) else CollisionLayer.ENEMY,
             center=data.get("center", False)
@@ -91,21 +91,34 @@ class EntityFactory:
             shoot_fn=SHOOT_FUNCTIONS.get(data["shoot_fn"], None),
             projectile_data=data.get("projectile_data", {})
         ),
+        "AttackPatternComponent": lambda eid, data, ctx: AttackPatternComponent(
+            patterns=[
+                AttackPattern(
+                    shoot_fn=SHOOT_FUNCTIONS[p["shoot_fn"]],
+                    projectile_data=p["projectile_data"],
+                    cooldown=p["cooldown"],
+                    duration=p.get("duration", None)
+                )
+                for p in data["patterns"]
+            ],
+            loop=data.get("loop", True)
+        ),
         "CollisionComponent": lambda eid, data, ctx: CollisionComponent(
             entity_id=eid,
-            offset=(data["offset_x"], data["offset_y"]),
-            size=(data["width"], data["height"]),
+            offset=(data["offset_x"] * SCALE, data["offset_y"] * SCALE),
+            size=(data["width"] * SCALE, data["height"] * SCALE),
             solid=data.get("solid", False),
-            center=data.get("center", False)
+            center=data.get("center", False),
+            blocks_projectiles=data.get("blocks_projectiles", True)
         ),
         "YSortComponent": lambda eid, data, ctx: YSortRender(
             entity_id=eid,
-            offset=data["offset"],
+            offset=(int(data["offset"][0] * SCALE), int(data["offset"][1] * SCALE)),
         ),
         "ShadowComponent": lambda eid, data, ctx: ShadowComponent(
             entity_id=eid,
             surface=data["surface"],
-            offset=data["offset"],
+            offset=(data["offset"][0] * SCALE, data["offset"][1] * SCALE),
             alpha=data["alpha"],
             center=data["center"]
         ),
@@ -114,7 +127,8 @@ class EntityFactory:
             min_dist_squared=data["min_dist"]**2,
             max_dist_squared=data["max_dist"]**2,
             alpha_range=data.get("alpha_range", (0, 255))
-        )
+        ),
+        "WindAffectedComponent": lambda eid, data, ctx: WindAffectedComponent(),
     }
 
     def __init__(self):

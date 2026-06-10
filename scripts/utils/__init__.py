@@ -22,11 +22,14 @@ class Inputs(Enum):
     DOWN_RELEASE = "down_release"
     LEFT_RELEASE = "left_release"
     RIGHT_RELEASE = "right_release"
+    SPACE_RELEASE = "space_release"
     LEFT_CLICK = "left_click"
     RIGHT_CLICK = "right_click"
     LEFT_HOLD = "left_hold"
     RIGHT_HOLD = "right_hold"
     SPACE = "space"
+    DASH = "dash"
+    DASH_RELEASE = "dash_release"
 
 class CollisionShape(Enum):
     RECT = "rect"
@@ -56,6 +59,7 @@ class GameSceneEvents(Enum):
     REMOVE_ENTITY = "remove_entity"
     ANIMATION_FINISHED = "animation_finished"
     COLLISION = "collision"
+    DASH_START = "dash_start"
 
 class EnemyState(Enum):
     IDLE = auto()

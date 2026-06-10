@@ -23,7 +23,7 @@ from ..systems.scene.level_manager import Level
 
 from ..weapons.bullet_patterns import *
 
-from ..utils import Inputs
+from ..utils import LEVEL, Inputs
 
 import random
 
@@ -50,7 +50,14 @@ class GameScene(Scene):
         self.combat_system = CombatSystem(self.component_manager, self.entity_manager, self.camera, self.ctx.event_manager, self.ctx.resource_manager)
 
         self.level = Level(self.ctx)
-        self.current_level = 'data/levels/2.json'
+        self.current_level = f'data/levels/{LEVEL}.json'
+
+        # Font for debug overlay (FPS)
+        try:
+            self.font = pygame.font.SysFont(None, 20)
+        except Exception:
+            # Fallback in case font subsystem isn't ready yet
+            self.font = None
 
     def start(self):
         print(f"[SCENE] Starting scene: '{self.id}' (DEBUG)")
@@ -137,9 +144,13 @@ class GameScene(Scene):
         self.ctx.event_manager.subscribe(Inputs.LEFT_HOLD, lambda: self.player_input_system.shoot(self.ctx.event_manager), source=self.player)
 
         # self.ctx.event_manager.subscribe(Inputs.RIGHT_CLICK, lambda: self.player_input_system.spawn_bomb(self.component_manager, self.entity_manager, self.ctx.animation_handler, self.ctx.event_manager))
-        self.ctx.event_manager.subscribe(Inputs.SPACE, lambda: self.player_input_system.spawn_bomb(self.component_manager, self.entity_manager, self.ctx.animation_handler, self.ctx.event_manager))
+        self.ctx.event_manager.subscribe(Inputs.SPACE, lambda: self.player_input_system.spawn_bomb(self.component_manager, self.entity_manager, self.ctx.animation_handler, self.ctx.event_manager), source=self.player)
+        self.ctx.event_manager.subscribe(Inputs.SPACE_RELEASE, lambda: self.player_input_system.on_bomb_release(), source=self.player)
+        self.ctx.event_manager.subscribe(Inputs.DASH, lambda: self.player_input_system.dash(self.component_manager), source=self.player)
+        self.ctx.event_manager.subscribe(Inputs.DASH_RELEASE, lambda: self.player_input_system.on_dash_release(), source=self.player)
 
         self.ctx.event_manager.subscribe('l', lambda eid=self.entity_manager.create_entity(): self.component_manager.add(
+
             eid,
             Position(
                 eid,
@@ -155,7 +166,8 @@ class GameScene(Scene):
         # Set up keybinds for input system
         self.ctx.input_system.set_input_binds(
             keys_pressed = {
-                pygame.K_SPACE: Inputs.SPACE
+                pygame.K_SPACE: Inputs.SPACE,
+                pygame.K_LSHIFT: Inputs.DASH
             },
             keys_held = {
                 pygame.K_w: Inputs.UP,
@@ -168,7 +180,9 @@ class GameScene(Scene):
                 pygame.K_w: Inputs.UP_RELEASE,
                 pygame.K_s: Inputs.DOWN_RELEASE,
                 pygame.K_a: Inputs.LEFT_RELEASE,
-                pygame.K_d: Inputs.RIGHT_RELEASE
+                pygame.K_d: Inputs.RIGHT_RELEASE,
+                pygame.K_SPACE: Inputs.SPACE_RELEASE,
+                pygame.K_LSHIFT: Inputs.DASH_RELEASE
             },
             mouse_clicked = {
                 pygame.BUTTON_LEFT: Inputs.LEFT_CLICK,
@@ -184,7 +198,7 @@ class GameScene(Scene):
     def update(self, fps, dt):
         # Update the physics engine
         self.timer_system.update(dt)
-        self.player_input_system.update(self.component_manager) 
+        self.player_input_system.update(self.component_manager, dt) 
         self.ai_system.update(dt)
         self.physics_engine.update(self.camera.scroll, fps, dt)
         self.combat_system.update(
@@ -192,10 +206,18 @@ class GameScene(Scene):
             component_manager=self.component_manager,
             entity_list=self.component_manager.get_entities_with_either(HurtBoxComponent, HitBoxComponent),
             scroll=self.camera.scroll,
-            dt=dt
+            dt=dt,
+            fps=fps
         )
         self.animation_system.update(fps, dt)
         self.render_system.update(dt)
+
+        # Update tilemap animations (water frames)
+        if self.level and self.level.tilemap:
+            try:
+                self.level.tilemap.update(dt)
+            except Exception:
+                pass
 
         self.camera.update(dt, self.component_manager, lerp=True, mouse=pygame.mouse.get_pos(), mouse_ratio=0.1)
     
@@ -203,6 +225,44 @@ class GameScene(Scene):
 
     def render(self, surface):
         self.render_system.render(surface, self.level.tilemap, self.camera)
+
+        # Draw FPS counter and bomb cooldown timer on the screen if font is available
+        if self.font:
+            fps_val = int(getattr(self.ctx, 'fps', 0))
+            text_surf = self.font.render(f"FPS: {fps_val}", True, (255, 255, 255))
+            # draw a subtle shadow for readability
+            shadow = self.font.render(f"FPS: {fps_val}", True, (0, 0, 0))
+            surface.blit(shadow, (11, 11))
+            surface.blit(text_surf, (10, 10))
+
+            # Bomb cooldown display
+            bomb_timer = None
+            if hasattr(self, 'player_input_system'):
+                bomb_timer = getattr(self.player_input_system, 'bomb_timer', 0.0)
+
+            if bomb_timer and bomb_timer > 0:
+                bomb_text = f"Bomb CD: {bomb_timer:.1f}s"
+            else:
+                bomb_text = "Bomb: Ready"
+
+            bomb_surf = self.font.render(bomb_text, True, (255, 200, 0))
+            bomb_shadow = self.font.render(bomb_text, True, (0, 0, 0))
+            surface.blit(bomb_shadow, (11, 31))
+            surface.blit(bomb_surf, (10, 30))
+
+            # Dash info
+            dash_charges = getattr(self.player_input_system, 'dash_charges', 0)
+            dash_refill = getattr(self.player_input_system, 'dash_refill_timer', 0.0)
+            is_dashing = getattr(self.player_input_system, 'is_dashing', False)
+            
+            dash_text = f"Dashes: {dash_charges} | Refill: {dash_refill:.1f}s"
+            if is_dashing:
+                dash_text += " [DASHING]"
+            
+            dash_surf = self.font.render(dash_text, True, (0, 255, 255))
+            dash_shadow = self.font.render(dash_text, True, (0, 0, 0))
+            surface.blit(dash_shadow, (11, 51))
+            surface.blit(dash_surf, (10, 50))
 
         # render all the hurtboxs and hitboxes
         # boxes = self.component_manager.get_entities_with_either(HurtBoxComponent, HitBoxComponent)

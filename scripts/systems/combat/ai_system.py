@@ -1,3 +1,4 @@
+from scripts.components.combat import AttackPatternComponent
 from ...components.ai import AIComponent
 from ...components.physics import Position, Velocity
 from ...components.timer import TimerComponent
@@ -27,6 +28,9 @@ class AISystem:
         if ai_comp:
             ai_comp.state = EnemyState.DEAD
             ai_comp.timer = 0
+        
+        apc = self.component_manager.get(entity_id, AttackPatternComponent)
+        if apc: apc.active = False
 
     def _reset_ai_comps(self, entity_id):
         if self.player_entity_id != entity_id:
@@ -68,9 +72,16 @@ class AISystem:
                     ai_comp.timer = 0
         # attack once closer to player
         elif ai_comp.state == EnemyState.ATTACK:
-            if ai_comp.timer < 0.5:
-                self.event_manager.emit(GameSceneEvents.SHOOT, entity_id=eid)
-            else:
+            # if ai_comp.timer < 0.5:
+            #     self.event_manager.emit(GameSceneEvents.SHOOT, entity_id=eid)
+            # else:
+            #     ai_comp.state = EnemyState.CHASE
+            #     ai_comp.timer = 0
+            apc = self.component_manager.get(eid, AttackPatternComponent)
+            if apc: apc.active = True
+
+            if ai_comp.timer > 2:
+                if apc: apc.active = False
                 ai_comp.state = EnemyState.CHASE
                 ai_comp.timer = 0
 
@@ -100,9 +111,11 @@ class AISystem:
                     ai_comp.timer = 0
         # snipe the player from far
         elif ai_comp.state == EnemyState.ATTACK:
-            if ai_comp.timer > 0.5 and ai_comp.timer <= 2: # simulate aiming of the sniper 
-                self.event_manager.emit(GameSceneEvents.SHOOT, entity_id=eid)
-            elif ai_comp.timer > 2:
+            apc = self.component_manager.get(eid, AttackPatternComponent)
+            if ai_comp.timer > 0.5:
+                if apc: apc.active = True
+            if ai_comp.timer > 2:
+                if apc: apc.active = False
                 ai_comp.state = EnemyState.FLEE
                 ai_comp.timer = 0
 

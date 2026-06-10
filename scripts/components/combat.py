@@ -1,4 +1,7 @@
 import pygame
+
+from scripts.ecs.component_manager import ComponentManager
+from scripts.systems.core.event_manager import EventManager
 from ..utils import GameSceneEvents
 from ..systems.animation.animation_state_machine import AnimationStateMachine
 
@@ -43,7 +46,7 @@ class HurtBoxComponent:
 
 class HealthComponent:
     iframetimer = 1/6
-    def __init__(self, entity_id, max_health, event_manager, component_manager):
+    def __init__(self, entity_id, max_health, event_manager: EventManager, component_manager: ComponentManager):
         self.entity_id = entity_id
         self.health = self.max_health = max_health
         self.invincibility_timer = 0
@@ -65,8 +68,8 @@ class HealthComponent:
         self.health -= damage
         self.effects = effects
 
-        if self.entity_id == 0: # TEMP: Assuming entity_id 0 is the player
-            print(f"[HEALTH COMPONENT] Player took {damage} damage, health now: {self.health}")
+        # if self.entity_id == 0: # TEMP: Assuming entity_id 0 is the player
+        #     print(f"[HEALTH COMPONENT] Player took {damage} damage, health now: {self.health}")
 
         # TEMP
         # set animation to hit
@@ -78,4 +81,33 @@ class HealthComponent:
             # Trigger death logic here, e.g., event_manager.publish("entity_died", self.entity_id)
             self.event_manager.emit(GameSceneEvents.DEATH, entity_id=self.entity_id)
         
+class AttackPattern:
+    def __init__(self, shoot_fn, projectile_data, cooldown, duration):
+        self.shoot_fn = shoot_fn
+        self.projectile_data = projectile_data
+        self.cooldown = cooldown      # time between shots within this pattern
+        self.duration = duration      # how long this pattern lasts before cycling to next
+        self.shoot_timer = 0
+        self.phase_timer = 0
+
+class AttackPatternComponent:
+    def __init__(self, patterns: list[AttackPattern], loop=True):
+        self.patterns = patterns
+        self.current_index = 0
+        self.loop = loop
+        self.active = False           # Controlled by the AI system
+        self.disabled = False
+
+    @property
+    def current(self):
+        return self.patterns[self.current_index]
+    
+    def advance(self):
+        if self.current_index < len(self.patterns) - 1:
+            self.current_index += 1
+        elif self.loop:
+            self.current_index = 0
+        # reset timers on advance
+        self.current.shoot_timer = 0
+        self.current.phase_timer = 0
 

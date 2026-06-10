@@ -1,5 +1,5 @@
 import pygame, json, bisect
-from ...utils import load_image, load_images_from_spritesheet, DEFAULT_COLORKEY, ANIMATION_FOLDER, GameSceneEvents, normalize_scale
+from ...utils import load_image, load_images_from_spritesheet, DEFAULT_COLORKEY, ANIMATION_FOLDER, GameSceneEvents, normalize_scale, SCALE
 
 class AnimationHandler:
     def __init__(self):
@@ -76,8 +76,10 @@ class AnimationData:
         # offset
         self.config["offset"] = pygame.Vector2(self.config["offset"])
 
-        # self.resize_images(self.config.get("scale", 1))
-        self.config["scale"] = normalize_scale(self.config.get("scale", 1))
+        # Normalize per-animation scale and apply global SCALE multiplier so all animations share one overall scale
+        base_scale = normalize_scale(self.config.get("scale", 1))
+        self.config["scale"] = [base_scale[0] * SCALE, base_scale[1] * SCALE]
+
         self.resize_images(self.config["scale"])
         self.config["offset"][0] *= self.config["scale"][0]
         self.config["offset"][1] *= self.config["scale"][1]

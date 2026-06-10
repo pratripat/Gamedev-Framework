@@ -119,57 +119,6 @@
                 "angle": 3
             }
         },
-        "AttackPatternComponent": {
-            "patterns": [
-                {
-                    "cooldown": 0.33,
-                    "shoot_fn": "shoot_single",
-                    "projectile_data": {
-                        "number": 7,
-                        "damage": 8,
-                        "speed": 7,
-                        "range": 120,
-                        "effects": [],
-                        "size": 1.25,
-                        "image_file": "data/graphics/images/projectile.png",
-                        "towards_player": true,
-                        "angle": 5
-                    },
-                    "duration": 3
-                },
-                {
-                    "cooldown": 1,
-                    "shoot_fn": "shoot_single",
-                    "projectile_data": {
-                        "damage": 10,
-                        "speed": 10,
-                        "range": 150,
-                        "effects": [],
-                        "size": 2,
-                        "image_file": "data/graphics/images/projectile.png",
-                        "towards_player": true,
-                        "angle": 3
-                    },
-                    "duration": 1
-                },
-                {
-                    "cooldown": 0.5,
-                    "shoot_fn": "shoot_radial",
-                    "projectile_data": {
-                        "number": 7,
-                        "damage": 8,
-                        "speed": 7,
-                        "range": 120,
-                        "effects": [],
-                        "size": 1.5,
-                        "image_file": "data/graphics/images/projectile.png",
-                        "towards_player": true,
-                        "angle": 5
-                    },
-                    "duration": 0.5
-                }
-            ]
-        },
         "AnimationStateMachine": {
             "animation_priority_list": [
                 "idle",
@@ -187,7 +136,7 @@
             }
         },
         "AIComponent": {
-            "behavior": "chase"
+            "behavior": "sniper"
         },
         "YSortComponent": {
             "offset": [
@@ -231,38 +180,22 @@
             "solid": false,
             "center": true
         },
-        "AttackPatternComponent": {
-            "patterns": [
-                {
-                    "cooldown": 1,
-                    "shoot_fn": "shoot_spread",
-                    "projectile_data": {
-                        "damage": 10,
-                        "speed": 7,
-                        "range": 150,
-                        "effects": [],
-                        "size": 3,
-                        "image_file": "data/graphics/images/projectile.png",
-                        "towards_player": true,
-                        "angle": 5
-                    }
-                },
-                {
-                    "cooldown": 3,
-                    "shoot_fn": "shoot_radial",
-                    "projectile_data": {
-                        "number": 5,
-                        "damage": 8,
-                        "speed": 6,
-                        "range": 120,
-                        "effects": [],
-                        "size": 5,
-                        "image_file": "data/graphics/images/projectile.png",
-                        "towards_player": true,
-                        "angle": 5
-                    }
-                }
-            ]
+        "WeaponComponent": {
+            "cooldown": 0.1,
+            "shoot_fn": "shoot_radial",
+            "projectile_data": {
+                "number": 10,
+                "damage": 10,
+                "speed": 5,
+                "range": 100,
+                "bounce": 0,
+                "penetration": 0,
+                "effects": [],
+                "size": 1.5,
+                "image_file": "data/graphics/images/projectile.png",
+                "towards_player": true,
+                "angle": 3
+            }
         },
         "AnimationStateMachine": {
             "animation_priority_list": [
@@ -350,7 +283,6 @@
                 255,
                 100
             ]
-        },
-        "WindAffectedComponent": {}
+        }
     }
 }

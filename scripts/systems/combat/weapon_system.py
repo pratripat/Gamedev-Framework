@@ -12,7 +12,7 @@ class WeaponSystem:
         self.resource_manager = resource_manager
         self.camera = camera
 
-        event_manager.subscribe(GameSceneEvents.SHOOT, self.on_shoot)
+        event_manager.subscribe(GameSceneEvents.SHOOT, self._on_shoot)
         event_manager.subscribe(GameSceneEvents.DEATH, self._disable_weapon_comp)
 
     def _disable_weapon_comp(self, entity_id):
@@ -20,7 +20,7 @@ class WeaponSystem:
         if weapon_comp:
             weapon_comp.disabled = True
     
-    def on_shoot(self, entity_id):
+    def _on_shoot(self, entity_id):
         weapon_component = self.component_manager.get(entity_id, WeaponComponent)
         if weapon_component.disabled:
             return
