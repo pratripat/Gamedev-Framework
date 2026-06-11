@@ -12,6 +12,12 @@ class Particle:
     rotation: float = 0.0
     spin: float = 0.0
     fade: bool = True
+    # New effects for death particles
+    flicker_colors: list = None # List of Colors to alternate between
+    flicker_speed: float = 0.0
+    oscillate_size: bool = False
+    friction: float = 1.0
+    shrink: bool = False
 
 @dataclass
 class ParticleConfig:
@@ -20,6 +26,11 @@ class ParticleConfig:
     color: pygame.Color = field(default_factory=lambda: pygame.Color(255, 255, 255))
     size: float = 6.0
     fade: bool = True
+    flicker_colors: list = None
+    flicker_speed: float = 0.0
+    oscillate_size: bool = False
+    friction: float = 1.0
+    shrink: bool = False
 
 @dataclass
 class ParticleEmitter:
@@ -84,9 +95,14 @@ class ParticleEmitter:
             vel.y = random.uniform(-pc.vel, pc.vel)
 
         particle.age = 0
-        particle.lifetime = random.uniform(pc.lifetime-1, pc.lifetime+1)
+        particle.lifetime = random.uniform(pc.lifetime * 0.5, pc.lifetime * 1.5)
         particle.color = pygame.Color(*pc.color)
         particle.size = random.uniform(pc.size*0.8, pc.size*1.2)
         particle.fade = pc.fade
+        particle.flicker_colors = pc.flicker_colors
+        particle.flicker_speed = pc.flicker_speed
+        particle.oscillate_size = pc.oscillate_size
+        particle.friction = pc.friction
+        particle.shrink = pc.shrink
 
         self.particle_counter += 1

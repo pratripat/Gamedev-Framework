@@ -13,6 +13,7 @@ class Game():
 
         self.screen = pygame.display.set_mode(INITIAL_WINDOW_SIZE, pygame.RESIZABLE | pygame.SCALED)
         pygame.display.set_caption("Game")
+        pygame.mouse.set_visible(False)
         self.time = 1
         # TEMP
 
@@ -46,6 +47,14 @@ class Game():
         self.ctx.dt = getattr(self, 'dt', 0)
 
         self.ctx.scene_manager.render_scene(self.screen)
+        
+        # Render custom cursor on top of everything
+        cursor_img = self.ctx.resource_manager.get_image("data/graphics/images/cursor.png")
+        if cursor_img:
+            mx, my = pygame.mouse.get_pos()
+            cw, ch = cursor_img.get_size()
+            self.screen.blit(cursor_img, (mx - cw // 2, my - ch // 2))
+
         pygame.display.update()
 
     def update(self):

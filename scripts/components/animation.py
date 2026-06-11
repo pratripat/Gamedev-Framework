@@ -2,10 +2,11 @@ import pygame
 from ..utils import normalize_scale
 
 class RenderComponent:
-    def __init__(self, entity_id, surface=None, offset=(0,0), center=False):
+    def __init__(self, entity_id, surface=None, offset=(0,0), center=False, image_file=None):
         self.entity_id = entity_id
         self.original_surface = self.surface = surface
         self.offset = pygame.Vector2(offset)
+        self.image_file = image_file
         
         if surface is None:
             self.surface = pygame.Surface((32,32))

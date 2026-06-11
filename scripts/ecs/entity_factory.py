@@ -56,7 +56,8 @@ class EntityFactory:
                 ctx["resource_manager"].get_image(data["image_file"], scale=data.get("image_scale", 1))
             ),
             offset=(data["offset_x"] * SCALE, data["offset_y"] * SCALE),
-            center=data.get("center", True)
+            center=data.get("center", True),
+            image_file=ctx.get("image_file") or data.get("image_file")
         ),
         "AnimationComponent": lambda eid, data, ctx: AnimationComponent(
             entity_id=eid,
@@ -177,7 +178,7 @@ class EntityFactory:
         # Add components to the foliage entity
         foliage_component_data = self.data["foliage"]
 
-        self.add_components_to_entity(foliage, pos, foliage_component_data, component_manager, entity_manager, event_manager, animation_handler, input_system, resource_manager, image=image)
+        self.add_components_to_entity(foliage, pos, foliage_component_data, component_manager, entity_manager, event_manager, animation_handler, input_system, resource_manager, image=image, image_file="data/graphics/spritesheets/foliage.png")
 
         render_effect_system.add_proximity_fade_component(foliage)
 
@@ -196,7 +197,7 @@ class EntityFactory:
 
         return entity_id
 
-    def add_components_to_entity(self, entity_id, pos, entity_data, component_manager, entity_manager, event_manager, animation_handler, input_system, resource_manager, player=False, image=None):
+    def add_components_to_entity(self, entity_id, pos, entity_data, component_manager, entity_manager, event_manager, animation_handler, input_system, resource_manager, player=False, image=None, image_file=None):
         ctx = {
             "pos": pos,
             "component_manager": component_manager,
@@ -206,7 +207,8 @@ class EntityFactory:
             "input_system": input_system,
             "resource_manager": resource_manager,
             "player": player,
-            "image": image
+            "image": image,
+            "image_file": image_file
         }
         
         for component_name, component_data in entity_data.items():

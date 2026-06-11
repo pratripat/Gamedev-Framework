@@ -62,8 +62,11 @@ MAKE THE ENEMY AI SYSTEM WITH TIMERS
 
 TRY OUT ASEPRITE
 
-y sort walls 
-
-remove collisions on water for projectiles
-
-add dash
+* SHADER
+    shader effect for trees (sort of)
+* EFFECTS
+    some leaf particles occasioanlly coming from trees and flying in the direction of wind and despawning after sometime 
+    some water ripple effects when projectiles pass thru water
+    screen shake
+* ACTUAL BOARD THAT RELATES GAME TO CHESS
+* The pawn after defeating certain bosses can become different chess pieces that when dead go back to the pawn with little health

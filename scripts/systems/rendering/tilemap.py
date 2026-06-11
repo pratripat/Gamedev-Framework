@@ -7,10 +7,11 @@ class Tilemap:
     CHUNK_SIZE = CHUNK_SIZE
     CHUNK_RES = TILE_SIZE * CHUNK_SIZE
 
-    def __init__(self, layers, tilemaps, resource_manager, exception_layers=[]):
+    def __init__(self, layers, tilemaps, resource_manager, exception_layers=[], ysort_layers=["wall"]):
         self.layers = {}       # {layer_id: {chunk_pos: {tile_pos: tile_data}}}
         self.chunk_images = {} # {layer_id: {chunk_pos: image}}
         self.layer_order = list(layers.keys())
+        self.ysort_layers = ysort_layers
 
         # Water animation state
         self.water_frames = None
@@ -191,6 +192,10 @@ class Tilemap:
             if layer_id == "water":
                 self._render_water(surface, camera)
                 continue
+            
+            # Skip layers that are Y-Sorted with entities
+            if layer_id in self.ysort_layers:
+                continue
 
             if layer_id not in self.chunk_images:
                 continue
@@ -242,4 +247,24 @@ class Tilemap:
                     # Fallback to simple blit if map failed
                     frame = self.water_frames[self.water_frame_index % len(self.water_frames)]
                     surface.blit(frame, blit_pos, special_flags=pygame.BLEND_RGB_ADD)
+    
+    def get_ysort_items(self, camera_rect):
+        """Returns a list of tiles from ysort_layers that are within camera_rect."""
+        items = [] # (sort_y, surface, pos)
+        for layer_id in self.ysort_layers:
+            if layer_id not in self.layers:
+                continue
+            
+            for chunk_pos, tiles in self.layers[layer_id].items():
+                # Quick chunk visibility check
+                chunk_rect = pygame.Rect(chunk_pos[0], chunk_pos[1], self.CHUNK_RES, self.CHUNK_RES)
+                if not camera_rect.colliderect(chunk_rect):
+                    continue
+                
+                for tile_pos, tile_data in tiles.items():
+                    if camera_rect.colliderect(tile_data["rect"]):
+                        # Standard Y-sorting: sort by bottom edge of the tile
+                        sort_y = tile_pos[1] + self.TILE_SIZE
+                        items.append((sort_y, "tile", tile_data["image"], tile_pos))
+        return items
                     

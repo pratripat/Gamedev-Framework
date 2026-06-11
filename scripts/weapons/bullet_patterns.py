@@ -1,13 +1,12 @@
 import pygame
-from ..utils import get_unit_direction_towards, rotate_vector, get_blob_shadow_surface, CollisionShape, CollisionLayer, EmitterShape, EmitterShapeType, SCALE
+from ..utils import get_unit_direction_towards, rotate_vector, get_blob_shadow_surface, CollisionShape, CollisionLayer, EmitterShape, EmitterShapeType, SCALE, GameSceneEvents
 from ..components.physics import Position, Velocity, CollisionComponent
 from ..components.animation import RenderComponent, AnimationComponent
 from ..components.projectile import ProjectileComponent
 from ..components.combat import HitBoxComponent
 from ..components.timer import TimerComponent
-from ..components.particle import ParticleConfig
-from ..components.render_effect import YSortRender, ShadowComponent
-from ..systems.rendering.particle_effect_system import ParticleEmitter
+from ..components.particle import ParticleConfig, ParticleEmitter
+from ..components.render_effect import YSortRender, ShadowComponent, PulseComponent
 
 def spawn_bomb(eid, cm, em, anim_handler, event_manager, data):
     bomb_id = em.create_entity()
@@ -21,8 +20,10 @@ def spawn_bomb(eid, cm, em, anim_handler, event_manager, data):
         # Notify systems that this bomb has burst (used by input cooldown)
         try:
             event_manager.emit('bomb_burst', entity_id=bomb_id)
-        except Exception:
-            pass
+            event_manager.emit(GameSceneEvents.SCREEN_SHAKE, intensity=8.0, duration=0.2)
+        except Exception as e:
+            print(f"[BOMB BURST ERROR] {e}")
+
             
         # Create a new entity for the explosion burst so it's clean and separate from the bomb
         burst_id = em.create_entity()
@@ -125,7 +126,7 @@ def spawn_projectile(eid, cm, em, rm, direction, data, position_offset=pygame.Ve
         ),
         RenderComponent(
             proj_id,
-            rm.get_image(data["image_file"], scale=data["size"]),
+            rm.get_image(data["image_file"], scale=data["size"], color_swap=data.get("projectile_color")),
             center = True
         ),
         YSortRender(
@@ -145,6 +146,23 @@ def spawn_projectile(eid, cm, em, rm, direction, data, position_offset=pygame.Ve
             offset=(0, 0),
             size=(size_px, size_px),
             center=True
+        ),
+        PulseComponent(
+            radius = size_px * 0.7,
+            speed = data.get("pulse_speed", 10.0),
+            color = data.get("projectile_color") or [0, 153, 219]
+        ),
+        ParticleEmitter(
+            rate=30,
+            duration=999, # persists until entity is destroyed
+            loop=True,
+            particle_config=ParticleConfig(
+                vel=0, 
+                lifetime=0.5, 
+                color=data.get("projectile_color") or [0, 153, 219],
+                size=size_px * 0.2
+            ),
+            shape=EmitterShape(type=EmitterShapeType.CIRCLE, radius=size_px * 0.3)
         )
     )
 
