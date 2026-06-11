@@ -23,7 +23,7 @@ from ..systems.scene.level_manager import Level
 
 from ..weapons.bullet_patterns import *
 
-from ..utils import LEVEL, Inputs
+from ..utils import LEVEL, Inputs, GameSceneEvents
 
 import random
 
@@ -148,6 +148,9 @@ class GameScene(Scene):
         self.ctx.event_manager.subscribe(Inputs.SPACE_RELEASE, lambda: self.player_input_system.on_bomb_release(), source=self.player)
         self.ctx.event_manager.subscribe(Inputs.DASH, lambda: self.player_input_system.dash(self.component_manager), source=self.player)
         self.ctx.event_manager.subscribe(Inputs.DASH_RELEASE, lambda: self.player_input_system.on_dash_release(), source=self.player)
+        
+        # Screen shake event
+        self.ctx.event_manager.subscribe(GameSceneEvents.SCREEN_SHAKE, lambda intensity, duration: self.camera.trigger_shake(intensity, duration))
 
         self.ctx.event_manager.subscribe('l', lambda eid=self.entity_manager.create_entity(): self.component_manager.add(
 
@@ -211,6 +214,7 @@ class GameScene(Scene):
         )
         self.animation_system.update(fps, dt)
         self.render_system.update(dt)
+        self.entity_manager.refresh_entities(dt=dt)
 
         # Update tilemap animations (water frames)
         if self.level and self.level.tilemap:
@@ -263,6 +267,14 @@ class GameScene(Scene):
             dash_shadow = self.font.render(dash_text, True, (0, 0, 0))
             surface.blit(dash_shadow, (11, 51))
             surface.blit(dash_surf, (10, 50))
+
+            # Wind info
+            wind_mag = getattr(self.render_system.wind_system, 'magnitude_x', 0.0)
+            wind_text = f"Wind X: {wind_mag:+.2f}"
+            wind_surf = self.font.render(wind_text, True, (200, 255, 200))
+            wind_shadow = self.font.render(wind_text, True, (0, 0, 0))
+            surface.blit(wind_shadow, (11, 71))
+            surface.blit(wind_surf, (10, 70))
 
         # render all the hurtboxs and hitboxes
         # boxes = self.component_manager.get_entities_with_either(HurtBoxComponent, HitBoxComponent)

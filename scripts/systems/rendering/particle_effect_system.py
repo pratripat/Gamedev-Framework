@@ -69,6 +69,11 @@ class ParticleEffectSystem:
                 self.pool.release(eid)
                 continue
 
+            # Apply friction (velocity decay)
+            if particle.friction < 1.0:
+                vel.x *= (particle.friction ** (dt * 60.0))
+                vel.y *= (particle.friction ** (dt * 60.0))
+
             pos.x += vel.x * dt
             pos.y += vel.y * dt
 
@@ -76,14 +81,11 @@ class ParticleEffectSystem:
                 alpha = 255 * (1 - particle.age / particle.lifetime)
                 particle.color.a = max(0, int(alpha))
 
-    def render(self, screen, scroll):
-        for eid in self.cm.get_entities_with(Particle, Position):
-            particle = self.cm.get(eid, Particle)
-            pos = self.cm.get(eid, Position)
+            # Handle color flickering
+            if particle.flicker_colors:
+                idx = int(particle.age * particle.flicker_speed) % len(particle.flicker_colors)
+                particle.color = pygame.Color(*particle.flicker_colors[idx])
+                if particle.fade:
+                    particle.color.a = max(0, int(255 * (1 - particle.age / particle.lifetime)))
 
-            size = particle.size
-
-            particle_surf = pygame.Surface((size * 2, size * 2), pygame.SRCALPHA)
-            pygame.draw.circle(particle_surf, particle.color, (size, size), size)
-
-            screen.blit(particle_surf, (pos.x - scroll.x - size, pos.y - scroll.y - size))
+            # Note: Size oscillation/Growth is handled at render time in RenderSystem

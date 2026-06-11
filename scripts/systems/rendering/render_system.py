@@ -1,9 +1,9 @@
-import pygame
+import pygame, math
 from ...utils import CENTER, INITIAL_WINDOW_SIZE
 
 from ...components.physics import Position, Velocity
 from ...components.animation import RenderComponent, AnimationComponent
-from ...components.render_effect import RenderEffectComponent, YSortRender, ShadowComponent, WindAffectedComponent
+from ...components.render_effect import RenderEffectComponent, YSortRender, ShadowComponent, WindAffectedComponent, PulseComponent
 
 from .wind_system import WindSystem
 from ..animation.animation_state_machine import AnimationStateMachine
@@ -50,6 +50,10 @@ class RenderSystem:
         self.particle_effect_system.update(dt)
         self.proximity_fade_system.update()
         self.wind_system.update(dt)
+
+        for eid in self.component_manager.get_entities_with(PulseComponent):
+            pulse = self.component_manager.get(eid, PulseComponent)
+            pulse.time += dt
     
     def render(self, surface, tilemap, camera):
         self.temp_surf.fill((0, 0, 0))
@@ -62,8 +66,33 @@ class RenderSystem:
         normal_queue = []
         ysort_queue = []
 
-        # Render tilemap
+        # 1. Render tilemap (background layers like grass, water, path)
         tilemap.render(self.temp_surf, camera)
+
+        # 2. Render particle effects UNDERNEATH Y-sorted objects (for projectile trails and death bursts)
+        from ...components.particle import Particle
+        for eid in self.component_manager.get_entities_with(Particle, Position):
+            particle = self.component_manager.get(eid, Particle)
+            
+            # Skip deactivated particles from the pool
+            if math.isinf(particle.age) or particle.age >= particle.lifetime:
+                continue
+
+            pos = self.component_manager.get(eid, Position)
+
+            size = particle.size
+            if particle.shrink:
+                size *= max(0.0, 1.0 - (particle.age / particle.lifetime))
+            elif particle.oscillate_size:
+                size *= (0.8 + 0.4 * abs(math.sin(particle.age * 15.0)))
+
+            if size > 0:
+                p_surf = pygame.Surface((int(size * 2), int(size * 2)), pygame.SRCALPHA)
+                pygame.draw.circle(p_surf, particle.color, (int(size), int(size)), int(size))
+                self.temp_surf.blit(p_surf, (pos.x - scroll.x - size, pos.y - scroll.y - size))
+
+        # 3. Collect Y-sorted tiles (e.g. walls)
+        ysort_queue.extend(tilemap.get_ysort_items(camera.rect))
 
         for eid in self.component_manager.get_entities_with(Position):
             pos = self.component_manager.get(eid, Position)
@@ -77,125 +106,151 @@ class RenderSystem:
             ysort = self.component_manager.get(eid, YSortRender)
             shadow = self.component_manager.get(eid, ShadowComponent)
             wind_affected = self.component_manager.get(eid, WindAffectedComponent)
+            pulse = self.component_manager.get(eid, PulseComponent)
 
-            # wind_surf: if entity is wind-affected and has a render.surface, try to use a cached sway frame
-            wind_surf = None
-            wind_offset = pygame.Vector2(0, 0)
-            if wind_affected and render and render.surface:
-                img = render.surface
-                img_id = str(id(img))
-                if not hasattr(self, 'wind_cache'):
-                    self.wind_cache = {}
-                if img_id not in self.wind_cache:
-                    try:
-                        frames = self.wind_system.generate_sway_frames(img, num_frames=12, amplitude=3, slice_h=4)
-                        self.wind_cache[img_id] = frames
-                    except Exception:
-                        self.wind_cache[img_id] = None
-                frames = self.wind_cache.get(img_id)
-                if frames:
-                    # pick frame based on wind time
-                    idx = int((self.wind_system.time * 10) % len(frames))
-                    wind_surf = frames[idx]
-
-            # Skip entities with no visible component
-            if render is None and anim is None:
-                continue
-
-            # Effects
+            # Effects state
             scale = rec.scale if rec and not rec.disabled else None
             tint = rec.tint if rec and not rec.disabled else None
             alpha = rec.alpha if rec and not rec.disabled and rec.alpha else None
             rotation = rec.rotation if rec and not rec.disabled else 0.0
 
-            # Sprite render
+            # Determine sorting Y for entities
+            entity_sort_y = world_pos.y + (ysort.offset[1] if ysort else 0)
+
+            # Pulse render (underneath sprite, but relative to entity screen pos)
+            if pulse:
+                pulse_val = (math.sin(pulse.time * pulse.speed) + 1) / 2 # 0 to 1
+                dynamic_radius = pulse.radius * (0.8 + 0.4 * pulse_val)
+                pulse_surf = pygame.Surface((dynamic_radius * 2, dynamic_radius * 2), pygame.SRCALPHA)
+                pygame.draw.circle(pulse_surf, (*pulse.color, pulse.alpha), (dynamic_radius, dynamic_radius), dynamic_radius)
+                self.temp_surf.blit(pulse_surf, screen_pos - pygame.Vector2(dynamic_radius, dynamic_radius))
+
+            # Shadow render (added to Y-sort queue)
+            if shadow:
+                shadow_pos = screen_pos + pygame.Vector2(shadow.offset)
+                shadow_surf = shadow.surface
+                if screen_rect.colliderect(pygame.Rect(shadow_pos, shadow_surf.get_size())):
+                    # Stable sort keeps it behind the entity if added first
+                    ysort_queue.append((entity_sort_y, "shadow", shadow_surf, shadow_pos, shadow.alpha))
+
+            # Skip entities with no visible component
+            if render is None and anim is None:
+                continue
+
+            # Sprite render preparation
             if render:
                 surf = render.surface
-                # prefer wind_surf if available
-                if wind_surf:
-                    surf = wind_surf
+                # wind sway for foliage
+                if wind_affected and render.surface:
+                    img_id = str(id(render.surface))
+                    if not hasattr(self, 'wind_cache'): self.wind_cache = {}
+                    if img_id not in self.wind_cache:
+                        # Try to get focal points from config if it's a foliage image
+                        focal_points = None
+                        if "foliage.png" in render.image_file:
+                            try:
+                                # We need to know which tile index this is
+                                # This is a bit tricky, let's assume we can get it or use img_id
+                                # Prioritize custom user-defined config from the editor
+                                custom_path = "data/config/foliage_wind_custom.json"
+                                if os.path.exists(custom_path):
+                                    with open(custom_path, "r") as f:
+                                        self._foliage_config = json.load(f)
+                                else:
+                                    # Fallback to calculated config
+                                    with open("data/config/foliage_wind.json", "r") as f:
+                                        self._foliage_config = json.load(f)
+                                
+                                # Find index by matching surface to spritesheet images
+                                if not hasattr(self, '_foliage_images'):
+                                    from ...utils import load_images_from_spritesheet
+                                    self._foliage_images = load_images_from_spritesheet("data/graphics/spritesheets/foliage.png")
+                                
+                                for idx, fimg in enumerate(self._foliage_images):
+                                    if fimg.get_size() == render.surface.get_size():
+                                        # Best effort: compare a few pixels? Or just use idx
+                                        focal_points = self._foliage_config.get(str(idx))
+                                        break
+                            except Exception: pass
+
+                        try: self.wind_cache[img_id] = self.wind_system.generate_sway_frames(render.surface, num_frames=24, amplitude=6, focal_points=focal_points)
+                        except Exception: self.wind_cache[img_id] = None
+                    
+                    frames = self.wind_cache.get(img_id)
+                    if frames:
+                        # Render static base first to avoid gaps
+                        draw_pos = screen_pos + render.offset
+                        if screen_rect.colliderect(pygame.Rect(draw_pos, render.surface.get_size())):
+                            if ysort:
+                                ysort_queue.append((entity_sort_y, "sprite", render.surface, draw_pos, alpha, tint))
+                            else:
+                                normal_queue.append(("sprite", render.surface, draw_pos, alpha, tint))
+
+                        # Then render the swaying overlay on top (higher sort_y or just after)
+                        # Reduced playback speed to 10 FPS for a slower wiggle
+                        sway_surf = frames[int((self.wind_system.time * 10) % len(frames))]
+                        surf = sway_surf
+                    else:
+                        surf = render.surface
+                else:
+                    surf = render.surface
+
                 offset = render.offset.copy()
-
                 if rotation:
-                    old_center = pygame.Vector2(surf.get_rect(topleft=draw_pos).center) if 'draw_pos' in locals() else pygame.Vector2(0,0)
                     surf = pygame.transform.rotate(surf, rotation)
-                    draw_pos = old_center - pygame.Vector2(surf.get_size()) / 2
-
                 if scale and (scale[0] != 1 or scale[1] != 1):
-                    offset[0] *= scale[0]
-                    offset[1] *= scale[1]
-                    surf = pygame.transform.scale(surf, (
-                        int(surf.get_width() * scale[0]),
-                        int(surf.get_height() * scale[1])
-                    ))
-
-                draw_pos = screen_pos + offset  # wind handled by surf content
-
-                if tint:
-                    surf = surf.copy()
-                    tint_surf = pygame.Surface(surf.get_size(), pygame.SRCALPHA)
-                    tint_surf.fill(tint)
-                    surf.blit(tint_surf, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
-                
-                if alpha:
-                    surf = surf.copy()
-                    surf.set_alpha(alpha)
+                    offset[0] *= scale[0]; offset[1] *= scale[1]
+                    surf = pygame.transform.scale(surf, (int(surf.get_width() * scale[0]), int(surf.get_height() * scale[1])))
 
                 draw_pos = screen_pos + offset
                 if screen_rect.colliderect(pygame.Rect(draw_pos, surf.get_size())):
                     if ysort:
-                        sort_y = world_pos.y + ysort.offset[1]
-                        ysort_queue.append((sort_y, surf, draw_pos))
+                        ysort_queue.append((entity_sort_y, "sprite", surf, draw_pos, alpha, tint))
                     else:
-                        normal_queue.append((surf, draw_pos))
+                        normal_queue.append(("sprite", surf, draw_pos, alpha, tint))
 
-            # Animation render
+            # Animation render preparation
             if anim:
-                anim_pos = screen_pos + anim.offset + wind_offset
-                # Use animation surface size to check full rect visibility so entities near edges don't vanish
-                try:
-                    anim_surf = anim.surface
-                    anim_rect = pygame.Rect(anim_pos, anim_surf.get_size())
-                except Exception:
-                    anim_rect = pygame.Rect(anim_pos.x, anim_pos.y, 16, 16)
-
-                if screen_rect.colliderect(anim_rect):
+                anim_pos = screen_pos + anim.offset
+                # Approximate size check
+                if screen_rect.colliderect(pygame.Rect(anim_pos.x, anim_pos.y, 32, 32)):
                     if ysort:
-                        sort_y = world_pos.y + ysort.offset[1]
-                        ysort_queue.append((sort_y, anim, anim_pos, True, scale, tint, alpha, rotation))  # ✅ add rotation
+                        ysort_queue.append((entity_sort_y, "animation", anim, anim_pos, scale, tint, alpha, rotation))
                     else:
-                        normal_queue.append((anim, anim_pos, True, scale, tint, alpha, rotation))  # ✅ add rotation
-            
-            # Shadow render
-            if shadow:
-                shadow_pos = screen_pos + pygame.Vector2(shadow.offset)
-                shadow_surf = shadow.surface
-                shadow_rect = pygame.Rect(shadow_pos, shadow_surf.get_size())
-                if screen_rect.colliderect(shadow_rect):
-                    shadow_surf.set_alpha(shadow.alpha)
-                    self.temp_surf.blit(shadow_surf, shadow_pos)
+                        normal_queue.append(("animation", anim, anim_pos, scale, tint, alpha, rotation))
 
-        # Sort and draw ysort
+        # Sort and draw ysort_queue
         ysort_queue.sort(key=lambda item: item[0])
         for item in ysort_queue:
-            if len(item) == 3:  # sprite
-                _, surf, pos = item
+            q_type = item[1]
+            if q_type == "tile":
+                _, _, surf, tile_pos = item
+                self.temp_surf.blit(surf, (tile_pos[0] - scroll.x, tile_pos[1] - scroll.y))
+            elif q_type == "shadow":
+                _, _, surf, pos, alpha = item
+                surf.set_alpha(alpha)
                 self.temp_surf.blit(surf, pos)
-            else:  # animation
-                _, anim, pos, _, scale, tint, alpha, rotation = item
+            elif q_type == "sprite":
+                _, _, surf, pos, alpha, tint = item
+                if tint:
+                    ts = pygame.Surface(surf.get_size(), pygame.SRCALPHA); ts.fill(tint)
+                    surf = surf.copy(); surf.blit(ts, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+                if alpha:
+                    surf = surf.copy(); surf.set_alpha(alpha)
+                self.temp_surf.blit(surf, pos)
+            elif q_type == "animation":
+                _, _, anim, pos, scale, tint, alpha, rotation = item
                 anim.animation.render(self.temp_surf, pos, scale=scale, tint=tint, alpha=alpha, angle=rotation)
 
-        # Draw normal
+        # Draw non-ysorted (always on top)
         for item in normal_queue:
-            if len(item) == 2:  # sprite
-                surf, pos = item
+            q_type = item[0]
+            if q_type == "sprite":
+                _, surf, pos, alpha, tint = item
                 self.temp_surf.blit(surf, pos)
-            else:  # animation
-                anim, pos, _, scale, tint, alpha, rotation = item
+            elif q_type == "animation":
+                _, anim, pos, scale, tint, alpha, rotation = item
                 anim.animation.render(self.temp_surf, pos, scale=scale, tint=tint, alpha=alpha, angle=rotation)
-
-        # Particle effects
-        self.particle_effect_system.render(self.temp_surf, scroll=scroll)
 
         # Apply camera zoom
         if camera.zoom != 1:

@@ -43,6 +43,14 @@ class ProximityFadeComponent:
             self.targets[i] = PlayerTagComponent if target == "player" else EnemyTagComponent if target == "enemy" else target
 
 
+class PulseComponent:
+    def __init__(self, radius, speed, color, alpha=150):
+        self.radius = radius
+        self.speed = speed
+        self.color = color
+        self.alpha = alpha
+        self.time = 0.0
+
 class WindAffectedComponent:
     """Tag component. Add to any entity that should sway with wind (foliage, grass, etc.)"""
     pass

@@ -60,6 +60,7 @@ class GameSceneEvents(Enum):
     ANIMATION_FINISHED = "animation_finished"
     COLLISION = "collision"
     DASH_START = "dash_start"
+    SCREEN_SHAKE = "screen_shake"
 
 class EnemyState(Enum):
     IDLE = auto()
@@ -338,3 +339,29 @@ def rotate_vector(vector, angle):
     :return: A new pygame.Vector2 representing the rotated vector.
     """
     return pygame.Vector2(vector).rotate(angle)
+
+def swap_color(surface, old_colors, new_color):
+    """
+    Swaps a list of old colors with a single new color on a given surface.
+    Efficiently handles multiple color replacements in one pass.
+    """
+    img = surface.copy()
+    # Using surfarray for fast pixel manipulation if possible
+    try:
+        import numpy as np
+        arr = pygame.surfarray.array3d(img)
+        
+        for old_color in old_colors:
+            # Mask for the old color
+            mask = (arr[:, :, 0] == old_color[0]) & (arr[:, :, 1] == old_color[1]) & (arr[:, :, 2] == old_color[2])
+            arr[mask] = new_color
+            
+        pygame.surfarray.blit_array(img, arr)
+    except Exception:
+        # Fallback to slower set_at if numpy is not available
+        for x in range(img.get_width()):
+            for y in range(img.get_height()):
+                c = img.get_at((x, y))
+                if (c.r, c.g, c.b) in old_colors:
+                    img.set_at((x, y), pygame.Color(*new_color, c.a))
+    return img
