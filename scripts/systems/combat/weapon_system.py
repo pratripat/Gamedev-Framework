@@ -33,7 +33,8 @@ class WeaponSystem:
 
             # checks if player shot
             if self.component_manager.get(entity_id, PlayerTagComponent):
-                target_pos = pygame.mouse.get_pos() # mouse position
+                raw_mouse = pygame.mouse.get_pos()
+                target_pos = pygame.Vector2(raw_mouse[0] // 2, raw_mouse[1] // 2)
 
                 projectile_data['start_pos'] = shoot_pos
                 projectile_data['target_pos'] = target_pos + self.camera.scroll

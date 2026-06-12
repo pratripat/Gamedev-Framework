@@ -17,6 +17,10 @@ class Game():
         self.time = 1
         # TEMP
 
+        # Internal pixel-art resolution (half size)
+        self.virtual_size = (INITIAL_WINDOW_SIZE[0] // 2, INITIAL_WINDOW_SIZE[1] // 2)
+        self.virtual_surface = pygame.Surface(self.virtual_size).convert()
+
         self.clock = pygame.time.Clock()
         self.target_fps = 60
 
@@ -26,7 +30,8 @@ class Game():
 
     def setup(self):
         self.ctx.init()
-
+        # Ensure the Context/Utils know about the virtual center if needed
+        # We pass virtual_size to GameScene if it needs it, or just use it here
         self.game_scene = GameScene(self.ctx)
 
         self.ctx.scene_manager.add_scene(self.game_scene)
@@ -46,11 +51,20 @@ class Game():
         self.ctx.fps = getattr(self, 'fps', 0)
         self.ctx.dt = getattr(self, 'dt', 0)
 
-        self.ctx.scene_manager.render_scene(self.screen)
+        # Render world to virtual surface
+        self.ctx.scene_manager.render_scene(self.virtual_surface)
         
-        # Render custom cursor on top of everything
-        cursor_img = self.ctx.resource_manager.get_image("data/graphics/images/cursor.png")
+        # Scale up 2x using nearest-neighbor (fast and crisp)
+        scaled_up = pygame.transform.scale(self.virtual_surface, self.screen.get_size())
+        self.screen.blit(scaled_up, (0,0))
+
+        # Render UI to the screen
+        self.ctx.scene_manager.render_ui(self.screen)
+
+        # Render custom cursor on top of everything (on the actual screen)
+        cursor_img = self.ctx.resource_manager.get_image("data/graphics/images/cursor.png", scale=3)
         if cursor_img:
+            # We don't divide by 2 here because we are drawing on the unscaled screen
             mx, my = pygame.mouse.get_pos()
             cw, ch = cursor_img.get_size()
             self.screen.blit(cursor_img, (mx - cw // 2, my - ch // 2))

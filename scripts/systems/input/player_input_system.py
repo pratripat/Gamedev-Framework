@@ -38,6 +38,14 @@ class PlayerInputSystem:
         self.dash_key_pressed = False
         self.dash_cooldown = 0.1   # seconds between dashes
         self.dash_cooldown_timer = 0.0
+        self.on_land_completely = True
+        self.on_water_completely = False
+        self.is_touching_water = False
+        self.dash_extension_timer = 0.0 # Safety limit for water extension
+        self.dash_start_pos = pygame.Vector2(0, 0)
+
+        self.ghost_interval = 0.03 # Spawn approx 5 ghosts during 0.15s dash
+        self.ghost_timer = 0.0
 
         self.event_manager = event_manager
         event_manager.subscribe(GameSceneEvents.DEATH, self.on_death)
@@ -69,6 +77,11 @@ class PlayerInputSystem:
         self.is_dashing = True
         self.dash_timer = self.dash_duration
         self.dash_charges -= 1
+
+        # Record start position for water respawn
+        pos = cm.get(self.entity_id, Position)
+        if pos:
+            self.dash_start_pos = pos.vec.copy()
         
         # Emit dash start event for render effects
         self.event_manager.emit(GameSceneEvents.DASH_START, entity_id=self.entity_id, duration=self.dash_duration)
@@ -118,6 +131,12 @@ class PlayerInputSystem:
             self.disable_movement = True
             self.is_dashing = False
 
+    def check_water_death(self, cm, respawn_pos=None):
+        # Request a formal water check and potential respawn from the scene
+        pos = cm.get(self.entity_id, Position)
+        if pos:
+            self.event_manager.emit('request_water_check', entity_id=self.entity_id, pos=pos.vec.copy(), respawn_pos=respawn_pos)
+
     def update(self, component_manager, dt):
         # Update bomb cooldown timer
         if self.bomb_timer > 0:
@@ -148,20 +167,54 @@ class PlayerInputSystem:
 
         vel = component_manager.get(self.entity_id, Velocity)
         
-        # Safety: reset dashing state if timer is up
-        if self.is_dashing and self.dash_timer <= 0:
-            self.is_dashing = False
-            self.dash_cooldown_timer = self.dash_cooldown # Start inter-dash cooldown
+        # Safety: handle dash end and extensions
+        if self.is_dashing:
+            # GHOST LOGIC: Spawn ghosts at intervals
+            from ...components.animation import AnimationComponent
+            anim = component_manager.get(self.entity_id, AnimationComponent)
+            pos = component_manager.get(self.entity_id, Position)
+            if anim and pos:
+                self.ghost_timer += dt
+                if self.ghost_timer >= self.ghost_interval:
+                    self.ghost_timer = 0
+                    self.event_manager.emit(GameSceneEvents.SPAWN_GHOST, 
+                        image=anim.current_image, 
+                        pos=pos.vec.copy(), 
+                        offset=anim.offset.copy()
+                    )
+
+            if self.dash_timer > 0:
+                self.dash_timer -= dt
+                self.dash_extension_timer = 0.0 # reset extension during normal dash
+            else:
+                # Normal dash duration is over. Check terrain
+                if self.on_water_completely:
+                    # Deep in water: Die and respawn at dash start
+                    self.is_dashing = False
+                    self.check_water_death(component_manager, respawn_pos=self.dash_start_pos)
+                    self.dash_extension_timer = 0.0
+                elif not self.is_touching_water:
+                    # Safe on solid ground: stop
+                    self.is_dashing = False
+                    self.dash_cooldown_timer = self.dash_cooldown
+                    self.dash_extension_timer = 0.0
+                else:
+                    # PARTIALLY TOUCHING WATER: Extend dash until completely on land
+                    self.dash_extension_timer += dt
+                    # Safety timeout
+                    if self.dash_extension_timer > 1.5: # Lowered safety timeout
+                        self.is_dashing = False
+                        self.check_water_death(component_manager, respawn_pos=self.dash_start_pos)
+                        self.dash_extension_timer = 0.0
 
         if self.is_dashing:
-            self.dash_timer -= dt
-            if self.dash_timer <= 0:
-                self.is_dashing = False
-                self.dash_timer = 0
-            
-            # During dash, move at high speed in dash direction
+            # During dash (or extension), move at high speed
             vel.vec = self.dash_dir * vel.speed * self.dash_speed_mult
             return
+
+        # NEW: Constant water check when NOT dashing to prevent staying in water
+        if self.on_water_completely:
+            self.check_water_death(component_manager)
 
         # Normal movement
         dir = pygame.Vector2(0, 0)
@@ -173,4 +226,3 @@ class PlayerInputSystem:
         if dir.length_squared() > 0: dir = dir.normalize()
 
         vel.vec = dir * vel.speed # setting the velocity based on direction and speed
-        

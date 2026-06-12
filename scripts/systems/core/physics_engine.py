@@ -5,12 +5,14 @@ from scripts.ecs.component_manager import ComponentManager
 from ...components.physics import KnockbackComponent, Position, Velocity
 from ...components.physics import CollisionComponent
 from ...components.projectile import ProjectileComponent
-from ...utils import Quadtree, INITIAL_WINDOW_SIZE, GameSceneEvents, get_unit_direction_towards
+from ...utils import Quadtree, INITIAL_WINDOW_SIZE, VIRTUAL_WINDOW_SIZE, GameSceneEvents, get_unit_direction_towards
 
 class PhysicsEngine:
     def __init__(self, component_manager: ComponentManager, event_manager):
         self.component_manager = component_manager
         self.event_manager = event_manager
+        self.player_dashing = False
+        self.player_id = None
 
         self.event_manager.subscribe(GameSceneEvents.DAMAGE, self._knockback)
     
@@ -35,12 +37,14 @@ class PhysicsEngine:
                 KnockbackComponent(proj_vel, 5, duration=0.2)
             )
 
-    def update(self, scroll, fps, dt):
+    def update(self, scroll, fps, dt, is_dashing=False, player_id=None):
         """
         Update physics using a time delta in seconds (dt). Movement is computed using velocities in units/sec.
         The fps parameter is kept for compatibility with other systems but is NOT used for movement math.
         """
-        quadtree = Quadtree(0, (*scroll, *INITIAL_WINDOW_SIZE))
+        self.player_dashing = is_dashing
+        self.player_id = player_id
+        quadtree = Quadtree(0, (*scroll, *VIRTUAL_WINDOW_SIZE))
 
         # Determine multiplier to preserve previous frame-based speeds.
         # If fps is available use it, otherwise fallback to 60 (reasonable default).
@@ -103,6 +107,11 @@ class PhysicsEngine:
                 colliding_component = self.component_manager.get(entity, CollisionComponent)
                 if not colliding_component or not colliding_component.solid:
                     continue
+                
+                # NEW: Allow dashing through "pass-through" solid objects like water
+                if not getattr(colliding_component, "blocks_projectiles", True):
+                    if self.player_dashing and non_solid_component_entity == self.player_id:
+                        continue
 
                 # Check for collision
                 if rect.colliderect(colliding_rect):
@@ -118,6 +127,15 @@ class PhysicsEngine:
             # Move vertically using seconds-based dt and scale to match previous behavior
             rect.y += vel.y * dt * scale
 
+            # Emit WALK event for particles if moving
+            if vel.vec.length_squared() > 0.1:
+                # Use a timer to avoid mashing particles every single frame
+                if not hasattr(self, '_walk_timers'): self._walk_timers = {}
+                self._walk_timers[non_solid_component_entity] = self._walk_timers.get(non_solid_component_entity, 0) + dt
+                if self._walk_timers[non_solid_component_entity] > 0.15: # Emit every 0.15s
+                    self._walk_timers[non_solid_component_entity] = 0
+                    self.event_manager.emit(GameSceneEvents.WALK, pos=pos.vec.copy(), vel=vel.vec.copy(), entity_id=non_solid_component_entity)
+
             colliding_entities = []
             quadtree.retrieve(colliding_entities, rect)
             for entity, colliding_rect in colliding_entities:
@@ -127,6 +145,11 @@ class PhysicsEngine:
                 colliding_component = self.component_manager.get(entity, CollisionComponent)
                 if not colliding_component or not colliding_component.solid:
                     continue
+
+                # NEW: Allow dashing through "pass-through" solid objects like water
+                if not getattr(colliding_component, "blocks_projectiles", True):
+                    if self.player_dashing and non_solid_component_entity == self.player_id:
+                        continue
 
                 # Check for collision
                 if rect.colliderect(colliding_rect):

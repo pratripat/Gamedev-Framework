@@ -31,32 +31,35 @@ class ParticleConfig:
     oscillate_size: bool = False
     friction: float = 1.0
     shrink: bool = False
+    direction: pygame.Vector2 = None # Optional: bias direction
+    spread: float = 45.0             # Degrees of spread around direction
 
 @dataclass
 class ParticleEmitter:
     rate: float
     duration: float
-    loop: bool
-    particle_config: ParticleConfig = field(default_factory=lambda: ParticleConfig())
+    loop: bool = True
+    active: bool = True
+    particle_config: ParticleConfig = field(default_factory=ParticleConfig)
+    shape: EmitterShape = field(default_factory=lambda: EmitterShape(EmitterShapeType.POINT))
+    max_particles: int = 1000
+    
     elapsed: float = 0.0
     time_since_emit: float = 0.0
-    max_particles: int = 100
-    active: bool = True
-    shape: EmitterShape = field(default_factory=lambda: EmitterShape(EmitterShapeType.POINT))
     particle_counter: int = 0
 
-    def get_random_position_within_shape(self, shape: EmitterShape, origin_x: float, origin_y: float):
+    def get_random_position_within_shape(self, shape, origin_x, origin_y):
         if shape.type == EmitterShapeType.POINT:
             return origin_x, origin_y
-
-        elif shape.type == EmitterShapeType.RECT and shape.rect:
+        
+        elif shape.type == EmitterShapeType.RECT:
             rx = random.uniform(shape.rect.left, shape.rect.right)
             ry = random.uniform(shape.rect.top, shape.rect.bottom)
             return origin_x + rx, origin_y + ry
-
+            
         elif shape.type == EmitterShapeType.CIRCLE:
             angle = random.uniform(0, 2 * math.pi)
-            radius = shape.radius * random.uniform(0, 1)
+            radius = random.uniform(0, shape.radius)
             rx = origin_x + radius * math.cos(angle)
             ry = origin_y + radius * math.sin(angle)
             return rx, ry
@@ -78,21 +81,38 @@ class ParticleEmitter:
 
         pos.vec = pygame.Vector2(spawn_x, spawn_y)
 
-        # Prefer outward radial velocities for circle emitters so particles don't pile up at origin
-        if self.shape.type == EmitterShapeType.CIRCLE:
-            # direction from origin to spawn point
-            dir_vec = pygame.Vector2(spawn_x - origin_pos[0], spawn_y - origin_pos[1])
-            if dir_vec.length_squared() > 0.0001:
+        # Velocity Logic
+        if pc.vel > 0:
+            if pc.direction:
+                # Directional cone
+                base_angle = math.atan2(pc.direction.y, pc.direction.x)
+                spread_rad = math.radians(pc.spread)
+                angle = base_angle + random.uniform(-spread_rad/2, spread_rad/2)
                 speed = random.uniform(pc.vel * 0.8, pc.vel * 1.4)
-                vel_vec = dir_vec.normalize() * speed
-                vel.x = vel_vec.x
-                vel.y = vel_vec.y
+                vel.x = math.cos(angle) * speed
+                vel.y = math.sin(angle) * speed
+            elif self.shape.type == EmitterShapeType.CIRCLE:
+                # Radial burst
+                dir_vec = pygame.Vector2(spawn_x - origin_pos[0], spawn_y - origin_pos[1])
+                if dir_vec.length_squared() > 0.0001:
+                    speed = random.uniform(pc.vel * 0.8, pc.vel * 1.4)
+                    vel_vec = dir_vec.normalize() * speed
+                    vel.x = vel_vec.x
+                    vel.y = vel_vec.y
+                else:
+                    angle = random.uniform(0, math.pi * 2)
+                    v = random.uniform(pc.vel * 0.8, pc.vel * 1.4)
+                    vel.x = math.cos(angle) * v
+                    vel.y = math.sin(angle) * v
             else:
-                vel.x = random.uniform(-pc.vel, pc.vel)
-                vel.y = random.uniform(-pc.vel, pc.vel)
+                # Full random
+                angle = random.uniform(0, math.pi * 2)
+                v = random.uniform(pc.vel * 0.8, pc.vel * 1.4)
+                vel.x = math.cos(angle) * v
+                vel.y = math.sin(angle) * v
         else:
-            vel.x = random.uniform(-pc.vel, pc.vel)
-            vel.y = random.uniform(-pc.vel, pc.vel)
+            vel.x = 0
+            vel.y = 0
 
         particle.age = 0
         particle.lifetime = random.uniform(pc.lifetime * 0.5, pc.lifetime * 1.5)
