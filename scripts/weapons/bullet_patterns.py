@@ -97,7 +97,10 @@ def spawn_bomb(eid, cm, em, anim_handler, event_manager, data):
 
     return bomb_id
 
-def spawn_projectile(eid, cm, em, rm, direction, data, position_offset=pygame.Vector2(0,0)):
+def spawn_projectile(eid, cm, em, rm, direction, data, projectile_system=None, position_offset=pygame.Vector2(0,0)):
+    if not projectile_system:
+        return None
+
     pos = data.get("start_pos", pygame.Vector2(0, 0))
     spawn_pos = pos + position_offset
 
@@ -108,84 +111,61 @@ def spawn_projectile(eid, cm, em, rm, direction, data, position_offset=pygame.Ve
     mask = raw_mask.value if isinstance(raw_mask, CollisionLayer) else raw_mask
 
     projectile_scale = 15
-
-    proj_id = em.create_entity()
-    # Compute hitbox/collision sizes in pixels, accounting for global SCALE
     size_px = data["size"] * projectile_scale * SCALE
 
-    cm.add(
-        proj_id,
-        Position(proj_id, spawn_pos.x, spawn_pos.y),
-        Velocity(proj_id, direction.x * data["speed"], direction.y * data["speed"], data["speed"]),
-        ProjectileComponent(
-            source_entity=eid,
-            damage=data["damage"],
-            effects=data.get("effects", []),
-            bounce=data.get("bounce", 0),
-            penetration=data.get("penetration", 0)
-        ),
-        RenderComponent(
-            proj_id,
-            rm.get_image(data["image_file"], scale=data["size"], color_swap=data.get("projectile_color")),
-            center = True
-        ),
-        YSortRender(
-            proj_id,
-            offset=(0, 0)
-        ),
-        HitBoxComponent(
-            entity_id=proj_id,
-            offset=(0,0),
-            size=(size_px, size_px),
-            shape=CollisionShape.CIRCLE,
-            layer=layer,
-            mask=mask
-        ),
-        CollisionComponent(
-            entity_id=proj_id,
-            offset=(0, 0),
-            size=(size_px, size_px),
-            center=True
-        ),
-        PulseComponent(
-            radius = size_px * 0.7,
-            speed = data.get("pulse_speed", 10.0),
-            color = data.get("projectile_color") or [0, 153, 219]
-        ),
-        ParticleEmitter(
-            rate=30,
-            duration=999, # persists until entity is destroyed
-            loop=True,
-            particle_config=ParticleConfig(
-                vel=0, 
-                lifetime=0.5, 
-                color=data.get("projectile_color") or [0, 153, 219],
-                size=size_px * 0.2
-            ),
-            shape=EmitterShape(type=EmitterShapeType.CIRCLE, radius=size_px * 0.3)
-        )
+    speed = data["speed"]
+    vx = direction.x * speed
+    vy = direction.y * speed
+    
+    image = rm.get_image(data["image_file"], scale=data["size"], color_swap=data.get("projectile_color"))
+    
+    # Optional effects
+    pulse_color = data.get("projectile_color") or [0, 153, 219]
+    pulse_radius = size_px * 0.7
+    pulse_speed = data.get("pulse_speed", 10.0)
+
+    # Spawn fast projectile
+    proj = projectile_system.spawn(
+        source_entity=eid,
+        x=spawn_pos.x,
+        y=spawn_pos.y,
+        vx=vx,
+        vy=vy,
+        speed=speed,
+        damage=data["damage"],
+        effects=data.get("effects", []),
+        bounce=data.get("bounce", 0),
+        penetration=data.get("penetration", 0),
+        lifetime=data.get("lifetime", 2.0), # Fixed generic lifetime or use data if provided
+        size=size_px,
+        layer=layer,
+        mask=mask,
+        image=image,
+        pulse_radius=pulse_radius,
+        pulse_speed=pulse_speed,
+        pulse_color=pulse_color,
+        particle_rate=30,  # Emitting 30 particles / sec
+        hits_dashing_player=data.get("hits_dashing_player", False)
     )
 
-    # print(f"[DEBUG] Spawned projectile {proj_id} at {spawn_pos} with velocity {direction * data["speed"]}, layer={layer}, mask={mask}")
+    return proj
 
-    return proj_id
-
-def shoot_single(eid, cm, em, rm, data):
+def shoot_single(eid, cm, em, rm, data, projectile_system=None):
     dir = get_unit_direction_towards(data["start_pos"], data["target_pos"])
-    return [spawn_projectile(eid, cm, em, rm, dir, data)]
+    return [spawn_projectile(eid, cm, em, rm, dir, data, projectile_system)]
 
-def shoot_spread(eid, cm, em, rm, data):
+def shoot_spread(eid, cm, em, rm, data, projectile_system=None):
     dir = get_unit_direction_towards(data["start_pos"], data["target_pos"])
     max_angle = data.get("angle", 15)
     dirs = [rotate_vector(dir, angle) for angle in [-max_angle, 0, max_angle]]
     
     projs = []
     for d in dirs:
-        projs.append(spawn_projectile(eid, cm, em, rm, d, data))
+        projs.append(spawn_projectile(eid, cm, em, rm, d, data, projectile_system))
     
     return projs
 
-def shoot_radial(eid, cm, em, rm, data):
+def shoot_radial(eid, cm, em, rm, data, projectile_system=None):
     dir = pygame.Vector2(1, 0)
     if data.get("on_player", False): dir = get_unit_direction_towards(data["start_pos"], data["target_pos"])
     
@@ -196,7 +176,7 @@ def shoot_radial(eid, cm, em, rm, data):
         angle = (360 / number) * i
         d = rotate_vector(dir, angle)
 
-        projs.append(spawn_projectile(eid, cm, em, rm, d, data))
+        projs.append(spawn_projectile(eid, cm, em, rm, d, data, projectile_system))
     
     return projs
 
@@ -206,7 +186,7 @@ class SpiralShooter:
         self.bullets_per_shot = bullets_per_shot
         self.angle_increment = angle_increment
 
-    def __call__(self, eid, cm, em, rm, data):
+    def __call__(self, eid, cm, em, rm, data, projectile_system=None):
         dir = pygame.Vector2(1, 0)
         dir = rotate_vector(dir, self.current_angle)
         if data.get("on_player", False): dir = get_unit_direction_towards(data["start_pos"], data["target_pos"])
@@ -216,7 +196,7 @@ class SpiralShooter:
             angle = (360 / self.bullets_per_shot) * i
             d = rotate_vector(dir, angle)
 
-            projs.append(spawn_projectile(eid, cm, em, rm, d, data))
+            projs.append(spawn_projectile(eid, cm, em, rm, d, data, projectile_system))
         
         self.current_angle += self.angle_increment
         

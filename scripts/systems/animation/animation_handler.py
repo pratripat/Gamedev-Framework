@@ -141,58 +141,72 @@ class Animation:
         self.image = self.animation_data.get_images()[frame_index]
 
     def render(self, surface, pos, flipped=(False, False), angle=0, scale=(1, 1), alpha=None, center=True, offset=None, tint=None):
-        img = self.image
-        img.set_colorkey(DEFAULT_COLORKEY)
-        off = self.animation_data.config.get("offset", pygame.Vector2(0, 0)).copy()
+        if not hasattr(self, '_render_cache'):
+            self._render_cache = {}
 
-        if flipped != (False, False):
-            img = pygame.transform.flip(img, *flipped)
-
-        if angle != 0:
-            img = pygame.transform.rotate(img, angle)
-
-        if alpha is not None:
-            img = img.copy()
-            img.set_alpha(alpha)
-        
-        if tint is not None:
-            # mask = pygame.mask.from_surface(image)
-            # image = mask.to_surface()
-
-            # image = image.convert_alpha()
-
-            # Generate a white overlay with transparency in background
-            white_overlay = pygame.mask.from_surface(img).to_surface(
-                setcolor=(255, 255, 255, 255),
-                unsetcolor=(0, 0, 0, 0)
-            )
-
-            # Create a copy of the sprite and clear existing color
-            silhouette = img.copy()
-            silhouette.fill((255, 255, 255, 0), special_flags=pygame.BLEND_RGBA_MULT)
-
-            # Add white overlay onto cleared base
-            silhouette.blit(white_overlay, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
-
-            img = silhouette
-
+        # Normalize scale to a tuple
         if scale:
-            scale = normalize_scale(scale)
-            if scale != (1, 1):
-                img = pygame.transform.scale(img, (
-                    int(img.get_width() * scale[0]),
-                    int(img.get_height() * scale[1])
-                ))
+            scale_tuple = tuple(normalize_scale(scale))
+        else:
+            scale_tuple = (1.0, 1.0)
+            
+        # Create a unique key for the current transformation state
+        cache_key = (id(self.image), flipped, angle, scale_tuple, alpha, tint)
 
+        cached_img = self._render_cache.get(cache_key)
+
+        if cached_img is None:
+            img = self.image
+            img.set_colorkey(DEFAULT_COLORKEY)
+
+            if flipped != (False, False):
+                img = pygame.transform.flip(img, *flipped)
+
+            if angle != 0:
+                img = pygame.transform.rotate(img, angle)
+
+            if alpha is not None:
+                img = img.copy()
+                img.set_alpha(alpha)
+            
+            if tint is not None:
+                # Generate a white overlay with transparency in background
+                white_overlay = pygame.mask.from_surface(img).to_surface(
+                    setcolor=(255, 255, 255, 255),
+                    unsetcolor=(0, 0, 0, 0)
+                )
+
+                # Create a copy of the sprite and clear existing color
+                silhouette = img.copy()
+                silhouette.fill((255, 255, 255, 0), special_flags=pygame.BLEND_RGBA_MULT)
+
+                # Add white overlay onto cleared base
+                silhouette.blit(white_overlay, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
+
+                img = silhouette
+
+            if scale_tuple != (1.0, 1.0):
+                img = pygame.transform.scale(img, (
+                    int(img.get_width() * scale_tuple[0]),
+                    int(img.get_height() * scale_tuple[1])
+                ))
+            
+            cached_img = img
+            # Prevent memory leaks by bounding the cache
+            if len(self._render_cache) > 60:
+                self._render_cache.clear()
+            self._render_cache[cache_key] = cached_img
+
+        off = self.animation_data.config.get("offset", pygame.Vector2(0, 0)).copy()
         if offset:
             off = offset
 
         if self.animation_data.config.get("centered", center):
-            off.x -= img.get_width() / 2
-            off.y -= img.get_height() / 2
+            off.x -= cached_img.get_width() / 2
+            off.y -= cached_img.get_height() / 2
 
         render_pos = (pos[0] + off.x, pos[1] + off.y)
-        surface.blit(img, render_pos)
+        surface.blit(cached_img, render_pos)
 
     def run(self, event_manager, entity_id, fps, dt):
         self.frame += self.animation_data.config['speed'] * dt * fps

@@ -1,23 +1,6 @@
 import pygame, random, math
 from dataclasses import dataclass, field
-from ..components.physics import Position, Velocity
 from ..utils import EmitterShape, EmitterShapeType, rotate_vector
-
-@dataclass
-class Particle:
-    lifetime: float
-    color: pygame.Color = field(default_factory=lambda: pygame.Color(255, 255, 255))
-    age: float = 0.0
-    size: float = 1.0
-    rotation: float = 0.0
-    spin: float = 0.0
-    fade: bool = True
-    # New effects for death particles
-    flicker_colors: list = None # List of Colors to alternate between
-    flicker_speed: float = 0.0
-    oscillate_size: bool = False
-    friction: float = 1.0
-    shrink: bool = False
 
 @dataclass
 class ParticleConfig:
@@ -33,6 +16,7 @@ class ParticleConfig:
     shrink: bool = False
     direction: pygame.Vector2 = None # Optional: bias direction
     spread: float = 45.0             # Degrees of spread around direction
+    image: pygame.Surface = None     # Optional custom image for this particle
 
 @dataclass
 class ParticleEmitter:
@@ -66,63 +50,65 @@ class ParticleEmitter:
 
         return origin_x, origin_y
 
-    def emit(self, component_manager, pool, origin_pos):
-        eid = pool.get()
-        if eid is None:
+    def emit(self, particle_system, origin_pos):
+        p = particle_system.emit_particle()
+        if p is None:
             return  # pool exhausted
 
-        pos = component_manager.get(eid, Position)
-        vel = component_manager.get(eid, Velocity)
-        particle = component_manager.get(eid, Particle)
-
         spawn_x, spawn_y = self.get_random_position_within_shape(self.shape, origin_pos[0], origin_pos[1])
-
         pc = self.particle_config
 
-        pos.vec = pygame.Vector2(spawn_x, spawn_y)
+        p.x = spawn_x
+        p.y = spawn_y
 
         # Velocity Logic
         if pc.vel > 0:
             if pc.direction:
-                # Directional cone
                 base_angle = math.atan2(pc.direction.y, pc.direction.x)
                 spread_rad = math.radians(pc.spread)
                 angle = base_angle + random.uniform(-spread_rad/2, spread_rad/2)
                 speed = random.uniform(pc.vel * 0.8, pc.vel * 1.4)
-                vel.x = math.cos(angle) * speed
-                vel.y = math.sin(angle) * speed
+                p.vx = math.cos(angle) * speed
+                p.vy = math.sin(angle) * speed
             elif self.shape.type == EmitterShapeType.CIRCLE:
-                # Radial burst
-                dir_vec = pygame.Vector2(spawn_x - origin_pos[0], spawn_y - origin_pos[1])
-                if dir_vec.length_squared() > 0.0001:
+                dx = spawn_x - origin_pos[0]
+                dy = spawn_y - origin_pos[1]
+                sq_len = dx*dx + dy*dy
+                if sq_len > 0.0001:
+                    length = math.sqrt(sq_len)
                     speed = random.uniform(pc.vel * 0.8, pc.vel * 1.4)
-                    vel_vec = dir_vec.normalize() * speed
-                    vel.x = vel_vec.x
-                    vel.y = vel_vec.y
+                    p.vx = (dx / length) * speed
+                    p.vy = (dy / length) * speed
                 else:
                     angle = random.uniform(0, math.pi * 2)
                     v = random.uniform(pc.vel * 0.8, pc.vel * 1.4)
-                    vel.x = math.cos(angle) * v
-                    vel.y = math.sin(angle) * v
+                    p.vx = math.cos(angle) * v
+                    p.vy = math.sin(angle) * v
             else:
-                # Full random
                 angle = random.uniform(0, math.pi * 2)
                 v = random.uniform(pc.vel * 0.8, pc.vel * 1.4)
-                vel.x = math.cos(angle) * v
-                vel.y = math.sin(angle) * v
+                p.vx = math.cos(angle) * v
+                p.vy = math.sin(angle) * v
         else:
-            vel.x = 0
-            vel.y = 0
+            p.vx = 0
+            p.vy = 0
 
-        particle.age = 0
-        particle.lifetime = random.uniform(pc.lifetime * 0.5, pc.lifetime * 1.5)
-        particle.color = pygame.Color(*pc.color)
-        particle.size = random.uniform(pc.size*0.8, pc.size*1.2)
-        particle.fade = pc.fade
-        particle.flicker_colors = pc.flicker_colors
-        particle.flicker_speed = pc.flicker_speed
-        particle.oscillate_size = pc.oscillate_size
-        particle.friction = pc.friction
-        particle.shrink = pc.shrink
+        p.age = 0
+        p.lifetime = random.uniform(pc.lifetime * 0.5, pc.lifetime * 1.5)
+        
+        p.r = pc.color[0]
+        p.g = pc.color[1]
+        p.b = pc.color[2]
+        p.a = pc.color[3] if len(pc.color) > 3 else 255
+        
+        p.size = random.uniform(pc.size*0.8, pc.size*1.2)
+        p.fade = pc.fade
+        p.flicker_colors = pc.flicker_colors
+        p.flicker_speed = pc.flicker_speed
+        p.oscillate_size = pc.oscillate_size
+        p.friction = pc.friction
+        p.shrink = pc.shrink
+        p.image = pc.image
 
         self.particle_counter += 1
+

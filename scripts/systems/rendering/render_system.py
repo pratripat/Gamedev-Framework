@@ -45,9 +45,9 @@ class RenderSystem:
         self.wind_system = WindSystem()
         self.atmosphere_overlay = None
 
-    def update(self, dt, tilemap=None, camera=None):
+    def update(self, dt, tilemap=None, camera=None, quadtree=None):
         self.render_effect_system.update(dt)
-        self.particle_effect_system.update(dt, tilemap=tilemap, camera_rect=camera.rect if camera else None)
+        self.particle_effect_system.update(dt, quadtree=None) # Disable particle collisions for performance
         self.proximity_fade_system.update()
         self.wind_system.update(dt)
 
@@ -58,7 +58,7 @@ class RenderSystem:
     def render(self, surface, tilemap, camera):
         self.temp_surf.fill((0, 0, 0))
 
-        scroll = camera.scroll
+        scroll_int = camera.scroll_int
         temp_surf_offset = pygame.Vector2(0, 0)
         screen_rect = self.temp_surf.get_rect()
 
@@ -70,32 +70,20 @@ class RenderSystem:
         tilemap.render(self.temp_surf, camera)
 
         # 2. Collect Y-sorted objects (Particles, Tiles, Entities)
-        from ...components.particle import Particle
-        for eid in self.component_manager.get_entities_with(Particle, Position):
-            particle = self.component_manager.get(eid, Particle)
-            if math.isinf(particle.age) or particle.age >= particle.lifetime:
-                continue
-            pos = self.component_manager.get(eid, Position)
-            
-            size = particle.size
-            if particle.shrink:
-                size *= max(0.0, 1.0 - (particle.age / particle.lifetime))
-            elif particle.oscillate_size:
-                size *= (0.8 + 0.4 * abs(math.sin(particle.age * 15.0)))
-            
-            if size > 0:
-                p_surf = pygame.Surface((int(size * 2), int(size * 2)), pygame.SRCALPHA)
-                pygame.draw.circle(p_surf, particle.color, (int(size), int(size)), int(size))
-                # Add to Y-sort queue with its world Y pos
-                ysort_queue.append((pos.y, "sprite", p_surf, (pos.x - scroll.x - size, pos.y - scroll.y - size), None, None))
+        ysort_queue.extend(self.particle_effect_system.collect_render_items(camera))
+        
+        # Add FastProjectiles
+        if hasattr(self, 'combat_system') and self.combat_system:
+            ysort_queue.extend(self.combat_system.projectile_system.collect_render_items(camera))
 
         # 3. Collect Y-sorted tiles (e.g. walls)
         ysort_queue.extend(tilemap.get_ysort_items(camera.rect))
 
         for eid in self.component_manager.get_entities_with(Position):
             pos = self.component_manager.get(eid, Position)
-            world_pos = pygame.Vector2(pos.x, pos.y)
-            screen_pos = world_pos - scroll
+            # Snap to integer world coordinates BEFORE subtracting the float scroll
+            world_pos = pygame.Vector2(math.floor(pos.x), math.floor(pos.y))
+            screen_pos = world_pos - scroll_int
 
             # Components
             render = self.component_manager.get(eid, RenderComponent)
@@ -209,15 +197,24 @@ class RenderSystem:
 
         # Sort and draw ysort_queue
         ysort_queue.sort(key=lambda item: item[0])
+        
+        # Batch contiguous standard blits for huge performance gains
+        blits_batch = []
+        
+        def flush_blits():
+            if blits_batch:
+                self.temp_surf.blits(blits_batch)
+                blits_batch.clear()
+
         for item in ysort_queue:
             q_type = item[1]
             if q_type == "tile":
                 _, _, surf, tile_pos = item
-                self.temp_surf.blit(surf, (int(round(tile_pos[0] - scroll.x)), int(round(tile_pos[1] - scroll.y))))
+                blits_batch.append((surf, (tile_pos[0] - scroll_int.x, tile_pos[1] - scroll_int.y)))
             elif q_type == "shadow":
                 _, _, surf, pos, alpha = item
                 surf.set_alpha(alpha)
-                self.temp_surf.blit(surf, (int(round(pos[0])), int(round(pos[1]))))
+                blits_batch.append((surf, pos))
             elif q_type == "sprite":
                 _, _, surf, pos, alpha, tint = item
                 if tint:
@@ -225,20 +222,30 @@ class RenderSystem:
                     surf = surf.copy(); surf.blit(ts, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
                 if alpha:
                     surf = surf.copy(); surf.set_alpha(alpha)
-                self.temp_surf.blit(surf, (int(round(pos[0])), int(round(pos[1]))))
+                blits_batch.append((surf, pos))
             elif q_type == "animation":
+                flush_blits() # Interrupt batch to draw complex animation
                 _, _, anim, pos, scale, tint, alpha, rotation = item
-                anim.animation.render(self.temp_surf, (int(round(pos[0])), int(round(pos[1]))), scale=scale, tint=tint, alpha=alpha, angle=rotation)
+                anim.animation.render(self.temp_surf, pos, scale=scale, tint=tint, alpha=alpha, angle=rotation)
+                
+        flush_blits() # Flush remaining items
 
         # Draw non-ysorted (always on top)
+        normal_blits = []
         for item in normal_queue:
             q_type = item[0]
             if q_type == "sprite":
                 _, surf, pos, alpha, tint = item
-                self.temp_surf.blit(surf, pos)
+                normal_blits.append((surf, pos))
             elif q_type == "animation":
+                if normal_blits:
+                    self.temp_surf.blits(normal_blits)
+                    normal_blits.clear()
                 _, anim, pos, scale, tint, alpha, rotation = item
                 anim.animation.render(self.temp_surf, pos, scale=scale, tint=tint, alpha=alpha, angle=rotation)
+                
+        if normal_blits:
+            self.temp_surf.blits(normal_blits)
 
         # Apply camera zoom
         if camera.zoom != 1:

@@ -78,7 +78,7 @@ class ResourceManager:
                 else:
                     path = os.path.basename(path)
 
-        if path not in self.spritesheets:
+        if path and (path, 1) not in self.spritesheets:
             images = load_images_from_spritesheet(path)
             if not (path and len(images)):
                 return None
@@ -107,7 +107,7 @@ class ResourceManager:
                 else:
                     path = os.path.basename(path)
 
-        if path and path not in self.tilemaps:
+        if path and (path, 1) not in self.tilemaps:
             from ...utils import TILE_SIZE
             images = load_images_from_tilemap(path, tile_size=TILE_SIZE)
             if not (path and len(images)):

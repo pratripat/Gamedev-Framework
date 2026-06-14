@@ -9,7 +9,8 @@ class AttackPatternSystem:
         self.entity_manager = entity_manager
         self.resource_manager = resource_manager
 
-    def update(self, dt):
+    def update(self, dt, projectile_system=None):
+        self.projectile_system = projectile_system
         for eid in self.component_manager.get_entities_with(AttackPatternComponent):
             apc = self.component_manager.get(eid, AttackPatternComponent)
             if apc.disabled or not apc.active:
@@ -47,4 +48,4 @@ class AttackPatternSystem:
         else:
             data["target_pos"] = pos.vec + pygame.Vector2(1, 0)
 
-        pattern.shoot_fn(eid, self.component_manager, self.entity_manager, self.resource_manager, data)
+        pattern.shoot_fn(eid, self.component_manager, self.entity_manager, self.resource_manager, data, getattr(self, "projectile_system", None))

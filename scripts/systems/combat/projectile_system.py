@@ -37,30 +37,38 @@ class ProjectileSystem:
         else:
             self.component_manager.remove_all(proj_id)
 
-    def update(self, dt, fps=None):
-        # Build quadtree of solid and water collision rects
-        from ...utils import VIRTUAL_WINDOW_SIZE
-        quadtree = Quadtree(0, (0, 0, *VIRTUAL_WINDOW_SIZE))
-        for entity in self.component_manager.get_entities_with(CollisionComponent, Position):
-            comp = self.component_manager.get(entity, CollisionComponent)
-            pos = self.component_manager.get(entity, Position)
-            if comp and pos:
-                # Include solid (walls) and non-solid (water) for detection
-                # We SKIP characters' collision boxes (feet) for projectiles as requested.
-                if self.component_manager.get(entity, HurtBoxComponent):
-                    continue
-                    
-                rect = pygame.Rect(*(pos.vec + comp.offset), *comp.size)
-                quadtree.insert(entity, rect)
+    def update(self, dt, fps=None, quadtree=None):
+        # Alias dictionaries for speed
+        col_dict = self.component_manager._components.get(CollisionComponent, {})
+        pos_dict = self.component_manager._components.get(Position, {})
+        hurtbox_dict = self.component_manager._components.get(HurtBoxComponent, {})
+        proj_dict = self.component_manager._components.get(ProjectileComponent, {})
+        vel_dict = self.component_manager._components.get(Velocity, {})
+
+        # Build quadtree of solid and water collision rects if not provided
+        if quadtree is None:
+            from ...utils import VIRTUAL_WINDOW_SIZE, Quadtree
+            quadtree = Quadtree(0, (0, 0, *VIRTUAL_WINDOW_SIZE))
+            for entity in self.component_manager.get_entities_with(CollisionComponent, Position):
+                comp = col_dict.get(entity)
+                pos = pos_dict.get(entity)
+                if comp and pos:
+                    # Include solid (walls) and non-solid (water) for detection
+                    # We SKIP characters' collision boxes (feet) for projectiles as requested.
+                    if hurtbox_dict.get(entity):
+                        continue
+                        
+                    rect = pygame.Rect(*(pos.vec + comp.offset), *comp.size)
+                    quadtree.insert(entity, rect)
 
         # Movement scale
         movement_scale = fps if (fps and fps > 0) else 60.0
 
         for entity_id in list(self.component_manager.get_entities_with(ProjectileComponent)):
-            projectile = self.component_manager.get(entity_id, ProjectileComponent)
-            pos_comp = self.component_manager.get(entity_id, Position)
-            vel = self.component_manager.get(entity_id, Velocity)
-            col = self.component_manager.get(entity_id, CollisionComponent)
+            projectile = proj_dict.get(entity_id)
+            pos_comp = pos_dict.get(entity_id)
+            vel = vel_dict.get(entity_id)
+            col = col_dict.get(entity_id)
 
             if not projectile or not pos_comp or not vel or not col:
                 continue
@@ -78,10 +86,14 @@ class ProjectileSystem:
             rect.x += vel.x * dt * movement_scale
             nearby = []
             quadtree.retrieve(nearby, rect)
+            seen_h = set()
             for other_entity, other_rect in nearby:
+                if other_entity in seen_h: continue
+                seen_h.add(other_entity)
+                
                 if other_entity == entity_id:
                     continue
-                other_comp = self.component_manager.get(other_entity, CollisionComponent)
+                other_comp = col_dict.get(other_entity)
                 if not other_comp: continue
 
                 # 1. Water Splash / Pass-Through Detection
@@ -90,7 +102,7 @@ class ProjectileSystem:
                         self.event_manager.emit(
                             GameSceneEvents.WATER_SPLASH,
                             pos=pygame.Vector2(rect.center),
-                            vel=vel.vec.copy(),
+                            vel=vel.vec,
                             size=col.size[0]
                         )
                     continue
@@ -101,7 +113,7 @@ class ProjectileSystem:
                         self.event_manager.emit(
                             GameSceneEvents.PROJECTILE_COLLISION,
                             pos=pygame.Vector2(rect.center),
-                            vel=vel.vec.copy(),
+                            vel=vel.vec,
                             target_type="environment",
                             size=col.size[0]
                         )
@@ -114,17 +126,21 @@ class ProjectileSystem:
                             break
 
             # If Position component no longer exists, the projectile was removed
-            if not self.component_manager.get(entity_id, Position):
+            if not pos_dict.get(entity_id):
                 continue
 
             # Move vertically
             rect.y += vel.y * dt * movement_scale
             nearby = []
             quadtree.retrieve(nearby, rect)
+            seen_v = set()
             for other_entity, other_rect in nearby:
+                if other_entity in seen_v: continue
+                seen_v.add(other_entity)
+                
                 if other_entity == entity_id:
                     continue
-                other_comp = self.component_manager.get(other_entity, CollisionComponent)
+                other_comp = col_dict.get(other_entity)
                 if not other_comp: continue
 
                 # 1. Water Splash
@@ -133,7 +149,7 @@ class ProjectileSystem:
                         self.event_manager.emit(
                             GameSceneEvents.WATER_SPLASH,
                             pos=pygame.Vector2(rect.center),
-                            vel=vel.vec.copy(),
+                            vel=vel.vec,
                             size=col.size[0]
                         )
                     continue
@@ -144,7 +160,7 @@ class ProjectileSystem:
                         self.event_manager.emit(
                             GameSceneEvents.PROJECTILE_COLLISION,
                             pos=pygame.Vector2(rect.center),
-                            vel=vel.vec.copy(),
+                            vel=vel.vec,
                             target_type="environment",
                             size=col.size[0]
                         )
@@ -157,7 +173,7 @@ class ProjectileSystem:
                             break
 
             # If Position component no longer exists, the projectile was removed
-            if not self.component_manager.get(entity_id, Position):
+            if not pos_dict.get(entity_id):
                 continue
 
             # Apply final position

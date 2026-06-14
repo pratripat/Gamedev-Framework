@@ -37,42 +37,48 @@ class PhysicsEngine:
                 KnockbackComponent(proj_vel, 5, duration=0.2)
             )
 
-    def update(self, scroll, fps, dt, is_dashing=False, player_id=None):
+    def update(self, scroll, fps, dt, is_dashing=False, player_id=None, quadtree=None):
         """
         Update physics using a time delta in seconds (dt). Movement is computed using velocities in units/sec.
         The fps parameter is kept for compatibility with other systems but is NOT used for movement math.
         """
         self.player_dashing = is_dashing
         self.player_id = player_id
-        quadtree = Quadtree(0, (*scroll, *VIRTUAL_WINDOW_SIZE))
+
+        if quadtree is None:
+            # Fallback if not provided
+            quadtree = Quadtree(0, (*scroll, *VIRTUAL_WINDOW_SIZE))
+            for entity in self.component_manager.get_entities_with(CollisionComponent, Position):
+                position = self.component_manager.get(entity, Position)
+                collision_component = self.component_manager.get(entity, CollisionComponent)
+                rect = pygame.Rect(*(position.vec + collision_component.offset), *collision_component.size)
+                quadtree.insert(entity, rect)
 
         # Determine multiplier to preserve previous frame-based speeds.
         # If fps is available use it, otherwise fallback to 60 (reasonable default).
         scale = fps if (fps and fps > 0) else 60.0
 
         # Update all entities with Position and Velocity components
-        for entity in self.component_manager.get_entities_with(Position, Velocity):
-            position = self.component_manager.get(entity, Position)
-            velocity = self.component_manager.get(entity, Velocity)
+        pos_dict = self.component_manager._components.get(Position, {})
+        vel_dict = self.component_manager._components.get(Velocity, {})
+        col_dict = self.component_manager._components.get(CollisionComponent, {})
+        
+        entities_with_pos_vel = self.component_manager.get_entities_with(Position, Velocity)
+        for entity in entities_with_pos_vel:
+            position = pos_dict.get(entity)
+            velocity = vel_dict.get(entity)
 
             # Update position based on velocity when there's no collision component
-            collision_component = self.component_manager.get(entity, CollisionComponent)
+            collision_component = col_dict.get(entity)
             if not collision_component:
                 # Treat velocity.vec as units-per-frame previously; to convert to units/sec multiply by scale
                 # Then multiply by dt (seconds) to get actual displacement.
                 position += velocity.vec * dt * scale
                 velocity.realistic_vel = velocity.vec.copy()  # realistic_vel mirrors the desired velocity
 
-        # Insert solid collision rects into quadtree for collision checks
-        for entity in self.component_manager.get_entities_with(CollisionComponent, Position):
-            position = self.component_manager.get(entity, Position)
-            collision_component = self.component_manager.get(entity, CollisionComponent)
-            rect = pygame.Rect(*(position.vec + collision_component.offset), *collision_component.size)
-            quadtree.insert(entity, rect)
-
-        # Handle collisions for non-solid components
-        for non_solid_component_entity in self.component_manager.get_entities_with(CollisionComponent):
-            non_solid_component = self.component_manager.get(non_solid_component_entity, CollisionComponent)
+        entities_with_col = self.component_manager.get_entities_with(CollisionComponent)
+        for non_solid_component_entity in entities_with_col:
+            non_solid_component = col_dict.get(non_solid_component_entity)
             if non_solid_component.solid:
                 continue
 
@@ -80,8 +86,11 @@ class PhysicsEngine:
             if self.component_manager.get(non_solid_component_entity, ProjectileComponent):
                 continue
 
-            pos = self.component_manager.get(non_solid_component_entity, Position)
-            vel = self.component_manager.get(non_solid_component_entity, Velocity)
+            pos = pos_dict.get(non_solid_component_entity)
+            vel = vel_dict.get(non_solid_component_entity)
+            if not pos or not vel:
+                continue
+
             rect = pygame.FRect(*(pos.vec + non_solid_component.offset), *non_solid_component.size)
 
             # Apply knockback if present
@@ -91,8 +100,6 @@ class PhysicsEngine:
                 if kbc.duration <= 0:
                     self.component_manager.remove(non_solid_component_entity, KnockbackComponent)
 
-            collisions = {"top": False, "right": False, "bottom": False, "left": False}
-
             vel.realistic_vel = vel.vec.copy()
 
             # Move horizontally using seconds-based dt and scale to match previous behavior
@@ -100,7 +107,15 @@ class PhysicsEngine:
 
             colliding_entities = []
             quadtree.retrieve(colliding_entities, rect)
+            
+            # Optimization: Only create collisions dict if we actually hit something to save allocations
+            collisions = None
+            seen_h = set()
+
             for entity, colliding_rect in colliding_entities:
+                if entity in seen_h: continue
+                seen_h.add(entity)
+                
                 if entity == non_solid_component_entity:
                     continue
 
@@ -115,6 +130,8 @@ class PhysicsEngine:
 
                 # Check for collision
                 if rect.colliderect(colliding_rect):
+                    if collisions is None:
+                        collisions = {"top": False, "right": False, "bottom": False, "left": False}
                     if vel.x > 0:
                         rect.right = colliding_rect.left
                         collisions["right"] = True
@@ -134,11 +151,15 @@ class PhysicsEngine:
                 self._walk_timers[non_solid_component_entity] = self._walk_timers.get(non_solid_component_entity, 0) + dt
                 if self._walk_timers[non_solid_component_entity] > 0.15: # Emit every 0.15s
                     self._walk_timers[non_solid_component_entity] = 0
-                    self.event_manager.emit(GameSceneEvents.WALK, pos=pos.vec.copy(), vel=vel.vec.copy(), entity_id=non_solid_component_entity)
+                    self.event_manager.emit(GameSceneEvents.WALK, pos=pos.vec, vel=vel.vec, entity_id=non_solid_component_entity)
 
             colliding_entities = []
             quadtree.retrieve(colliding_entities, rect)
+            seen_v = set()
             for entity, colliding_rect in colliding_entities:
+                if entity in seen_v: continue
+                seen_v.add(entity)
+                
                 if entity == non_solid_component_entity:
                     continue
 
@@ -153,6 +174,8 @@ class PhysicsEngine:
 
                 # Check for collision
                 if rect.colliderect(colliding_rect):
+                    if collisions is None:
+                        collisions = {"top": False, "right": False, "bottom": False, "left": False}
                     if vel.y > 0:
                         rect.bottom = colliding_rect.top
                         collisions["bottom"] = True
@@ -162,7 +185,7 @@ class PhysicsEngine:
                     else:
                         vel.realistic_vel.y = 0
 
-            if any(collisions.values()):
+            if collisions is not None:
                 self.event_manager.emit(GameSceneEvents.COLLISION, entity_id=non_solid_component_entity, collisions=collisions)
 
             pos.vec.update(pygame.Vector2(rect.topleft) - non_solid_component.offset)

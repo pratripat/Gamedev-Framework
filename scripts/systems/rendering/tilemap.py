@@ -116,12 +116,24 @@ class Tilemap:
                 self.water_tile_positions.add(tile_pos)
 
         for chunk in water_layer.values():
-            for tile in chunk.values():
+            for tile_pos, tile in chunk.items():
                 img = tile.get("image")
                 if img:
                     unique_images[id(img)] = img
+                
+                # Pre-calculate edge bits: 1=Top, 2=Right, 4=Bottom, 8=Left
+                bits = 0
+                if (tile_pos[0], tile_pos[1] - self.TILE_SIZE) not in self.water_tile_positions: bits |= 1
+                if (tile_pos[0] + self.TILE_SIZE, tile_pos[1]) not in self.water_tile_positions: bits |= 2
+                if (tile_pos[0], tile_pos[1] + self.TILE_SIZE) not in self.water_tile_positions: bits |= 4
+                if (tile_pos[0] - self.TILE_SIZE, tile_pos[1]) not in self.water_tile_positions: bits |= 8
+                tile["water_bits"] = bits
         
         self.water_frames_map = {} # (img_id, edge_bits) -> [frames...]
+        
+        print(f"[DEBUG] _prepare_masked_water_frames starting. Unique water images: {len(unique_images)}")
+        import time
+        start_t = time.time()
         
         try:
             import numpy as np
@@ -164,6 +176,7 @@ class Tilemap:
                         masked_list.append(out_surf)
                     
                     self.water_frames_map[(img_id, bits)] = masked_list
+            print(f"[DEBUG] _prepare_masked_water_frames finished in {time.time() - start_t:.3f}s")
         except Exception as e:
             import traceback
             traceback.print_exc()
@@ -194,6 +207,7 @@ class Tilemap:
     
     def render(self, surface, camera):
         """Draw visible chunks based on camera view."""
+        scroll_int = camera.scroll_int
         for layer_id in self.layer_order:
             if layer_id == "water":
                 self._render_water(surface, camera)
@@ -209,12 +223,13 @@ class Tilemap:
             for chunk_pos, (chunk_image, chunk_rect) in chunks.items():
                 if camera.rect.colliderect(chunk_rect):
                     surface.blit(chunk_image, 
-                                    (int(round(chunk_pos[0] - camera.scroll.x)), 
-                                    int(round(chunk_pos[1] - camera.scroll.y))))
+                                    (chunk_pos[0] - scroll_int.x, 
+                                    chunk_pos[1] - scroll_int.y))
 
     def _render_water(self, surface, camera):
         """Render water layer per-tile with selective edge erosion masking."""
         water_layer = self.layers.get("water", {})
+        scroll_int = camera.scroll_int
         
         for chunk_pos, tiles in water_layer.items():
             # Quick visibility check for the whole chunk
@@ -227,26 +242,15 @@ class Tilemap:
                 if not camera.rect.colliderect(tile_rect):
                     continue
                 
-                blit_pos = (
-                    int(round(tile_pos[0] - camera.scroll.x)), 
-                    int(round(tile_pos[1] - camera.scroll.y))
-                )
+                blit_pos = (tile_pos[0] - scroll_int.x, tile_pos[1] - scroll_int.y)
                 
                 # 1. Render base tile image
                 base_img = tile_data.get("image")
                 if base_img:
                     surface.blit(base_img, blit_pos)
-                
                 # 2. Render pre-masked animation overlay
                 if self.water_frames_map:
-                    # Calculate edge bits: 1=Top, 2=Right, 4=Bottom, 8=Left
-                    # We check if a neighbor exists in the water layer
-                    bits = 0
-                    if (tile_pos[0], tile_pos[1] - self.TILE_SIZE) not in self.water_tile_positions: bits |= 1
-                    if (tile_pos[0] + self.TILE_SIZE, tile_pos[1]) not in self.water_tile_positions: bits |= 2
-                    if (tile_pos[0], tile_pos[1] + self.TILE_SIZE) not in self.water_tile_positions: bits |= 4
-                    if (tile_pos[0] - self.TILE_SIZE, tile_pos[1]) not in self.water_tile_positions: bits |= 8
-                    
+                    bits = tile_data.get("water_bits", 0)
                     img_id = id(base_img)
                     frames = self.water_frames_map.get((img_id, bits))
                     if frames:

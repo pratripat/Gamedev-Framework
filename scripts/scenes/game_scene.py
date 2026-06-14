@@ -49,6 +49,9 @@ class GameScene(Scene):
         self.animation_system = AnimationSystem(self.component_manager)
         self.render_system = RenderSystem(self.ctx.event_manager, self.component_manager, self.entity_manager)
         self.combat_system = CombatSystem(self.component_manager, self.entity_manager, self.camera, self.ctx.event_manager, self.ctx.resource_manager)
+        
+        # Link combat system to render system so projectiles can be drawn
+        self.render_system.combat_system = self.combat_system
 
         self.level = Level(self.ctx)
         self.current_level = f'data/levels/{LEVEL}.json'
@@ -187,19 +190,34 @@ class GameScene(Scene):
                 # For completeness (though no longer the primary dash decider)
                 self.player_input_system.on_land_completely = (water_count == 0)
 
+        # Build a single shared Quadtree for collisions per frame
+        from ..utils import Quadtree, VIRTUAL_WINDOW_SIZE
+        shared_quadtree = Quadtree(0, (*self.camera.scroll, *VIRTUAL_WINDOW_SIZE))
+        for entity in self.component_manager.get_entities_with(CollisionComponent, Position):
+            comp = self.component_manager.get(entity, CollisionComponent)
+            pos = self.component_manager.get(entity, Position)
+            # Skip character hurtboxes for the shared general quadtree (projectiles specifically skip them, physics handles enemies via specific logic if needed, but wait!
+            # Let's just insert all collision components. Systems can filter them out after retrieval.)
+            rect = pygame.Rect(*(pos.vec + comp.offset), *comp.size)
+            shared_quadtree.insert(entity, rect)
+
         self.player_input_system.update(self.component_manager, dt) 
         self.ai_system.update(dt)
-        self.physics_engine.update(self.camera.scroll, fps, dt, is_dashing=self.player_input_system.is_dashing, player_id=self.player)
+        self.physics_engine.update(self.camera.scroll, fps, dt, is_dashing=self.player_input_system.is_dashing, player_id=self.player, quadtree=shared_quadtree)
         self.combat_system.update(
             event_manager=self.ctx.event_manager,
             component_manager=self.component_manager,
             entity_list=self.component_manager.get_entities_with_either(HurtBoxComponent, HitBoxComponent),
             scroll=self.camera.scroll,
             dt=dt,
-            fps=fps
+            fps=fps,
+            quadtree=shared_quadtree,
+            particle_system=self.render_system.particle_effect_system,
+            is_dashing=self.player_input_system.is_dashing,
+            player_id=self.player
         )
         self.animation_system.update(fps, dt)
-        self.render_system.update(dt, tilemap=self.level.tilemap, camera=self.camera)
+        self.render_system.update(dt, tilemap=self.level.tilemap, camera=self.camera, quadtree=shared_quadtree)
         self.entity_manager.refresh_entities(dt=dt)
 
         # Update tilemap animations (water frames)
