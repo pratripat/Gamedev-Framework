@@ -45,9 +45,9 @@ class RenderSystem:
         self.wind_system = WindSystem()
         self.atmosphere_overlay = None
 
-    def update(self, dt):
+    def update(self, dt, tilemap=None, camera=None):
         self.render_effect_system.update(dt)
-        self.particle_effect_system.update(dt)
+        self.particle_effect_system.update(dt, tilemap=tilemap, camera_rect=camera.rect if camera else None)
         self.proximity_fade_system.update()
         self.wind_system.update(dt)
 
@@ -69,27 +69,25 @@ class RenderSystem:
         # 1. Render tilemap (background layers like grass, water, path)
         tilemap.render(self.temp_surf, camera)
 
-        # 2. Render particle effects UNDERNEATH Y-sorted objects (for projectile trails and death bursts)
+        # 2. Collect Y-sorted objects (Particles, Tiles, Entities)
         from ...components.particle import Particle
         for eid in self.component_manager.get_entities_with(Particle, Position):
             particle = self.component_manager.get(eid, Particle)
-            
-            # Skip deactivated particles from the pool
             if math.isinf(particle.age) or particle.age >= particle.lifetime:
                 continue
-
             pos = self.component_manager.get(eid, Position)
-
+            
             size = particle.size
             if particle.shrink:
                 size *= max(0.0, 1.0 - (particle.age / particle.lifetime))
             elif particle.oscillate_size:
                 size *= (0.8 + 0.4 * abs(math.sin(particle.age * 15.0)))
-
+            
             if size > 0:
                 p_surf = pygame.Surface((int(size * 2), int(size * 2)), pygame.SRCALPHA)
                 pygame.draw.circle(p_surf, particle.color, (int(size), int(size)), int(size))
-                self.temp_surf.blit(p_surf, (pos.x - scroll.x - size, pos.y - scroll.y - size))
+                # Add to Y-sort queue with its world Y pos
+                ysort_queue.append((pos.y, "sprite", p_surf, (pos.x - scroll.x - size, pos.y - scroll.y - size), None, None))
 
         # 3. Collect Y-sorted tiles (e.g. walls)
         ysort_queue.extend(tilemap.get_ysort_items(camera.rect))
@@ -149,8 +147,6 @@ class RenderSystem:
                         focal_points = None
                         if "foliage.png" in render.image_file:
                             try:
-                                # We need to know which tile index this is
-                                # This is a bit tricky, let's assume we can get it or use img_id
                                 # Prioritize custom user-defined config from the editor
                                 custom_path = "data/config/foliage_wind_custom.json"
                                 if os.path.exists(custom_path):
@@ -168,7 +164,6 @@ class RenderSystem:
                                 
                                 for idx, fimg in enumerate(self._foliage_images):
                                     if fimg.get_size() == render.surface.get_size():
-                                        # Best effort: compare a few pixels? Or just use idx
                                         focal_points = self._foliage_config.get(str(idx))
                                         break
                             except Exception: pass
@@ -179,17 +174,10 @@ class RenderSystem:
                     frames = self.wind_cache.get(img_id)
                     if frames:
                         # Render static base first to avoid gaps
-                        draw_pos = screen_pos + render.offset
-                        if screen_rect.colliderect(pygame.Rect(draw_pos, render.surface.get_size())):
-                            if ysort:
-                                ysort_queue.append((entity_sort_y, "sprite", render.surface, draw_pos, alpha, tint))
-                            else:
-                                normal_queue.append(("sprite", render.surface, draw_pos, alpha, tint))
-
-                        # Then render the swaying overlay on top (higher sort_y or just after)
-                        # Reduced playback speed to 10 FPS for a slower wiggle
+                        combined = render.surface.copy()
                         sway_surf = frames[int((self.wind_system.time * 10) % len(frames))]
-                        surf = sway_surf
+                        combined.blit(sway_surf, (0, 0))
+                        surf = combined
                     else:
                         surf = render.surface
                 else:
@@ -225,11 +213,11 @@ class RenderSystem:
             q_type = item[1]
             if q_type == "tile":
                 _, _, surf, tile_pos = item
-                self.temp_surf.blit(surf, (tile_pos[0] - scroll.x, tile_pos[1] - scroll.y))
+                self.temp_surf.blit(surf, (int(round(tile_pos[0] - scroll.x)), int(round(tile_pos[1] - scroll.y))))
             elif q_type == "shadow":
                 _, _, surf, pos, alpha = item
                 surf.set_alpha(alpha)
-                self.temp_surf.blit(surf, pos)
+                self.temp_surf.blit(surf, (int(round(pos[0])), int(round(pos[1]))))
             elif q_type == "sprite":
                 _, _, surf, pos, alpha, tint = item
                 if tint:
@@ -237,10 +225,10 @@ class RenderSystem:
                     surf = surf.copy(); surf.blit(ts, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
                 if alpha:
                     surf = surf.copy(); surf.set_alpha(alpha)
-                self.temp_surf.blit(surf, pos)
+                self.temp_surf.blit(surf, (int(round(pos[0])), int(round(pos[1]))))
             elif q_type == "animation":
                 _, _, anim, pos, scale, tint, alpha, rotation = item
-                anim.animation.render(self.temp_surf, pos, scale=scale, tint=tint, alpha=alpha, angle=rotation)
+                anim.animation.render(self.temp_surf, (int(round(pos[0])), int(round(pos[1]))), scale=scale, tint=tint, alpha=alpha, angle=rotation)
 
         # Draw non-ysorted (always on top)
         for item in normal_queue:

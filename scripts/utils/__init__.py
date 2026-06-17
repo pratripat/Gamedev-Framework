@@ -3,14 +3,15 @@ from enum import Enum, IntFlag, auto
 from dataclasses import dataclass
 
 DEFAULT_COLORKEY = (0, 0, 0)
-INITIAL_WINDOW_SIZE = (1100, 600)# (1280, 720) # (1920, 1002) # (1280, 720)
-CENTER = pygame.Vector2(INITIAL_WINDOW_SIZE) * 0.5
-ANIMATION_FOLDER = "data/graphics/animations"
 SCALE = 1
-TILE_SIZE = 64
+INITIAL_WINDOW_SIZE = (1100, 600)
+VIRTUAL_WINDOW_SIZE = (550, 300)
+CENTER = pygame.Vector2(VIRTUAL_WINDOW_SIZE) * 0.5
+ANIMATION_FOLDER = "data/graphics/animations"
+TILE_SIZE = 32
 CHUNK_SIZE = 16
 
-LEVEL = 3
+LEVEL = 4
 
 # Define keybinds for player inputs
 class Inputs(Enum):
@@ -61,6 +62,10 @@ class GameSceneEvents(Enum):
     COLLISION = "collision"
     DASH_START = "dash_start"
     SCREEN_SHAKE = "screen_shake"
+    PROJECTILE_COLLISION = "projectile_collision"
+    WALK = "walk"
+    WATER_SPLASH = "water_splash"
+    SPAWN_GHOST = "spawn_ghost"
 
 class EnemyState(Enum):
     IDLE = auto()
@@ -308,7 +313,7 @@ def load_images_from_tilemap(filename, tile_size=32, skip_empty=True):
 
     return tiles
 
-def get_blob_shadow_surface(size=[52, 24], color=(80, 80, 80), alpha=200):
+def get_blob_shadow_surface(size=[26, 12], color=(80, 80, 80), alpha=200):
     # TEMP
     shadow_surf = pygame.Surface(size).convert_alpha()
     pygame.draw.ellipse(shadow_surf, color, (0, 0, *size))

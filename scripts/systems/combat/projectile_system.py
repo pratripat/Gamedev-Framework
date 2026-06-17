@@ -1,6 +1,7 @@
 import pygame
 from ...components.projectile import ProjectileComponent
 from ...components.physics import Velocity, Position, CollisionComponent
+from ...components.combat import HurtBoxComponent, HealthComponent
 from ...utils import GameSceneEvents, Quadtree, INITIAL_WINDOW_SIZE, SCALE
 
 class ProjectileSystem:
@@ -37,16 +38,22 @@ class ProjectileSystem:
             self.component_manager.remove_all(proj_id)
 
     def update(self, dt, fps=None):
-        # Build quadtree of solid collision rects for efficient queries
-        quadtree = Quadtree(0, (0, 0, *INITIAL_WINDOW_SIZE))
+        # Build quadtree of solid and water collision rects
+        from ...utils import VIRTUAL_WINDOW_SIZE
+        quadtree = Quadtree(0, (0, 0, *VIRTUAL_WINDOW_SIZE))
         for entity in self.component_manager.get_entities_with(CollisionComponent, Position):
             comp = self.component_manager.get(entity, CollisionComponent)
             pos = self.component_manager.get(entity, Position)
-            if comp and comp.solid and pos:
+            if comp and pos:
+                # Include solid (walls) and non-solid (water) for detection
+                # We SKIP characters' collision boxes (feet) for projectiles as requested.
+                if self.component_manager.get(entity, HurtBoxComponent):
+                    continue
+                    
                 rect = pygame.Rect(*(pos.vec + comp.offset), *comp.size)
                 quadtree.insert(entity, rect)
 
-        # Movement scale: use fps if available to restore previous per-frame speeds
+        # Movement scale
         movement_scale = fps if (fps and fps > 0) else 60.0
 
         for entity_id in list(self.component_manager.get_entities_with(ProjectileComponent)):
@@ -67,10 +74,7 @@ class ProjectileSystem:
             # Prepare movement rect
             rect = pygame.FRect(*(pos_comp.vec + col.offset), *col.size)
 
-            collided = False
-            collisions = {"top": False, "right": False, "bottom": False, "left": False}
-
-            # Move horizontally (restore per-frame behaviour using movement_scale)
+            # Move horizontally
             rect.x += vel.x * dt * movement_scale
             nearby = []
             quadtree.retrieve(nearby, rect)
@@ -78,39 +82,42 @@ class ProjectileSystem:
                 if other_entity == entity_id:
                     continue
                 other_comp = self.component_manager.get(other_entity, CollisionComponent)
-                # Skip non-solid and collision boxes that don't block projectiles (e.g., water)
-                if not other_comp or not other_comp.solid or not getattr(other_comp, "blocks_projectiles", True):
+                if not other_comp: continue
+
+                # 1. Water Splash / Pass-Through Detection
+                if not getattr(other_comp, "blocks_projectiles", True):
+                    if rect.colliderect(other_rect):
+                        self.event_manager.emit(
+                            GameSceneEvents.WATER_SPLASH,
+                            pos=pygame.Vector2(rect.center),
+                            vel=vel.vec.copy(),
+                            size=col.size[0]
+                        )
                     continue
 
-                # SPECIAL: If target has a health component and is invincible (e.g. dashing), 
-                # let projectiles pass through them without being destroyed or bouncing.
-                from ...components.combat import HealthComponent
-                other_health = self.component_manager.get(other_entity, HealthComponent)
-                if other_health and other_health.invincibility_timer > 0:
-                    continue
+                # 2. Solid Wall collision
+                if other_comp.solid:
+                    if rect.colliderect(other_rect):
+                        self.event_manager.emit(
+                            GameSceneEvents.PROJECTILE_COLLISION,
+                            pos=pygame.Vector2(rect.center),
+                            vel=vel.vec.copy(),
+                            target_type="environment",
+                            size=col.size[0]
+                        )
+                        
+                        if projectile.data.get("bounce", 0) > 0:
+                            projectile.data["bounce"] -= 1
+                            vel.x *= -1
+                        else:
+                            self.component_manager.remove_all(entity_id)
+                            break
 
-                if rect.colliderect(other_rect):
-                    if vel.x > 0:
-                        rect.right = other_rect.left
-                        collisions["right"] = True
-                    elif vel.x < 0:
-                        rect.left = other_rect.right
-                        collisions["left"] = True
-
-                    collided = True
-                    # Handle bounce/kill
-                    if projectile.data.get("bounce", 0) > 0:
-                        projectile.data["bounce"] -= 1
-                        vel.x *= -1
-                    else:
-                        self.component_manager.remove_all(entity_id)
-                        collided = True
-                        break
             # If Position component no longer exists, the projectile was removed
             if not self.component_manager.get(entity_id, Position):
                 continue
 
-            # Move vertically (restore per-frame behaviour using movement_scale)
+            # Move vertically
             rect.y += vel.y * dt * movement_scale
             nearby = []
             quadtree.retrieve(nearby, rect)
@@ -118,33 +125,36 @@ class ProjectileSystem:
                 if other_entity == entity_id:
                     continue
                 other_comp = self.component_manager.get(other_entity, CollisionComponent)
-                # Skip non-solid and collision boxes that don't block projectiles (e.g., water)
-                if not other_comp or not other_comp.solid or not getattr(other_comp, "blocks_projectiles", True):
+                if not other_comp: continue
+
+                # 1. Water Splash
+                if not getattr(other_comp, "blocks_projectiles", True):
+                    if rect.colliderect(other_rect):
+                        self.event_manager.emit(
+                            GameSceneEvents.WATER_SPLASH,
+                            pos=pygame.Vector2(rect.center),
+                            vel=vel.vec.copy(),
+                            size=col.size[0]
+                        )
                     continue
 
-                # SPECIAL: If target has a health component and is invincible (e.g. dashing), 
-                # let projectiles pass through them without being destroyed or bouncing.
-                from ...components.combat import HealthComponent
-                other_health = self.component_manager.get(other_entity, HealthComponent)
-                if other_health and other_health.invincibility_timer > 0:
-                    continue
+                # 2. Solid Wall collision
+                if other_comp.solid:
+                    if rect.colliderect(other_rect):
+                        self.event_manager.emit(
+                            GameSceneEvents.PROJECTILE_COLLISION,
+                            pos=pygame.Vector2(rect.center),
+                            vel=vel.vec.copy(),
+                            target_type="environment",
+                            size=col.size[0]
+                        )
 
-                if rect.colliderect(other_rect):
-                    if vel.y > 0:
-                        rect.bottom = other_rect.top
-                        collisions["bottom"] = True
-                    elif vel.y < 0:
-                        rect.top = other_rect.bottom
-                        collisions["top"] = True
-
-                    collided = True
-                    if projectile.data.get("bounce", 0) > 0:
-                        projectile.data["bounce"] -= 1
-                        vel.y *= -1
-                    else:
-                        self.component_manager.remove_all(entity_id)
-                        collided = True
-                        break
+                        if projectile.data.get("bounce", 0) > 0:
+                            projectile.data["bounce"] -= 1
+                            vel.y *= -1
+                        else:
+                            self.component_manager.remove_all(entity_id)
+                            break
 
             # If Position component no longer exists, the projectile was removed
             if not self.component_manager.get(entity_id, Position):
@@ -152,10 +162,3 @@ class ProjectileSystem:
 
             # Apply final position
             pos_comp.vec.update(pygame.Vector2(rect.topleft) - col.offset)
-
-            # Optionally, emit collision event for other systems if needed
-            if any(collisions.values()):
-                try:
-                    self.event_manager.emit(GameSceneEvents.COLLISION, entity_id=entity_id, collisions=collisions)
-                except Exception:
-                    pass

@@ -55,7 +55,7 @@ class EntityFactory:
                 ctx.get("image", None) or
                 ctx["resource_manager"].get_image(data["image_file"], scale=data.get("image_scale", 1))
             ),
-            offset=(data["offset_x"] * SCALE, data["offset_y"] * SCALE),
+            offset=(data["offset_x"], data["offset_y"]),
             center=data.get("center", True),
             image_file=ctx.get("image_file") or data.get("image_file")
         ),
@@ -75,8 +75,8 @@ class EntityFactory:
         ),
         "HurtBoxComponent": lambda eid, data, ctx: HurtBoxComponent(
             entity_id=eid,
-            offset=(data["offset_x"] * SCALE, data["offset_y"] * SCALE),
-            size=(data["width"] * SCALE, data["height"] * SCALE),
+            offset=(data["offset_x"], data["offset_y"]),
+            size=(data["width"], data["height"]),
             shape=CollisionShape.RECT,
             layer=CollisionLayer.PLAYER if ctx.get("player", False) else CollisionLayer.ENEMY,
             center=data.get("center", False)
@@ -106,20 +106,20 @@ class EntityFactory:
         ),
         "CollisionComponent": lambda eid, data, ctx: CollisionComponent(
             entity_id=eid,
-            offset=(data["offset_x"] * SCALE, data["offset_y"] * SCALE),
-            size=(data["width"] * SCALE, data["height"] * SCALE),
+            offset=(data["offset_x"], data["offset_y"]),
+            size=(data["width"], data["height"]),
             solid=data.get("solid", False),
             center=data.get("center", False),
             blocks_projectiles=data.get("blocks_projectiles", True)
         ),
         "YSortComponent": lambda eid, data, ctx: YSortRender(
             entity_id=eid,
-            offset=(int(data["offset"][0] * SCALE), int(data["offset"][1] * SCALE)),
+            offset=(int(data["offset"][0]), int(data["offset"][1])),
         ),
         "ShadowComponent": lambda eid, data, ctx: ShadowComponent(
             entity_id=eid,
             surface=data["surface"],
-            offset=(data["offset"][0] * SCALE, data["offset"][1] * SCALE),
+            offset=(data["offset"][0], data["offset"][1]),
             alpha=data["alpha"],
             center=data["center"]
         ),
@@ -129,6 +129,7 @@ class EntityFactory:
             max_dist_squared=data["max_dist"]**2,
             alpha_range=data.get("alpha_range", (0, 255))
         ),
+
         "WindAffectedComponent": lambda eid, data, ctx: WindAffectedComponent(),
     }
 
@@ -144,7 +145,7 @@ class EntityFactory:
         alpha = 200
         player_component_data["ShadowComponent"] = {
             "surface": get_blob_shadow_surface(alpha=alpha),
-            "offset": (0, 36),
+            "offset": (0, 18),
             "alpha": alpha,
             "center": True
         }
@@ -163,7 +164,7 @@ class EntityFactory:
 
         enemy_component_data["ShadowComponent"] = {
             "surface": get_blob_shadow_surface(alpha=alpha),
-            "offset": (0, 36),
+            "offset": (0, 18),
             "alpha": alpha,
             "center": True
         }

@@ -179,5 +179,19 @@ class RenderEffectSystem:
                     del render_effect_comp.effect_data["dash_blink"]
                     del render_effect_comp.effect_timers["dash_blink"]
 
+            if "fade" in render_effect_comp.effect_data:
+                data = render_effect_comp.effect_data["fade"]
+                total = data["duration"]
+                render_effect_comp.effect_timers["fade"] += dt
+                t = min(render_effect_comp.effect_timers["fade"] / total, 1.0)
+                
+                start_alpha = data.get("start_alpha", 255)
+                target_alpha = data.get("target_alpha", 0)
+                render_effect_comp.alpha = int(start_alpha + (target_alpha - start_alpha) * t)
+
+                if t >= 1.0:
+                    del render_effect_comp.effect_data["fade"]
+                    del render_effect_comp.effect_timers["fade"]
+
             if len(render_effect_comp.effect_data) == 0:
                 self.component_manager.remove(entity_id, RenderEffectComponent)

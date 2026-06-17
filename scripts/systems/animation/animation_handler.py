@@ -76,9 +76,9 @@ class AnimationData:
         # offset
         self.config["offset"] = pygame.Vector2(self.config["offset"])
 
-        # Normalize per-animation scale and apply global SCALE multiplier so all animations share one overall scale
+        # Normalize per-animation scale
         base_scale = normalize_scale(self.config.get("scale", 1))
-        self.config["scale"] = [base_scale[0] * SCALE, base_scale[1] * SCALE]
+        self.config["scale"] = base_scale
 
         self.resize_images(self.config["scale"])
         self.config["offset"][0] *= self.config["scale"][0]

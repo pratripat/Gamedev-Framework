@@ -108,7 +108,8 @@ class ResourceManager:
                     path = os.path.basename(path)
 
         if path and path not in self.tilemaps:
-            images = load_images_from_tilemap(path)
+            from ...utils import TILE_SIZE
+            images = load_images_from_tilemap(path, tile_size=TILE_SIZE)
             if not (path and len(images)):
                 return None
 

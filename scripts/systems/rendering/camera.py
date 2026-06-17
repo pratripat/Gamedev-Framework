@@ -1,6 +1,6 @@
 import pygame, math, random
 from ...components.physics import Position
-from ...utils import CENTER, INITIAL_WINDOW_SIZE
+from ...utils import CENTER, INITIAL_WINDOW_SIZE, VIRTUAL_WINDOW_SIZE
 
 class Camera:
     def __init__(self):
@@ -58,6 +58,7 @@ class Camera:
     
     @property
     def rect(self):
-        return pygame.Rect(*self.scroll, *INITIAL_WINDOW_SIZE)
+        # We now render to a half-sized virtual surface, so culling should match that
+        return pygame.Rect(*self.scroll, *VIRTUAL_WINDOW_SIZE)
     
 

@@ -28,8 +28,14 @@ class Tilemap:
         return (cx, cy)
 
     def load_layers(self, layers, tilemaps, rm, exception_layers):
-        for layer_id, tiles in layers.items():
+        for layer_id, layer_data in layers.items():
             self.layers[layer_id] = {}
+
+            # Handle both old format (list of tiles) and new format (dict with 'tiles' and 'autotile_config')
+            if isinstance(layer_data, dict):
+                tiles = layer_data.get("tiles", [])
+            else:
+                tiles = layer_data
 
             for tile_data in tiles:
                 (
@@ -203,8 +209,8 @@ class Tilemap:
             for chunk_pos, (chunk_image, chunk_rect) in chunks.items():
                 if camera.rect.colliderect(chunk_rect):
                     surface.blit(chunk_image, 
-                                    (chunk_pos[0] - camera.scroll.x, 
-                                    chunk_pos[1] - camera.scroll.y))
+                                    (int(round(chunk_pos[0] - camera.scroll.x)), 
+                                    int(round(chunk_pos[1] - camera.scroll.y))))
 
     def _render_water(self, surface, camera):
         """Render water layer per-tile with selective edge erosion masking."""
@@ -221,7 +227,10 @@ class Tilemap:
                 if not camera.rect.colliderect(tile_rect):
                     continue
                 
-                blit_pos = (tile_pos[0] - camera.scroll.x, tile_pos[1] - camera.scroll.y)
+                blit_pos = (
+                    int(round(tile_pos[0] - camera.scroll.x)), 
+                    int(round(tile_pos[1] - camera.scroll.y))
+                )
                 
                 # 1. Render base tile image
                 base_img = tile_data.get("image")

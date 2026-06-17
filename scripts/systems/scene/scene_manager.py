@@ -29,11 +29,19 @@ class SceneManager():
             raise ValueError(f"[SCENE MANAGER] Scene with id {scene.id} already exists. (DEBUG)")
         self.scenes.append(scene)
     
-    def render_scene(self, screen):
+    def render_scene(self, surface):
         if not self.current_scene:
             raise RuntimeError("[SCENE MANAGER] No current scene set. (DEBUG)")
         
-        self.current_scene.render(screen)
+        self.current_scene.render(surface)
+
+    def render_ui(self, screen):
+        if not self.current_scene:
+            raise RuntimeError("[SCENE MANAGER] No current scene set. (DEBUG)")
+        
+        # Call render_ui if the scene has it
+        if hasattr(self.current_scene, 'render_ui'):
+            self.current_scene.render_ui(screen)
 
     def update_scene(self, **kwargs):
         if not self.current_scene:

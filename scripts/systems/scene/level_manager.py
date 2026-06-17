@@ -19,14 +19,19 @@ class Level:
 
         layers = data["layers"]
         tilemaps = data["tilemaps"]
-
+        
         # loading tilemap
         self.tilemap = Tilemap(layers, tilemaps, self.ctx.resource_manager, exception_layers=["player", "enemies", "foliage"])
 
         # Create collision boxes per collidable layer so some layers (like water) can be non-blocking for projectiles
         self.collision_grid = []
         for layer_id in self.collidables:
-            layer_collidables = layers.get(layer_id, [])
+            layer_data = layers.get(layer_id, [])
+            if isinstance(layer_data, dict):
+                layer_collidables = layer_data.get("tiles", [])
+            else:
+                layer_collidables = layer_data
+            
             cg = CollisionGrid(layer_collidables)
             # water should NOT block projectiles (they fly over it); other layers block projectiles
             blocks_projectiles = False if layer_id == "water" else True
@@ -82,7 +87,12 @@ class Level:
 
         # player loading
         player = None
-        player_data = layers.get("player", {})
+        layer_data = layers.get("player", {})
+        if isinstance(layer_data, dict):
+            player_data = layer_data.get("tiles", [])
+        else:
+            player_data = layer_data
+
         if player_data:
             tile_pos = player_data[0][0]
             player = entity_factory.create_player(
@@ -96,7 +106,12 @@ class Level:
             )
         
         # enemies loading
-        enemies_data = layers.get("enemies", [])
+        layer_data = layers.get("enemies", [])
+        if isinstance(layer_data, dict):
+            enemies_data = layer_data.get("tiles", [])
+        else:
+            enemies_data = layer_data
+
         if enemies_data:
             for tile_pos, _, _, spritesheet_index, _ in enemies_data:
                 enemy = entity_factory.create_enemy(
@@ -119,7 +134,12 @@ class Level:
                 # )
         
         # foliage loading
-        foliage_data = layers.get("foliage", [])
+        layer_data = layers.get("foliage", [])
+        if isinstance(layer_data, dict):
+            foliage_data = layer_data.get("tiles", [])
+        else:
+            foliage_data = layer_data
+
         if foliage_data:
             for tile_pos, _, _, spritesheet_index, scale in foliage_data:
                 image = self.ctx.resource_manager.get_spritesheet("data/graphics/spritesheets/foliage.png", index=spritesheet_index, scale=scale)
