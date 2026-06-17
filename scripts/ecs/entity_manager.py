@@ -32,7 +32,7 @@ class EntityManager:
             self.player_id = eid
         return eid
 
-    def kill_entity(self, entity_id):
+    def kill_entity(self, entity_id, **kwargs):
         asm = self.cm.get(entity_id, AnimationStateMachine)
         
         # Disable collision for the dying entity immediately
@@ -68,27 +68,25 @@ class EntityManager:
                 angle = random.uniform(0, math.pi * 2)
                 toss_dir = pygame.Vector2(math.cos(angle), math.sin(angle))
 
-            # Apply a strong "toss" knockback
-            self.cm.add(entity_id, KnockbackComponent(toss_dir, 15, duration=0.4))
-            
-            # Add rotation effect matching the toss direction
-            rec = self.cm.get(entity_id, RenderEffectComponent)
-            if not rec:
-                rec = RenderEffectComponent()
-                self.cm.add(entity_id, rec)
-            
-            rec.disabled = False # Re-enable for toss rotation
-            spin_angle = 720 if toss_dir.x < 0 else -720
-            rec.effect_data["rotate"] = {"target_angle": spin_angle, "lerp": True, "duration": 0.4}
-            rec.effect_timers["rotate"] = 0.0
+            # Apply true top-down projectile motion:
+            # 1. Ground plane (X, Y) linear movement
+            # 2. Vertical plane (Z) parabolic arc
+            self.cm.add(entity_id, KnockbackComponent(
+                toss_dir, 
+                force=25,       # Reduced from 40 for shorter distance
+                duration=0.6, 
+                up_force=250.0, # Vertical pop
+                gravity=750.0  # Pull back down
+            ))
 
+            
             # Stop regular movement
             vel = self.cm.get(entity_id, Velocity)
             if vel: vel.vec = (0, 0)
 
             # Queue for delayed removal
             if not hasattr(self, 'dying_timers'): self.dying_timers = {}
-            self.dying_timers[entity_id] = 0.4 # Match toss duration
+            self.dying_timers[entity_id] = 0.6 # Match toss duration
 
     def check_dead_entity(self, entity_id, animation_id):
         if animation_id.endswith("_death") and entity_id in self.dead_entities:

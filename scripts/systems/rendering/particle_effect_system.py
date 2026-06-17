@@ -9,11 +9,15 @@ class FastParticle:
         'active', 'x', 'y', 'vx', 'vy', 'age', 'lifetime', 
         'r', 'g', 'b', 'a', 'size', 'fade', 
         'flicker_colors', 'flicker_speed', 'oscillate_size', 
-        'friction', 'shrink', 'image'
+        'friction', 'shrink', 'image',
+        'sway', 'gravity', 'wind_factor'
     ]
     def __init__(self):
         self.active = False
         self.image = None
+        self.sway = False
+        self.gravity = 0.0
+        self.wind_factor = 0.0
 
 class ParticleEffectSystem:
     def __init__(self, component_manager, entity_manager, capacity=4000):
@@ -25,6 +29,7 @@ class ParticleEffectSystem:
         self._temp_rect = pygame.Rect(0, 0, 0, 0)
         self._temp_hits = []
         self._particle_cache = {}
+        self.wind_system = None
         
     def emit_particle(self):
         if not self.free_indices:
@@ -35,7 +40,7 @@ class ParticleEffectSystem:
         self.active_indices.append(idx)
         return p
 
-    def emit_fast_particle(self, x, y, vx, vy, lifetime, r, g, b, a, size, fade, shrink, friction):
+    def emit_fast_particle(self, x, y, vx, vy, lifetime, r, g, b, a, size, fade, shrink, friction, sway=False, gravity=0.0, wind_factor=0.0):
         p = self.emit_particle()
         if p:
             p.x = x
@@ -55,12 +60,20 @@ class ParticleEffectSystem:
             p.flicker_colors = None
             p.oscillate_size = False
             p.image = None
+            p.sway = sway
+            p.gravity = gravity
+            p.wind_factor = wind_factor
             
-    def update(self, dt, quadtree=None):
+    def update(self, dt, quadtree=None, camera_rect=None):
         # Emit particles
         for eid in self.cm.get_entities_with(ParticleEmitter, Position):
             emitter = self.cm.get(eid, ParticleEmitter)
             pos = self.cm.get(eid, Position).vec
+            
+            # Culling: Only emit if emitter is near screen
+            if camera_rect:
+                if not camera_rect.inflate(400, 400).collidepoint(pos.x, pos.y):
+                    continue
 
             if not emitter.active:
                 continue
@@ -87,6 +100,21 @@ class ParticleEffectSystem:
         alive_indices = []
         for idx in self.active_indices:
             p = self.particles[idx]
+            
+            # Culling: Only update if particle is near screen
+            if camera_rect:
+                if not camera_rect.inflate(300, 300).collidepoint(p.x, p.y):
+                    # Still keep it alive but don't move it for this frame
+                    # (Wait, if we don't update age, it lives forever offscreen. 
+                    # If we don't update pos, it stays still. 
+                    # Better: If it's too far, just kill it or update age only.)
+                    p.age += dt
+                    if p.age >= p.lifetime:
+                        p.active = False
+                        self.free_indices.append(idx)
+                        continue
+                    alive_indices.append(idx)
+                    continue
 
             p.age += dt
             if p.age >= p.lifetime:
@@ -99,8 +127,24 @@ class ParticleEffectSystem:
                 p.vx *= (p.friction ** (dt * 60.0))
                 p.vy *= (p.friction ** (dt * 60.0))
 
+            # Environmental Physics (Leaves, Dust, etc)
+            # 1. Gravity (Downwards)
+            if p.gravity != 0:
+                p.vy += p.gravity * dt
+
+            # 2. Wind & Sway
+            # Dynamic Wind: directly affect VX based on wind magnitude change
+            if p.wind_factor != 0 and self.wind_system:
+                # We apply wind as a force directly to VX
+                p.vx += self.wind_system.magnitude_x * p.wind_factor * dt
+            
+            current_vx = p.vx
+            if p.sway:
+                # Horizontal sine-wave sway (added only to temporary render pos to preserve base VX)
+                current_vx += math.sin(p.age * 5.0) * 15.0
+
             # Move with collision if quadtree available
-            new_x = p.x + p.vx * dt
+            new_x = p.x + current_vx * dt
             if quadtree:
                 self._temp_rect.x = int(new_x - p.size)
                 self._temp_rect.y = int(p.y - p.size)
@@ -154,8 +198,14 @@ class ParticleEffectSystem:
         scroll_int_x = camera.scroll_int.x
         scroll_int_y = camera.scroll_int.y
         items = []
+        screen_rect = camera.rect
+        
         for idx in self.active_indices:
             p = self.particles[idx]
+            
+            # PERFORMANCE: Strict visibility culling for particles
+            if not screen_rect.inflate(64, 64).collidepoint(p.x, p.y):
+                continue
             
             size = p.size
             if p.shrink:
@@ -187,7 +237,12 @@ class ParticleEffectSystem:
 
                 x = math.floor(p.x) - scroll_int_x - size
                 y = math.floor(p.y) - scroll_int_y - size
+                
+                # Performance/Visual: Leaf particles should render ON TOP of trees
+                # We add an offset to the sort_y for sway/gravity particles
+                sort_y = p.y + 100 if (p.sway or p.gravity > 0) else p.y
+                
                 # Yield identical signature for ysort_queue to maintain strict visual parity
-                items.append((p.y, "sprite", p_surf, (x, y), None, None))
+                items.append((sort_y, "sprite", p_surf, (x, y), None, None))
                 
         return items

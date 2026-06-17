@@ -12,6 +12,7 @@ class Tilemap:
         self.chunk_images = {} # {layer_id: {chunk_pos: image}}
         self.layer_order = list(layers.keys())
         self.ysort_layers = ysort_layers
+        self.world_bounds = [0, 0, 0, 0] # min_x, min_y, max_x, max_y
 
         # Water animation state
         self.water_frames = None
@@ -48,6 +49,12 @@ class Tilemap:
 
                 # Ensure tile positions are integer pixel coordinates
                 tile_pos = tuple(map(int, tile_pos))
+
+                # Update world bounds
+                self.world_bounds[0] = min(self.world_bounds[0], tile_pos[0])
+                self.world_bounds[1] = min(self.world_bounds[1], tile_pos[1])
+                self.world_bounds[2] = max(self.world_bounds[2], tile_pos[0] + self.TILE_SIZE)
+                self.world_bounds[3] = max(self.world_bounds[3], tile_pos[1] + self.TILE_SIZE)
 
                 filepath = list(tilemaps.keys())[filepath_index]
 
@@ -230,36 +237,48 @@ class Tilemap:
         """Render water layer per-tile with selective edge erosion masking."""
         water_layer = self.layers.get("water", {})
         scroll_int = camera.scroll_int
-        
+
+        base_blits = []
+        overlay_blits = []
+
         for chunk_pos, tiles in water_layer.items():
             # Quick visibility check for the whole chunk
             chunk_rect = pygame.Rect(chunk_pos[0], chunk_pos[1], self.CHUNK_RES, self.CHUNK_RES)
             if not camera.rect.colliderect(chunk_rect):
                 continue
-            
+
             for tile_pos, tile_data in tiles.items():
                 tile_rect = tile_data["rect"]
                 if not camera.rect.colliderect(tile_rect):
                     continue
-                
+
                 blit_pos = (tile_pos[0] - scroll_int.x, tile_pos[1] - scroll_int.y)
-                
-                # 1. Render base tile image
+
+                # 1. Collect base tile image
                 base_img = tile_data.get("image")
                 if base_img:
-                    surface.blit(base_img, blit_pos)
-                # 2. Render pre-masked animation overlay
+                    base_blits.append((base_img, blit_pos))
+
+                # 2. Collect pre-masked animation overlay
                 if self.water_frames_map:
                     bits = tile_data.get("water_bits", 0)
                     img_id = id(base_img)
                     frames = self.water_frames_map.get((img_id, bits))
                     if frames:
                         frame = frames[self.water_frame_index % len(frames)]
-                        surface.blit(frame, blit_pos, special_flags=pygame.BLEND_RGB_ADD)
+                        # Pygame blits sequence: (source, dest, area, special_flags)
+                        overlay_blits.append((frame, blit_pos, None, pygame.BLEND_RGB_ADD))
                 elif self.water_frames:
                     # Fallback to simple blit if map failed
                     frame = self.water_frames[self.water_frame_index % len(self.water_frames)]
-                    surface.blit(frame, blit_pos, special_flags=pygame.BLEND_RGB_ADD)
+                    overlay_blits.append((frame, blit_pos, None, pygame.BLEND_RGB_ADD))
+
+        # Perform batched blits in correct order
+        if base_blits:
+            surface.blits(base_blits)
+        if overlay_blits:
+            surface.blits(overlay_blits)
+
     
     def get_ysort_items(self, camera_rect):
         """Returns a list of tiles from ysort_layers that are within camera_rect."""

@@ -83,7 +83,7 @@ def spawn_bomb(eid, cm, em, anim_handler, event_manager, data):
         ),
         ShadowComponent(
             entity_id=bomb_id,
-            surface=get_blob_shadow_surface(size=[36, 24]),
+            surface=get_blob_shadow_surface(size=[18, 12]),
             offset=(0, 16),
             alpha=200,
             center=True

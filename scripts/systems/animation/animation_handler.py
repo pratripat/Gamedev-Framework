@@ -2,7 +2,8 @@ import pygame, json, bisect
 from ...utils import load_image, load_images_from_spritesheet, DEFAULT_COLORKEY, ANIMATION_FOLDER, GameSceneEvents, normalize_scale, SCALE
 
 class AnimationHandler:
-    def __init__(self):
+    def __init__(self, resource_manager):
+        self.resource_manager = resource_manager
         self.animations = {}
         self.animations_config = json.load(open(f"{ANIMATION_FOLDER}/config.json", "r"))
     
@@ -21,7 +22,12 @@ class AnimationHandler:
         try:
             spritesheet_index = 0
             for animation_id in config:
-                self.animations[f"{entity}_{animation_id}"] = AnimationData(f"{ANIMATION_FOLDER}/{entity}", config[animation_id], spritesheet_index)
+                self.animations[f"{entity}_{animation_id}"] = AnimationData(
+                    f"{ANIMATION_FOLDER}/{entity}", 
+                    config[animation_id], 
+                    self.resource_manager,
+                    spritesheet_index
+                )
                 spritesheet_index += len(config[animation_id]['frames'])
 
         except FileNotFoundError:
@@ -44,28 +50,37 @@ class AnimationHandler:
         return Animation(animation_data, animation_id)
 
 class AnimationData:
-    def __init__(self, path, config, spritesheet_index=0):
+    def __init__(self, path, config, resource_manager, spritesheet_index=0):
         """
         Initializes the AnimationData with the path to the spritesheet and its configuration.
         
         :param path: Path to the spritesheet.
         :param config: Configuration for the animation.
+        :param resource_manager: The global resource manager for caching.
         :param spritesheet_index: Index of the spritesheet in case of multiple sheets.
         """
         self.animation_path = path
-        self.load_data(path, config, spritesheet_index)
+        self.load_data(path, config, resource_manager, spritesheet_index)
     
-    def load_data(self, path, config, spritesheet_index=0):
+    def load_data(self, path, config, resource_manager, spritesheet_index=0):
         """
         Load the animation data from the given path and configuration.
         
         :param path: Path to the spritesheet.
         :param config: Configuration for the animation.
+        :param resource_manager: The global resource manager for caching.
         :param spritesheet_index: Index of the spritesheet in case of multiple sheets.
         """
-        images = load_images_from_spritesheet(path+'.png')[spritesheet_index:spritesheet_index + len(config['frames'])]
-        if images == []: self.original_images = self.images = load_image(path) # handles if its a single image n not a spritesheet
-        else: self.original_images = self.images = images
+        full_path = path + '.png'
+        # Use resource manager to get cached images
+        images_list = resource_manager.get_spritesheet(full_path)
+        images = images_list[spritesheet_index:spritesheet_index + len(config['frames'])] if images_list else []
+        
+        if not images:
+            img = resource_manager.get_image(path)
+            self.original_images = self.images = [img] if img else []
+        else:
+            self.original_images = self.images = images
 
         self.config = config
 
@@ -170,20 +185,9 @@ class Animation:
                 img.set_alpha(alpha)
             
             if tint is not None:
-                # Generate a white overlay with transparency in background
-                white_overlay = pygame.mask.from_surface(img).to_surface(
-                    setcolor=(255, 255, 255, 255),
-                    unsetcolor=(0, 0, 0, 0)
-                )
-
-                # Create a copy of the sprite and clear existing color
-                silhouette = img.copy()
-                silhouette.fill((255, 255, 255, 0), special_flags=pygame.BLEND_RGBA_MULT)
-
-                # Add white overlay onto cleared base
-                silhouette.blit(white_overlay, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
-
-                img = silhouette
+                # Solid silhouette tint using mask
+                mask = pygame.mask.from_surface(img)
+                img = mask.to_surface(setcolor=tint, unsetcolor=(0,0,0,0))
 
             if scale_tuple != (1.0, 1.0):
                 img = pygame.transform.scale(img, (
@@ -197,15 +201,17 @@ class Animation:
                 self._render_cache.clear()
             self._render_cache[cache_key] = cached_img
 
-        off = self.animation_data.config.get("offset", pygame.Vector2(0, 0)).copy()
-        if offset:
+        off = pygame.Vector2(0, 0)
+        if offset is not None:
             off = offset
+        else:
+            off = self.animation_data.config.get("offset", pygame.Vector2(0, 0)).copy()
 
         if self.animation_data.config.get("centered", center):
             off.x -= cached_img.get_width() / 2
             off.y -= cached_img.get_height() / 2
 
-        render_pos = (pos[0] + off.x, pos[1] + off.y)
+        render_pos = (int(pos[0] + off.x), int(pos[1] + off.y))
         surface.blit(cached_img, render_pos)
 
     def run(self, event_manager, entity_id, fps, dt):

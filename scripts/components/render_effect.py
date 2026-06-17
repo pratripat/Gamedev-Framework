@@ -10,6 +10,7 @@ class RenderEffectComponent:
         self.tint = None                  # for color tint
         self.blink = False                # for flickering
         self.rotation = 0.0               # degrees, consumed by render system
+        self.z_offset = 0.0               # vertical height (for jumps/tosses)
         self.effect_timers = {}           # active timers {'squash': 0}
         self.effect_data = {}             # active data {'squash': {'start_scale': [x, y], 'target_scale': [x2, y2], 'duration': ,return_back: bool}}
         self.disabled = False

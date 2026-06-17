@@ -97,16 +97,37 @@ class CollisionComponent:
             self.offset -= self.size / 2
 
 class KnockbackComponent:
-    def __init__(self, vec: pygame.Vector2, force: int, duration: int=0.3):
+    def __init__(self, vec: pygame.Vector2, force: int, duration: int=0.3, up_force: float=0.0, gravity: float=0.0):
         self.vx = vec.x * force
         self.vy = vec.y * force
+        self.vz = -up_force        # Vertical velocity (negative is UP on screen)
         self.duration = duration   # seconds remaining
+        self.gravity = gravity
+        self.z = 0.0
 
-    def update(self, dt):
+    def update(self, dt, component_manager, entity_id):
         if self.duration <= 0:
             return 0, 0
         self.duration -= dt
-        # print(self.duration)
-        self.vx *= 0.80
-        self.vy *= 0.80
+
+        # Ground Friction
+        self.vx *= (0.80 ** (dt * 60))
+        self.vy *= (0.80 ** (dt * 60))
+
+        # Vertical Arc
+        if self.gravity != 0 or self.vz != 0:
+            self.vz += self.gravity * dt
+            self.z -= self.vz * dt # Update height
+
+            # Clamp height to 0 (ground)
+            if self.z < 0:
+                self.z = 0
+                self.vz = 0
+
+            # Update render effect if present
+            from ..components.render_effect import RenderEffectComponent
+            rec = component_manager.get(entity_id, RenderEffectComponent)
+            if rec:
+                rec.z_offset = self.z
+
         return self.vx, self.vy

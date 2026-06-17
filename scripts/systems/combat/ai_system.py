@@ -23,7 +23,7 @@ class AISystem:
 
         event_manager.subscribe(GameSceneEvents.DEATH, self._reset_ai_comps, self._handle_dead_enemy)
 
-    def _handle_dead_enemy(self, entity_id):
+    def _handle_dead_enemy(self, entity_id, **kwargs):
         ai_comp = self.component_manager.get(entity_id, AIComponent)
         if ai_comp:
             ai_comp.state = EnemyState.DEAD
@@ -32,7 +32,7 @@ class AISystem:
         apc = self.component_manager.get(entity_id, AttackPatternComponent)
         if apc: apc.active = False
 
-    def _reset_ai_comps(self, entity_id):
+    def _reset_ai_comps(self, entity_id, **kwargs):
         if self.player_entity_id != entity_id:
             return
         

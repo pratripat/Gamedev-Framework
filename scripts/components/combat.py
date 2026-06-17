@@ -57,7 +57,7 @@ class HealthComponent:
 
         event_manager.subscribe(GameSceneEvents.DAMAGE, self.take_damage, source=self.entity_id)
 
-    def take_damage(self, entity_id, proj_id, damage, effects):
+    def take_damage(self, entity_id, proj_id, damage, effects, **kwargs):
         if entity_id != self.entity_id:
             return
         
@@ -79,7 +79,7 @@ class HealthComponent:
         if self.health <= 0:
             self.health = 0
             # Trigger death logic here, e.g., event_manager.publish("entity_died", self.entity_id)
-            self.event_manager.emit(GameSceneEvents.DEATH, entity_id=self.entity_id)
+            self.event_manager.emit(GameSceneEvents.DEATH, entity_id=self.entity_id, proj_vel=kwargs.get('proj_vel'), proj_pos=kwargs.get('proj_pos'), death=True)
         
 class AttackPattern:
     def __init__(self, shoot_fn, projectile_data, cooldown, duration):

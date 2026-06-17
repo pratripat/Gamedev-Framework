@@ -109,7 +109,7 @@ class PlayerInputSystem:
             data = {
                 "pos": cm.get(self.entity_id, Position).vec.copy(),
                 "timer": 0.75,
-                "radius": 150
+                "radius": 75
             }
         )
 
@@ -126,7 +126,7 @@ class PlayerInputSystem:
     def on_move(self, direction, held=True):
         self.held[direction] = held
     
-    def on_death(self, entity_id):
+    def on_death(self, entity_id, **kwargs):
         if self.entity_id == entity_id:
             self.disable_movement = True
             self.is_dashing = False

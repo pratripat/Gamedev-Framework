@@ -14,16 +14,43 @@ class RenderEffectSystem:
             GameSceneEvents.DAMAGE,
             self.trigger_flash,
             lambda entity_id, **args: self.trigger_squash(entity_id, target_scale=(1, 0.8)),
-            lambda entity_id, proj_id, **args: self.trigger_rotate(entity_id, angle=10 * (1 if (component_manager.get(proj_id, Velocity) and component_manager.get(proj_id, Velocity).x < 0) else -1), lerp=True, duration=0.2),
+            lambda entity_id, proj_id, **args: self.trigger_rotate(
+                entity_id, 
+                angle=15 * (-1 if args.get('proj_vel', pygame.Vector2(0,0)).x > 0 else 1), 
+                lerp=True, 
+                duration=0.2
+            ) if not args.get('death') else None,
         )
-        event_manager.subscribe(GameSceneEvents.DEATH, 
-            self.disable_render_effect,
-        )
+        event_manager.subscribe(GameSceneEvents.DEATH, self.trigger_death_effect)
         event_manager.subscribe(GameSceneEvents.DASH_START, lambda entity_id, duration: self.trigger_dash_blink(entity_id, duration))
 
-    def disable_render_effect(self, entity_id):
+    def trigger_death_effect(self, entity_id, **args):
+        # 1. Permanent "Lighter Black" Silhouette Tint
+        # Force add/reset the component to ensure it's not disabled
+        if not self.component_manager.get(entity_id, RenderEffectComponent):
+            self.component_manager.add(entity_id, RenderEffectComponent())
+        
+        rec = self.component_manager.get(entity_id, RenderEffectComponent)
+        rec.disabled = False
+        # Clear existing transient effects to make way for death visuals
+        rec.effect_data.clear()
+        rec.effect_timers.clear()
+
+        # rec.effect_data["death_pale"] = {
+        #     "color": (58, 68, 102),
+        #     "duration": 99.0 
+        # }
+        # rec.effect_timers["death_pale"] = 0.0
+
+        # 2. Death Rotation (Directional spin - CORRECTED)
+        proj_vel = args.get('proj_vel', pygame.Vector2(0, 0))
+        spin_angle = -360 if proj_vel.x > 0 else 360
+        self.trigger_rotate(entity_id, angle=spin_angle, lerp=True, duration=0.5)
+
+    def disable_render_effect(self, entity_id, **args):
         render_effect_comp = self.component_manager.get(entity_id, RenderEffectComponent)
-        render_effect_comp.disabled = True
+        if render_effect_comp:
+            render_effect_comp.disabled = True
  
     def trigger_flash(self, entity_id, **args):
         self.add_effect(entity_id, "flash", {
@@ -65,7 +92,7 @@ class RenderEffectSystem:
             self.component_manager.add(entity_id, RenderEffectComponent())
         
         rec = self.component_manager.get(entity_id, RenderEffectComponent)
-        if rec.disabled or effect_type in rec.effect_data:
+        if not rec or rec.disabled or effect_type in rec.effect_data:
             return
         
         rec.effect_data[effect_type] = effect_data
@@ -95,6 +122,10 @@ class RenderEffectSystem:
             render_effect_comp = self.component_manager.get(entity_id, RenderEffectComponent)
             if render_effect_comp is None or render_effect_comp.disabled:
                 continue
+
+            # Death Pale Tint
+            if "death_pale" in render_effect_comp.effect_data:
+                render_effect_comp.tint = render_effect_comp.effect_data["death_pale"]["color"]
 
             if "squash" in render_effect_comp.effect_data:
                 total = render_effect_comp.effect_data["squash"]["duration"]
@@ -160,9 +191,11 @@ class RenderEffectSystem:
                     render_effect_comp.rotation = data["target_angle"]
 
                 if t >= 1:
-                    render_effect_comp.rotation = 0.0
-                    del render_effect_comp.effect_data["rotate"]
-                    del render_effect_comp.effect_timers["rotate"]
+                    # Only reset rotation if not a death effect
+                    if "death_pale" not in render_effect_comp.effect_data:
+                        render_effect_comp.rotation = 0.0
+                        del render_effect_comp.effect_data["rotate"]
+                        del render_effect_comp.effect_timers["rotate"]
 
             if "dash_blink" in render_effect_comp.effect_data:
                 data = render_effect_comp.effect_data["dash_blink"]
