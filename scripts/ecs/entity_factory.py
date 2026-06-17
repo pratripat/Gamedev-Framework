@@ -12,7 +12,7 @@ from ..weapons.bullet_patterns import SHOOT_FUNCTIONS
 
 from ..utils import CollisionShape, CollisionLayer, get_blob_shadow_surface, SCALE
 
-import json, copy, pygame
+import json, copy, pygame, random
 
 # function factory for getting cond for transitions
 def make_vel_zero_check(entity_id, component_manager, input_system):
@@ -180,6 +180,31 @@ class EntityFactory:
         foliage_component_data = self.data["foliage"]
 
         self.add_components_to_entity(foliage, pos, foliage_component_data, component_manager, entity_manager, event_manager, animation_handler, input_system, resource_manager, image=image, image_file="data/graphics/spritesheets/foliage.png")
+
+        # Add leaf particle emitter
+        from ..components.particle import ParticleEmitter, ParticleConfig, EmitterShape, EmitterShapeType
+        
+        leaf_color = random.choice([(34, 139, 34), (50, 205, 50), (0, 100, 0)]) # Forest, Lime, Dark Green
+        
+        component_manager.add(foliage, ParticleEmitter(
+            rate=random.uniform(1.0, 2.0), # increased trickle
+            duration=9999,
+            loop=True,
+            particle_config=ParticleConfig(
+                vel=random.uniform(5, 15),
+                lifetime=random.uniform(4.0, 7.0), # halved lifetime
+                color=pygame.Color(*leaf_color),
+                size=random.uniform(1.5, 2.6), 
+                fade=False,      
+                shrink=True,
+                friction=0.99,   
+                gravity=10.0,    
+                sway=True,       
+                wind_factor=40.0  # Increased to represent direct velocity contribution
+            ),
+            # Emit from a random spot in the tree crown
+            shape=EmitterShape(EmitterShapeType.CIRCLE, radius=15)
+        ))
 
         render_effect_system.add_proximity_fade_component(foliage)
 

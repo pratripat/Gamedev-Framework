@@ -17,4 +17,4 @@ class GameContext:
         self.scene_manager = SceneManager()
         self.input_system = Input()
         self.event_manager = EventManager()
-        self.animation_handler = AnimationHandler()
+        self.animation_handler = AnimationHandler(self.resource_manager)

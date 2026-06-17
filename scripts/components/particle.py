@@ -17,6 +17,11 @@ class ParticleConfig:
     direction: pygame.Vector2 = None # Optional: bias direction
     spread: float = 45.0             # Degrees of spread around direction
     image: pygame.Surface = None     # Optional custom image for this particle
+    
+    # Environmental physics
+    sway: bool = False               # Horizontal sine-wave sway
+    gravity: float = 0.0             # Constant downward force
+    wind_factor: float = 0.0         # How much the global wind affects horizontal speed
 
 @dataclass
 class ParticleEmitter:
@@ -109,6 +114,10 @@ class ParticleEmitter:
         p.friction = pc.friction
         p.shrink = pc.shrink
         p.image = pc.image
+        
+        p.sway = pc.sway
+        p.gravity = pc.gravity
+        p.wind_factor = pc.wind_factor
 
         self.particle_counter += 1
 

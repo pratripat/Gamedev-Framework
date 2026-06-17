@@ -5,6 +5,7 @@ from scripts.ecs.component_manager import ComponentManager
 from ...components.physics import KnockbackComponent, Position, Velocity
 from ...components.physics import CollisionComponent
 from ...components.projectile import ProjectileComponent
+from ...components.render_effect import RenderEffectComponent
 from ...utils import Quadtree, INITIAL_WINDOW_SIZE, VIRTUAL_WINDOW_SIZE, GameSceneEvents, get_unit_direction_towards
 
 class PhysicsEngine:
@@ -17,175 +18,158 @@ class PhysicsEngine:
         self.event_manager.subscribe(GameSceneEvents.DAMAGE, self._knockback)
     
     def _knockback(self, entity_id, proj_id, **kwargs):
-        # Knockback only if the entity that got hit is a enemy
         if self.component_manager.get(entity_id, EnemyTagComponent):
-            # Safe check for Velocity component (bomb bursts are static)
-            proj_vel_comp = self.component_manager.get(proj_id, Velocity)
-            if proj_vel_comp:
-                proj_vel = get_unit_direction_towards(pygame.Vector2(0, 0), proj_vel_comp.vec)
+            proj_vel = kwargs.get('proj_vel')
+            if proj_vel and proj_vel.length_squared() > 0:
+                proj_vel = proj_vel.normalize()
             else:
-                # Fallback for static explosions: knockback AWAY from the explosion center
-                proj_pos = self.component_manager.get(proj_id, Position)
-                target_pos = self.component_manager.get(entity_id, Position)
-                if proj_pos and target_pos:
-                    proj_vel = get_unit_direction_towards(proj_pos.vec, target_pos.vec)
+                proj_vel_comp = self.component_manager.get(proj_id, Velocity) if isinstance(proj_id, int) and proj_id in self.component_manager._components.get(Velocity, {}) else None
+                if proj_vel_comp:
+                    proj_vel = get_unit_direction_towards(pygame.Vector2(0, 0), proj_vel_comp.vec)
                 else:
-                    proj_vel = pygame.Vector2(0, 0)
+                    proj_pos_vec = kwargs.get('proj_pos')
+                    if not proj_pos_vec:
+                        proj_pos = self.component_manager.get(proj_id, Position) if isinstance(proj_id, int) and proj_id in self.component_manager._components.get(Position, {}) else None
+                        proj_pos_vec = proj_pos.vec if proj_pos else None
+                    target_pos = self.component_manager.get(entity_id, Position)
+                    if proj_pos_vec and target_pos:
+                        proj_vel = get_unit_direction_towards(proj_pos_vec, target_pos.vec)
+                    else:
+                        proj_vel = pygame.Vector2(0, 0)
 
-            self.component_manager.add(
-                entity_id,
-                KnockbackComponent(proj_vel, 5, duration=0.2)
-            )
+            self.component_manager.add(entity_id, KnockbackComponent(proj_vel, 5, duration=0.2))
 
-    def update(self, scroll, fps, dt, is_dashing=False, player_id=None, quadtree=None):
-        """
-        Update physics using a time delta in seconds (dt). Movement is computed using velocities in units/sec.
-        The fps parameter is kept for compatibility with other systems but is NOT used for movement math.
-        """
+    def update(self, scroll, fps, dt, is_dashing=False, player_id=None, static_quadtree=None, dynamic_quadtree=None):
         self.player_dashing = is_dashing
         self.player_id = player_id
-
-        if quadtree is None:
-            # Fallback if not provided
-            quadtree = Quadtree(0, (*scroll, *VIRTUAL_WINDOW_SIZE))
-            for entity in self.component_manager.get_entities_with(CollisionComponent, Position):
-                position = self.component_manager.get(entity, Position)
-                collision_component = self.component_manager.get(entity, CollisionComponent)
-                rect = pygame.Rect(*(position.vec + collision_component.offset), *collision_component.size)
-                quadtree.insert(entity, rect)
-
-        # Determine multiplier to preserve previous frame-based speeds.
-        # If fps is available use it, otherwise fallback to 60 (reasonable default).
         scale = fps if (fps and fps > 0) else 60.0
 
-        # Update all entities with Position and Velocity components
         pos_dict = self.component_manager._components.get(Position, {})
         vel_dict = self.component_manager._components.get(Velocity, {})
         col_dict = self.component_manager._components.get(CollisionComponent, {})
         
-        entities_with_pos_vel = self.component_manager.get_entities_with(Position, Velocity)
-        for entity in entities_with_pos_vel:
+        for entity in self.component_manager.get_entities_with(Position, Velocity):
             position = pos_dict.get(entity)
             velocity = vel_dict.get(entity)
-
-            # Update position based on velocity when there's no collision component
             collision_component = col_dict.get(entity)
             if not collision_component:
-                # Treat velocity.vec as units-per-frame previously; to convert to units/sec multiply by scale
-                # Then multiply by dt (seconds) to get actual displacement.
                 position += velocity.vec * dt * scale
-                velocity.realistic_vel = velocity.vec.copy()  # realistic_vel mirrors the desired velocity
+                velocity.realistic_vel = velocity.vec.copy()
 
-        entities_with_col = self.component_manager.get_entities_with(CollisionComponent)
-        for non_solid_component_entity in entities_with_col:
+        for non_solid_component_entity in self.component_manager.get_entities_with(CollisionComponent):
             non_solid_component = col_dict.get(non_solid_component_entity)
             if non_solid_component.solid:
                 continue
-
-            # Skip projectiles; ProjectileSystem handles their movement/collisions for bullet-hell accuracy
             if self.component_manager.get(non_solid_component_entity, ProjectileComponent):
                 continue
 
             pos = pos_dict.get(non_solid_component_entity)
             vel = vel_dict.get(non_solid_component_entity)
-            if not pos or not vel:
-                continue
+            if not pos or not vel: continue
 
             rect = pygame.FRect(*(pos.vec + non_solid_component.offset), *non_solid_component.size)
 
-            # Apply knockback if present
+            kvx, kvy = 0, 0
             kbc = self.component_manager.get(non_solid_component_entity, KnockbackComponent)
             if kbc:
-                vel.vec = kbc.update(dt)
-                if kbc.duration <= 0:
-                    self.component_manager.remove(non_solid_component_entity, KnockbackComponent)
+                kvx, kvy = kbc.update(dt, self.component_manager, non_solid_component_entity)
 
             vel.realistic_vel = vel.vec.copy()
 
-            # Move horizontally using seconds-based dt and scale to match previous behavior
-            rect.x += vel.x * dt * scale
+            # 1. Horizontal Movement & Collision
+            total_dx = (vel.x + kvx) * dt * scale
+            rect.x += total_dx
 
-            colliding_entities = []
-            quadtree.retrieve(colliding_entities, rect)
-            
-            # Optimization: Only create collisions dict if we actually hit something to save allocations
+            rec = self.component_manager.get(non_solid_component_entity, RenderEffectComponent)
+            in_air = rec and rec.z_offset > 5.0
+
             collisions = None
-            seen_h = set()
-
-            for entity, colliding_rect in colliding_entities:
-                if entity in seen_h: continue
-                seen_h.add(entity)
+            if not in_air:
+                colliding_entities = []
+                if static_quadtree: static_quadtree.retrieve(colliding_entities, rect)
+                if dynamic_quadtree: dynamic_quadtree.retrieve(colliding_entities, rect)
                 
-                if entity == non_solid_component_entity:
-                    continue
+                seen_h = set()
+                for entity, colliding_rect in colliding_entities:
+                    collision_id = (entity, tuple(colliding_rect))
+                    if collision_id in seen_h or entity == non_solid_component_entity: continue
+                    seen_h.add(collision_id)
+                    
+                    layer_id = entity[0] if isinstance(entity, tuple) else entity
+                    is_water = (layer_id == "water")
+                    is_solid = (layer_id == "wall")
+                    if entity is not None and not (is_water or is_solid):
+                        comp = col_dict.get(entity)
+                        if comp: is_solid = comp.solid
 
-                colliding_component = self.component_manager.get(entity, CollisionComponent)
-                if not colliding_component or not colliding_component.solid:
-                    continue
-                
-                # NEW: Allow dashing through "pass-through" solid objects like water
-                if not getattr(colliding_component, "blocks_projectiles", True):
-                    if self.player_dashing and non_solid_component_entity == self.player_id:
-                        continue
+                    # Water logic: solid unless dashing
+                    if is_water:
+                        if self.player_dashing and non_solid_component_entity == self.player_id:
+                            is_solid = False
+                        else:
+                            is_solid = True
 
-                # Check for collision
-                if rect.colliderect(colliding_rect):
-                    if collisions is None:
-                        collisions = {"top": False, "right": False, "bottom": False, "left": False}
-                    if vel.x > 0:
-                        rect.right = colliding_rect.left
-                        collisions["right"] = True
-                    elif vel.x < 0:
-                        rect.left = colliding_rect.right
-                        collisions["left"] = True
-                    else:
+                    if is_solid and rect.colliderect(colliding_rect):
+                        if collisions is None: collisions = {"top": False, "right": False, "bottom": False, "left": False}
+                        if total_dx > 0:
+                            rect.right = colliding_rect.left
+                            collisions["right"] = True
+                            if kbc: kbc.vx = 0
+                        elif total_dx < 0:
+                            rect.left = colliding_rect.right
+                            collisions["left"] = True
+                            if kbc: kbc.vx = 0
                         vel.realistic_vel.x = 0
 
-            # Move vertically using seconds-based dt and scale to match previous behavior
-            rect.y += vel.y * dt * scale
+            # 2. Vertical Movement & Collision
+            total_dy = (vel.y + kvy) * dt * scale
+            rect.y += total_dy
 
-            # Emit WALK event for particles if moving
-            if vel.vec.length_squared() > 0.1:
-                # Use a timer to avoid mashing particles every single frame
-                if not hasattr(self, '_walk_timers'): self._walk_timers = {}
-                self._walk_timers[non_solid_component_entity] = self._walk_timers.get(non_solid_component_entity, 0) + dt
-                if self._walk_timers[non_solid_component_entity] > 0.15: # Emit every 0.15s
-                    self._walk_timers[non_solid_component_entity] = 0
-                    self.event_manager.emit(GameSceneEvents.WALK, pos=pos.vec, vel=vel.vec, entity_id=non_solid_component_entity)
-
-            colliding_entities = []
-            quadtree.retrieve(colliding_entities, rect)
-            seen_v = set()
-            for entity, colliding_rect in colliding_entities:
-                if entity in seen_v: continue
-                seen_v.add(entity)
+            if not in_air:
+                colliding_entities = []
+                if static_quadtree: static_quadtree.retrieve(colliding_entities, rect)
+                if dynamic_quadtree: dynamic_quadtree.retrieve(colliding_entities, rect)
                 
-                if entity == non_solid_component_entity:
-                    continue
+                seen_v = set()
+                for entity, colliding_rect in colliding_entities:
+                    collision_id = (entity, tuple(colliding_rect))
+                    if collision_id in seen_v or entity == non_solid_component_entity: continue
+                    seen_v.add(collision_id)
+                    
+                    layer_id = entity[0] if isinstance(entity, tuple) else entity
+                    is_water = (layer_id == "water")
+                    is_solid = (layer_id == "wall")
+                    if entity is not None and not (is_water or is_solid):
+                        comp = col_dict.get(entity)
+                        if comp: is_solid = comp.solid
+                    
+                    if is_water:
+                        if self.player_dashing and non_solid_component_entity == self.player_id:
+                            is_solid = False
+                        else:
+                            is_solid = True
 
-                colliding_component = self.component_manager.get(entity, CollisionComponent)
-                if not colliding_component or not colliding_component.solid:
-                    continue
-
-                # NEW: Allow dashing through "pass-through" solid objects like water
-                if not getattr(colliding_component, "blocks_projectiles", True):
-                    if self.player_dashing and non_solid_component_entity == self.player_id:
-                        continue
-
-                # Check for collision
-                if rect.colliderect(colliding_rect):
-                    if collisions is None:
-                        collisions = {"top": False, "right": False, "bottom": False, "left": False}
-                    if vel.y > 0:
-                        rect.bottom = colliding_rect.top
-                        collisions["bottom"] = True
-                    elif vel.y < 0:
-                        rect.top = colliding_rect.bottom
-                        collisions["top"] = True
-                    else:
+                    if is_solid and rect.colliderect(colliding_rect):
+                        if collisions is None: collisions = {"top": False, "right": False, "bottom": False, "left": False}
+                        if total_dy > 0:
+                            rect.bottom = colliding_rect.top
+                            collisions["bottom"] = True
+                            if kbc: kbc.vy = 0
+                        elif total_dy < 0:
+                            rect.top = colliding_rect.bottom
+                            collisions["top"] = True
+                            if kbc: kbc.vy = 0
                         vel.realistic_vel.y = 0
 
             if collisions is not None:
                 self.event_manager.emit(GameSceneEvents.COLLISION, entity_id=non_solid_component_entity, collisions=collisions)
+
+            # Particles WALK event
+            if vel.vec.length_squared() > 0.1:
+                if not hasattr(self, '_walk_timers'): self._walk_timers = {}
+                self._walk_timers[non_solid_component_entity] = self._walk_timers.get(non_solid_component_entity, 0) + dt
+                if self._walk_timers[non_solid_component_entity] > 0.15:
+                    self._walk_timers[non_solid_component_entity] = 0
+                    self.event_manager.emit(GameSceneEvents.WALK, pos=pos.vec, vel=vel.vec, entity_id=non_solid_component_entity)
 
             pos.vec.update(pygame.Vector2(rect.topleft) - non_solid_component.offset)

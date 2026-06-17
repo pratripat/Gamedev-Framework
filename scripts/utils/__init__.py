@@ -11,7 +11,7 @@ ANIMATION_FOLDER = "data/graphics/animations"
 TILE_SIZE = 32
 CHUNK_SIZE = 16
 
-LEVEL = 3
+LEVEL = 2
 
 # Define keybinds for player inputs
 class Inputs(Enum):
@@ -113,7 +113,6 @@ class Quadtree:
         self.nodes[3] = Quadtree(self.level + 1, (x + half_w, y + half_h, half_w, half_h))  # Bottom-right
 
     def get_index(self, rect):
-        indexes = []
         x, y, w, h = self.bounds
         vertical_mid = x + w / 2
         horizontal_mid = y + h / 2
@@ -123,12 +122,13 @@ class Quadtree:
         left = rect.x < vertical_mid
         right = rect.x + rect.width > vertical_mid
 
-        if top and right: indexes.append(0)
-        if top and left: indexes.append(1)
-        if bottom and left: indexes.append(2)
-        if bottom and right: indexes.append(3)
-
-        return indexes
+        # Return a generator or tuple to avoid list allocation
+        if top:
+            if right: yield 0
+            if left: yield 1
+        if bottom:
+            if left: yield 2
+            if right: yield 3
 
 
     def insert(self, entity_id, rect):

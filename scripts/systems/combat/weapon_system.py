@@ -15,12 +15,12 @@ class WeaponSystem:
         event_manager.subscribe(GameSceneEvents.SHOOT, self._on_shoot)
         event_manager.subscribe(GameSceneEvents.DEATH, self._disable_weapon_comp)
 
-    def _disable_weapon_comp(self, entity_id):
+    def _disable_weapon_comp(self, entity_id, **kwargs):
         weapon_comp = self.component_manager.get(entity_id, WeaponComponent)
         if weapon_comp:
             weapon_comp.disabled = True
     
-    def _on_shoot(self, entity_id):
+    def _on_shoot(self, entity_id, **kwargs):
         weapon_component = self.component_manager.get(entity_id, WeaponComponent)
         if weapon_component.disabled:
             return

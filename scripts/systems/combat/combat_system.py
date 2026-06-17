@@ -15,15 +15,15 @@ class CombatSystem:
         self.projectile_system = FastProjectileSystem(event_manager)
         self.attack_pattern_system = AttackPatternSystem(component_manager, entity_manager, resource_manager)
 
-    def update(self, event_manager, component_manager, entity_list, scroll, dt, fps=None, quadtree=None, particle_system=None, is_dashing=False, player_id=None):
+    def update(self, event_manager, component_manager, scroll, dt, fps=None, static_quadtree=None, dynamic_quadtree=None, particle_system=None, is_dashing=False, player_id=None, camera_center=None):
         self.weapon_system.update(dt, self.projectile_system)
         self.attack_pattern_system.update(dt, self.projectile_system)
         # Update projectiles first so their positions are ready when hitboxes are checked
-        
+
         hurtbox_dict = component_manager._components.get(HurtBoxComponent, {})
         pos_dict = component_manager._components.get(Position, {})
         col_dict = component_manager._components.get(CollisionComponent, {})
-        
-        self.projectile_system.update(dt, fps, quadtree, hurtbox_dict, pos_dict, col_dict, particle_system, is_dashing, player_id)
-        self.hitbox_system.update(event_manager, component_manager, entity_list, scroll)
+
+        self.projectile_system.update(dt, fps, static_quadtree, dynamic_quadtree, hurtbox_dict, pos_dict, col_dict, particle_system, is_dashing, player_id, camera_center)
+        self.hitbox_system.update(event_manager, component_manager, scroll, dt)
         self.health_system.update(component_manager, dt)

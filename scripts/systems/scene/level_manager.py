@@ -19,24 +19,33 @@ class Level:
 
         layers = data["layers"]
         tilemaps = data["tilemaps"]
-        
         # loading tilemap
         self.tilemap = Tilemap(layers, tilemaps, self.ctx.resource_manager, exception_layers=["player", "enemies", "foliage"])
 
-        # Create collision boxes per collidable layer so some layers (like water) can be non-blocking for projectiles
+        # Build Static Quadtree for walls and water
+        from ...utils import Quadtree
+        min_x, min_y, max_x, max_y = self.tilemap.world_bounds
+        # Root rect covers the entire level with a bit of padding
+        root_rect = (min_x - 100, min_y - 100, (max_x - min_x) + 200, (max_y - min_y) + 200)
+        self.static_quadtree = Quadtree(0, root_rect)
+
+        # Create collision boxes per collidable layer
         self.collision_grid = []
         for layer_id in self.collidables:
             layer_data = layers.get(layer_id, [])
-            if isinstance(layer_data, dict):
-                layer_collidables = layer_data.get("tiles", [])
-            else:
-                layer_collidables = layer_data
+            tiles = layer_data.get("tiles", []) if isinstance(layer_data, dict) else layer_data
             
-            cg = CollisionGrid(layer_collidables)
-            # water should NOT block projectiles (they fly over it); other layers block projectiles
-            blocks_projectiles = False if layer_id == "water" else True
-            cg.create_collision_boxes(entity_manager, component_manager, blocks_projectiles=blocks_projectiles)
+            cg = CollisionGrid(tiles)
+            # We no longer create ECS entities for every single static tile.
+            # Instead, the static_quadtree handles their collisions.
             self.collision_grid.append((layer_id, cg))
+            
+            from ...utils import TILE_SIZE
+            for tile in tiles:
+                tpos = tuple(tile[0])
+                rect = pygame.Rect(tpos[0], tpos[1], TILE_SIZE, TILE_SIZE)
+                # Unique ID per tile: (layer, position)
+                self.static_quadtree.insert((layer_id, tpos), rect)
 
         # Auto-generate water animation frames (tileable Worley overlay) and build chunk-based water animations
         try:
@@ -54,13 +63,7 @@ class Level:
                 HIGHLIGHT = (30, 90, 180) 
                 INTENSITY = 0.8
 
-                # Optional: Try to load pre-generated frames if they match our needs
-                # (Disabled for now to ensure the new dark bluish effect is always applied)
                 worley_frames = None
-                # gen_dirs = sorted(glob.glob("data/graphics/generated_water_*"))
-                # if gen_dirs:
-                #     latest_dir = gen_dirs[-1]
-                #     worley_frames = load_water_frames(latest_dir, scale=TILE_SIZE/32.0)
                 
                 if not worley_frames:
                     # Generate a deterministic seed from the level path so results are stable
@@ -124,14 +127,6 @@ class Level:
                     resource_manager = self.ctx.resource_manager,
                     chess_piece_type = ['pawn', 'rook', 'knight', 'bishop'][spritesheet_index]
                 )
-
-                # component_manager.add(
-                #     enemy, 
-                #     AIComponent(
-                #         entity_id=enemy,
-                #         behavior="sniper"  # or "sniper", "patrol", etc.
-                #     )
-                # )
         
         # foliage loading
         layer_data = layers.get("foliage", [])

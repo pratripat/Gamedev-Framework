@@ -79,8 +79,8 @@ class Game():
 
     def calculate_dt(self):
         # tick() returns milliseconds passed since last call; convert to seconds
-        ms = self.clock.tick(self.target_fps)
-        # ms = self.clock.tick()
+        # ms = self.clock.tick(self.target_fps)
+        ms = self.clock.tick()
         self.dt = ms / 1000.0
         # current smoothed FPS (may be 0 briefly on startup)
         self.fps = self.clock.get_fps()
