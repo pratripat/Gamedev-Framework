@@ -138,14 +138,13 @@ class Quadtree:
                     self.nodes[i].insert(*obj)
             self.objects.clear()
     
-    def retrieve(self, return_list: list, rect: pygame.Rect):
+    def retrieve(self, return_set: set, rect: pygame.Rect):
         for i in self.get_index(rect):
             if self.nodes[i]:
-                self.nodes[i].retrieve(return_list, rect)
+                self.nodes[i].retrieve(return_set, rect)
         
         for object in self.objects:
-            if object not in return_list:
-                return_list.append(object)
+            return_set.add(object)
 
 def normalize_scale(scale):
     if isinstance(scale, (int, float)):

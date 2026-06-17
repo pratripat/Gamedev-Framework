@@ -75,3 +75,233 @@ TRY OUT ASEPRITE
     [/] screen shake
 * ACTUAL BOARD THAT RELATES GAME TO CHESS
 * The pawn after defeating certain bosses can become different chess pieces that when dead go back to the pawn with little health
+
+OPTIMIZATIONS
+1. Component Lookup Cost
+
+Many ECS implementations do:
+
+transform = world.get_component(entity, Transform)
+velocity = world.get_component(entity, Velocity)
+
+thousands of times per frame.
+
+Ask:
+
+Identify expensive component lookups and recommend ways to cache component references or iterate over component arrays more efficiently.
+2. Event System Allocations
+
+A common hidden cost:
+
+DamageEvent(...)
+CollisionEvent(...)
+ParticleEvent(...)
+
+creating lots of objects every frame.
+
+Ask:
+
+Identify event allocations occurring every frame and suggest pooling, batching, or allocation-free alternatives.
+3. Collision Broad Phase
+
+You already use Quadtrees.
+
+Ask:
+
+Analyze my collision system for unnecessary collision checks and identify opportunities to reduce broad-phase and narrow-phase work.
+
+Sometimes the quadtree is fine, but the filtering after retrieval isn't.
+
+4. Sprite Rotation
+
+A huge killer in Pygame:
+
+pygame.transform.rotate()
+
+every frame.
+
+Ask:
+
+Identify any surfaces being rotated, scaled, flipped, or transformed every frame and suggest caching strategies.
+
+[LEFT]
+5. Surface Creation
+
+Bad:
+
+pygame.Surface(...)
+
+inside update/render loops.
+
+Ask:
+
+Find all runtime surface creation and recommend precomputation or caching approaches.
+6. Font Rendering
+
+Another hidden killer:
+
+font.render(...)
+
+every frame.
+
+Ask:
+
+Identify text rendering performed every frame and suggest caching mechanisms.
+7. Particle Rendering
+
+Even with pooling, rendering can bottleneck.
+
+Ask:
+
+Evaluate particle rendering and recommend optimizations such as sprite atlases, batching, cached surfaces, or reduced draw calls.
+8. Animation System
+
+Many people update every animation:
+
+for anim in all_animations:
+
+even off-screen ones.
+
+Ask:
+
+Determine whether animation updates can be culled based on visibility, distance, or activity state.
+9. Camera Culling
+
+Very important for larger maps.
+
+Ask:
+
+Identify entities being updated or rendered while off-screen and recommend culling strategies.
+10. Allocations in Hot Loops
+
+Things like:
+
+Vector2(...)
+tuple(...)
+list(...)
+dict(...)
+
+inside update loops.
+
+Ask:
+
+Find all per-frame object allocations in hot paths and suggest allocation-free alternatives.
+11. Bullet Management
+
+Bullet hell games live or die here.
+
+Ask:
+
+Analyze bullet spawning, updating, collision, and destruction for opportunities to reduce allocations and improve throughput.
+12. Python-Specific Optimizations
+
+People often overlook these.
+
+Ask:
+
+Identify Python-specific performance improvements such as reducing attribute lookups, minimizing dynamic dispatch, avoiding repeated dictionary access, and improving iteration patterns.
+13. Cache-Friendly ECS Storage
+
+A lot of ECS implementations accidentally become:
+
+entity -> dict -> component
+
+which is slow.
+
+Ask:
+
+Evaluate my ECS storage model and recommend more cache-friendly component storage patterns while preserving flexibility.
+14. Profiling Hotspots
+
+The biggest one.
+
+Ask:
+
+Instrument the project with profiling and identify the top 10 most expensive functions by frame time.
+
+You'd be surprised how often the real bottleneck is something completely unexpected.
+
+
+
+
+I have investigated your ECS architecture, your event dispatching, and your core update loops. I have already applied some hotfixes
+  behind the scenes while looking around, but here is a comprehensive breakdown of the major bottlenecks holding back your game, and how
+  to conquer them for a flawless 60 FPS bullet hell experience.
+
+  1. Expensive Component Lookups
+
+  The Problem:
+  In pure Python, method calls and dictionary lookups inside tight for loops are surprisingly expensive. 
+   * The Query Bottleneck: Every frame, systems were calling self.component_manager.get_entities_with(...). Previously, this method
+     generated a brand new set() for every component dictionary and performed a massive set intersection. (I hotfixed this slightly to
+     use the smallest dictionary without allocating sets, which gives an immediate boost, but we can do better).
+   * The Lookup Bottleneck: Inside the loop, you repeatedly call pos = self.component_manager.get(eid, Position). Calling get() resolves
+     the function pointer, executes a method, and does a dictionary .get() for every component, for every entity, every frame.
+
+  The Solution:
+   * Cache Component Arrays inside Systems: Instead of asking the ECS "Who has a Velocity?" every frame, the systems should maintain
+     their own lists. When an entity is created with Velocity, the ECS fires an ENTITY_ADDED event, and the PhysicsSystem appends that
+     entity to its own internal flat list.
+   * Local Variable Aliasing: For immediate gains without rewriting architecture, alias the lookup functions outside your loops:
+
+    1     # Slow
+    2     for eid in entities:
+    3         pos = self.component_manager.get(eid, Position)
+    4         vel = self.component_manager.get(eid, Velocity)
+    5
+    6     # 30% Faster (Python-specific optimization)
+    7     get_comp = self.component_manager._components
+    8     pos_dict = get_comp[Position]
+    9     vel_dict = get_comp[Velocity]
+   10
+   11     for eid in entities:
+   12         pos = pos_dict.get(eid)
+   13         vel = vel_dict.get(eid)
+
+  2. Per-Frame Event Allocations
+
+  The Problem:
+  Your EventManager relies heavily on **kwargs for flexibility (self.event_manager.emit(GameSceneEvents.WALK, pos=pos, vel=vel)).
+   * Kwargs Overhead: Every time you use **kwargs, Python allocates a brand new dictionary in memory. If 50 enemies walk and 20
+     projectiles hit a wall, you allocate 70 dictionaries per frame just to pass data.
+   * Vector Copies: You were previously passing pos=pos.vec.copy() in events. This instantiates a brand new pygame.Vector2 object,
+     throwing it directly into the garbage collector moments later. (I removed the .copy() in the WALK event to immediately alleviate
+     this).
+
+  The Solution:
+   * Use Dataclasses for High-Frequency Events: Instead of flexible **kwargs, define lightweight dataclass objects for spammy events
+     like WalkEvent(eid, x, y). You can instantiate a pool of 50 WalkEvent objects at launch. When an enemy walks, grab an event from
+     the pool, populate its variables, emit it, and return it to the pool. No dictionaries, zero allocations.
+   * Static Arguments: Alternatively, rewrite the emit and subscribe signatures for high-frequency events to accept positional arguments
+     rather than **kwargs.
+
+  3. The Biggest Culprit: Quadtree Rebuilding
+
+  The Problem:
+  I discovered that your game is building a brand new Quadtree from scratch four times per frame (in physics_engine.py,
+  projectile_system.py, particle_effect_system.py, and hitbox_system.py). 
+  Every frame, it asks the ECS for all walls and water, creates hundreds of pygame.Rect objects, and recursively sorts them into a fresh
+  tree based on the camera's scroll.
+
+  The Solution:
+   * Static vs. Dynamic Trees: The world tiles (walls, water) never move! LevelManager should build a StaticQuadtree exactly once when
+     the level loads, using world coordinates.
+   * The Physics and Projectile systems should simply query this pre-built StaticQuadtree.
+   * If you need a Quadtree for enemies/hitboxes (dynamic objects), build a separate DynamicQuadtree once per frame, and share it across
+     all combat systems.
+
+  ---
+
+  Overall Strategy for a 60 FPS Bullet Hell
+
+  If you implement the following prioritized plan, you will never drop below 60 FPS:
+
+   1. (Critical) Persistent Static Quadtree: Move the terrain Quadtree generation out of your systems' update() loops and into
+      LevelManager.load(). Pass this single static tree to the systems.
+   2. (High) Array of Structs for Projectiles: Just like we did for the particles today, pull ProjectileComponent out of the ECS. Manage
+      bullets in a dedicated FastProjectileSystem using continuous arrays. ECS is great for players and enemies, but it is too heavy for
+      hundreds of bullets.
+   3. (Medium) Local Aliasing: Go through your hottest loops (PhysicsEngine, HitboxSystem) and alias your dictionary lookups as shown in
+      point 1.
+   4. (Low/Maintenance) Event Batching: If the garbage collector still causes micro-stutters, replace **kwargs in your EventManager with
+      positional arguments for WALK and COLLISION events.

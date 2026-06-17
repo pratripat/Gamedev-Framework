@@ -16,12 +16,28 @@ class ComponentManager:
         return self._components[component_type].get(entity_id, None)
 
     def get_entities_with(self, *component_types):
-        sets = [set(self._components[ct]) for ct in component_types]
-        return set.intersection(*sets) if sets else set()
+        if not component_types:
+            return set()
+            
+        # Optimization: Find the component type with the fewest entities
+        smallest_ct = min(component_types, key=lambda ct: len(self._components.get(ct, {})))
+        
+        # Iterating over the smallest set of keys drastically reduces loop iterations
+        entities = set()
+        other_dicts = [self._components.get(ct, {}) for ct in component_types if ct != smallest_ct]
+        
+        for entity_id in self._components.get(smallest_ct, {}):
+            # dict lookup is O(1), and we only check entities that definitely have the rarest component
+            if all(entity_id in d for d in other_dicts):
+                entities.add(entity_id)
+                
+        return entities
 
     def get_entities_with_either(self, *component_types):
-        sets = [set(self._components[ct]) for ct in component_types]
-        return set.union(*sets) if sets else set()
+        entities = set()
+        for ct in component_types:
+            entities.update(self._components.get(ct, {}).keys())
+        return entities
 
     def remove(self, entity_id, component_type):
         del self._components[component_type][entity_id]

@@ -12,18 +12,25 @@ class HitBoxSystem:
     def update(self, event_manager, component_manager, entity_list, scroll):
         quadtree = Quadtree(0, (*scroll, *INITIAL_WINDOW_SIZE))
 
+        # Alias dicts for speed
+        hurtbox_dict = component_manager._components.get(HurtBoxComponent, {})
+        hitbox_dict = component_manager._components.get(HitBoxComponent, {})
+        pos_dict = component_manager._components.get(Position, {})
+        player_tag_dict = component_manager._components.get(PlayerTagComponent, {})
+        health_dict = component_manager._components.get(HealthComponent, {})
+
         # insert all hitboxes to qt
         for entity_id in entity_list:
-            hurtbox = component_manager.get(entity_id, HurtBoxComponent)
-            pos_comp = component_manager.get(entity_id, Position)
+            hurtbox = hurtbox_dict.get(entity_id)
+            pos_comp = pos_dict.get(entity_id)
             if not hurtbox or not pos_comp or hurtbox.disabled:
                 continue
 
             pos = pos_comp.vec
 
             # Check if the entity's health has an invincibility timer greater than 0
-            is_player = component_manager.get(entity_id, PlayerTagComponent)
-            health = component_manager.get(entity_id, HealthComponent)
+            is_player = player_tag_dict.get(entity_id)
+            health = health_dict.get(entity_id)
             if is_player and health and health.invincibility_timer > 0:
                 continue  # Skip collision handling for invincible entities
         
@@ -32,8 +39,8 @@ class HitBoxSystem:
         
         # for each hitbox, retrieve nearby hurtboxes
         for attacker in entity_list:
-            hitbox = component_manager.get(attacker, HitBoxComponent)
-            pos_comp_a = component_manager.get(attacker, Position)
+            hitbox = hitbox_dict.get(attacker)
+            pos_comp_a = pos_dict.get(attacker)
             if not hitbox or not pos_comp_a or hitbox.disabled:
                 continue
 
@@ -44,20 +51,26 @@ class HitBoxSystem:
 
             quadtree.retrieve(nearby_hurtboxes, hitbox_rect)
 
+            seen = set()
             for defender, hurtbox_rect in nearby_hurtboxes:
+                if defender in seen:
+                    continue
+                seen.add(defender)
+                
                 if attacker == defender:
                     continue
 
-                hurtbox = component_manager.get(defender, HurtBoxComponent)
+                hurtbox = hurtbox_dict.get(defender)
                 if not hurtbox:
                     continue
 
                 if not self.can_hit(hitbox, hurtbox):
                     continue
 
-                pos_b = component_manager.get(defender, Position).vec
-                if not pos_b:
+                pos_b_comp = pos_dict.get(defender)
+                if not pos_b_comp:
                     continue
+                pos_b = pos_b_comp.vec
 
                 # TEMP
                 # if hitbox_rect.colliderect(hurtbox_rect):

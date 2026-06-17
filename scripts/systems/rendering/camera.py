@@ -16,6 +16,11 @@ class Camera:
     def scroll(self):
         return self._scroll + self.shake_offset
 
+    @property
+    def scroll_int(self):
+        s = self.scroll
+        return pygame.Vector2(math.floor(s.x), math.floor(s.y))
+
     def trigger_shake(self, intensity: float, duration: float):
         self.shake_intensity = max(self.shake_intensity, intensity)
         self.shake_timer = max(self.shake_timer, duration)

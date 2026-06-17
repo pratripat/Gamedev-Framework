@@ -43,18 +43,19 @@ class WeaponSystem:
                 projectile_data['mask'] = CollisionLayer.create_mask(CollisionLayer.ENEMY)
 
                 # making the proj
-                projectiles = weapon_component.shoot_fn(entity_id, self.component_manager, self.entity_manager, self.resource_manager, projectile_data)
+                projectiles = weapon_component.shoot_fn(entity_id, self.component_manager, self.entity_manager, self.resource_manager, projectile_data, getattr(self, "projectile_system", None))
                 # making sure all the projs have the same vel as that of the entity
-                for proj_id in projectiles:
-                    proj_vel = self.component_manager.get(proj_id, Velocity).vec
-                    proj_vel += realistic_vel
-                    proj_vel = proj_vel.normalize()
-                    proj_vel *= projectile_data['speed']
+                for proj in projectiles:
+                    if proj: # Now it's a FastProjectile object
+                        # add realistic_vel to its velocity vector
+                        v = pygame.Vector2(proj.vx, proj.vy)
+                        v += realistic_vel
+                        if v.length_squared() > 0:
+                            v = v.normalize() * projectile_data['speed']
+                        proj.vx, proj.vy = v.x, v.y
 
             # enemy is shooting
             else:
-                # print(f'[WEAPON SYSTEM] Entity: {entity_id} has shot... (DEBUG)')
-                
                 target_pos = pygame.Vector2(1, 0) + shoot_pos # default target position
                 if projectile_data['towards_player']:
                     player_pos = self.component_manager.get(self.entity_manager.player_id, Position)
@@ -67,11 +68,12 @@ class WeaponSystem:
                 projectile_data['layer'] = CollisionLayer.ENEMY
                 projectile_data['mask'] = CollisionLayer.create_mask(CollisionLayer.PLAYER)
 
-                weapon_component.shoot_fn(entity_id, self.component_manager, self.entity_manager, self.resource_manager, projectile_data)
+                weapon_component.shoot_fn(entity_id, self.component_manager, self.entity_manager, self.resource_manager, projectile_data, getattr(self, "projectile_system", None))
 
             weapon_component.shot = True
         
-    def update(self, dt):
+    def update(self, dt, projectile_system=None):
+        self.projectile_system = projectile_system
         for entity_id in self.component_manager.get_entities_with(WeaponComponent):
             weapon = self.component_manager.get(entity_id, WeaponComponent)
 

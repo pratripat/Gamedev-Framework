@@ -11,7 +11,7 @@ ANIMATION_FOLDER = "data/graphics/animations"
 TILE_SIZE = 32
 CHUNK_SIZE = 16
 
-LEVEL = 4
+LEVEL = 3
 
 # Define keybinds for player inputs
 class Inputs(Enum):
@@ -153,9 +153,9 @@ class Quadtree:
             if self.nodes[i]:
                 self.nodes[i].retrieve(return_list, rect)
         
-        for object in self.objects:
-            if object not in return_list:
-                return_list.append(object)
+        for obj in self.objects:
+            return_list.append(obj)
+
 
 def normalize_scale(scale):
     if isinstance(scale, (int, float)):
