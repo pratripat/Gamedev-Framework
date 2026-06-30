@@ -11,7 +11,7 @@ ANIMATION_FOLDER = "data/graphics/animations"
 TILE_SIZE = 32
 CHUNK_SIZE = 16
 
-LEVEL = 2
+LEVEL = 5
 
 # Define keybinds for player inputs
 class Inputs(Enum):

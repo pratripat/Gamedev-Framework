@@ -14,13 +14,17 @@ class Level:
 
         self.collidables = ["wall", "water"]
     
-    def load(self, path, component_manager, entity_factory, entity_manager, render_effect_system):
+    def load(self, path, component_manager, entity_factory, entity_manager, render_system):
         data = json.load(open(path, "r"))
 
         layers = data["layers"]
         tilemaps = data["tilemaps"]
         # loading tilemap
         self.tilemap = Tilemap(layers, tilemaps, self.ctx.resource_manager, exception_layers=["player", "enemies", "foliage"])
+
+        # Generate Grass on the RenderSystem's instance
+        if hasattr(render_system, 'grass_system'):
+            render_system.grass_system.generate_grass(self.tilemap.layers)
 
         # Build Static Quadtree for walls and water
         from ...utils import Quadtree
@@ -146,7 +150,7 @@ class Level:
                     animation_handler = self.ctx.animation_handler,
                     input_system = self.ctx.input_system,
                     resource_manager = self.ctx.resource_manager,
-                    render_effect_system = render_effect_system,
+                    render_effect_system = render_system.render_effect_system,
                     image = image
                 )
             

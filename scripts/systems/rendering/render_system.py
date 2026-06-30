@@ -1,7 +1,7 @@
 import pygame, math
 from ...utils import CENTER, INITIAL_WINDOW_SIZE, VIRTUAL_WINDOW_SIZE
 
-from ...components.physics import Position, Velocity
+from ...components.physics import Position, Velocity, CollisionComponent
 from ...components.animation import RenderComponent, AnimationComponent
 from ...components.render_effect import RenderEffectComponent, YSortRender, ShadowComponent, WindAffectedComponent, PulseComponent
 
@@ -18,16 +18,58 @@ class RenderSystem:
         self.particle_effect_system = ParticleEffectSystem(component_manager, entity_manager)
         self.proximity_fade_system = ProximityFadeSystem(component_manager)
 
+        # Import locally to avoid circular dependency if any
+        from .grass_system import GrassSystem
+        self.grass_system = GrassSystem() 
+
         self.wind_system = WindSystem()
         self.particle_effect_system.wind_system = self.wind_system
         self._pulse_cache = {}
         self._sprite_transform_cache = {}
 
-    def update(self, dt, tilemap=None, camera=None, quadtree=None):
+    def update(self, dt, tilemap=None, camera=None, quadtree=None, mouse_pos=None):
         self.render_effect_system.update(dt)
         self.particle_effect_system.update(dt, quadtree=None, camera_rect=camera.rect if camera else None) 
         self.proximity_fade_system.update()
         self.wind_system.update(dt)
+        # Collect grass interactors
+        interactors = []
+
+        # 1. Entities with Position (and optional CollisionComponent for size)
+        for eid in self.component_manager.get_entities_with(Position):
+            pos = self.component_manager.get(eid, Position)
+            col = self.component_manager.get(eid, CollisionComponent)
+
+            if col:
+                # Use actual collision box center and scaled radius
+                center_x = pos.x + col.offset.x + col.size.x / 2
+                center_y = pos.y + col.offset.y + col.size.y / 2
+                # Radius based on collision box size + padding
+                radius = max(col.size.x, col.size.y) / 2 + 6
+                interactors.append((center_x, center_y, radius, 1.4))
+            else:
+                # Fallback to default radius if no collision box exists
+                interactors.append((pos.x, pos.y, 16, 1.4))
+
+        # 2. Projectiles (scaled by their physical size)
+        if hasattr(self, 'combat_system') and self.combat_system:
+            p_sys = self.combat_system.projectile_system
+            if hasattr(p_sys, 'active_indices'):
+                # FastProjectileSystem logic
+                for idx in p_sys.active_indices:
+                    p = p_sys.projectiles[idx]
+                    # Radius proportional to projectile size + small padding
+                    p_radius = (p.size / 2) + 6
+                    interactors.append((p.x, p.y, p_radius, 1.5))
+            elif hasattr(p_sys, 'component_manager'):
+                # Standard ProjectileSystem fallback
+                for pid in p_sys.component_manager.get_entities_with(ProjectileComponent):
+                    p_pos = p_sys.component_manager.get(pid, Position)
+                    if p_pos:
+                        # Default size for standard projectiles if unknown
+                        interactors.append((p_pos.x, p_pos.y, 12, 1.5))
+
+        self.grass_system.update(dt, interactors, self.wind_system.magnitude_x, self.wind_system.time, camera.rect if camera else None)
         
         for eid in self.component_manager.get_entities_with(PulseComponent):
             pulse = self.component_manager.get(eid, PulseComponent)
@@ -48,6 +90,7 @@ class RenderSystem:
         
         # Batch objects
         ysort_queue.extend(self.particle_effect_system.collect_render_items(camera))
+        ysort_queue.extend(self.grass_system.collect_render_items(camera))
         if hasattr(self, 'combat_system') and self.combat_system:
             ysort_queue.extend(self.combat_system.projectile_system.collect_render_items(camera))
         ysort_queue.extend(tilemap.get_ysort_items(camera.rect))

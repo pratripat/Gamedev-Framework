@@ -80,7 +80,7 @@ class GameScene(Scene):
     def start(self):
         print(f"[SCENE] Starting scene: '{self.id}' (DEBUG)")
 
-        self.player = self.level.load(self.current_level, self.component_manager, self.entity_factory, self.entity_manager, self.render_system.render_effect_system)
+        self.player = self.level.load(self.current_level, self.component_manager, self.entity_factory, self.entity_manager, self.render_system)
 
         self.player_input_system = PlayerInputSystem(entity_id=self.player, event_manager=self.ctx.event_manager)
         self.ai_system = AISystem(player_entity_id=self.player, component_manager=self.component_manager, event_manager=self.ctx.event_manager)
@@ -255,7 +255,11 @@ class GameScene(Scene):
             camera_center=self.camera.center
         )
         self.animation_system.update(fps, dt, camera_rect=self.camera.rect)
-        self.render_system.update(dt, tilemap=self.level.tilemap, camera=self.camera)
+        
+        raw_mouse = pygame.mouse.get_pos()
+        scaled_mouse = (raw_mouse[0] // 2, raw_mouse[1] // 2)
+        
+        self.render_system.update(dt, tilemap=self.level.tilemap, camera=self.camera, mouse_pos=scaled_mouse)
         self.entity_manager.refresh_entities(dt=dt)
 
         # Update tilemap animations (water frames)
@@ -265,8 +269,6 @@ class GameScene(Scene):
             except Exception:
                 pass
 
-        raw_mouse = pygame.mouse.get_pos()
-        scaled_mouse = (raw_mouse[0] // 2, raw_mouse[1] // 2)
         self.camera.update(dt, self.component_manager, lerp=True, mouse=scaled_mouse, mouse_ratio=0.1)
 
         # Update health bar drain effect
