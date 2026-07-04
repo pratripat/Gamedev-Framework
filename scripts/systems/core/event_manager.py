@@ -1,4 +1,5 @@
 from collections import defaultdict
+from ...utils import GameSceneEvents
 
 class EventManager:
     def __init__(self):
@@ -27,7 +28,14 @@ class EventManager:
             ]
 
     def emit(self, event_type, **kwargs):
-        # print(f"[EVENT MANAGER] Emitting event '{event_type}' with kwargs: [{kwargs}] (DEBUG)")
         for callback, _ in self.subscribers[event_type]:
             if kwargs: callback(**kwargs)
             else: callback()
+
+    def emit_walk(self, pos, vel, entity_id):
+        for callback, _ in self.subscribers[GameSceneEvents.WALK]:
+            callback(pos, vel, entity_id)
+
+    def emit_collision(self, entity_id, collisions):
+        for callback, _ in self.subscribers[GameSceneEvents.COLLISION]:
+            callback(entity_id, collisions)

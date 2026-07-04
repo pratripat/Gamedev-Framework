@@ -64,10 +64,10 @@ TRY OUT ASEPRITE
 
 * LEVEL EDITOR AUTOTILE
     [] let the empty grass be empty in the tileset (change art), then next generate the flowers in the level accordingly.
-    [] make the autotile for walls (give ai the order of the tiles in the spritesheet for the walls and let it figure the rest out)
-    [] make some destructibles (like grass (shld sway according to wind) or other things that break on walking or projectile hitting it, use shader to "shatter" them)
+    [/] make the autotile for walls (give ai the order of the tiles in the spritesheet for the walls and let it figure the rest out)
+    [-] make some destructibles (like grass (shld sway according to wind) or other things that break on walking or projectile hitting it, use shader to "shatter" them)
 * SHADER
-    [/] shader effect for trees (sort of)
+    [-] shader effect for trees (sort of)
 * EFFECTS
     particles to be spawned on collision and hit with entity
     some leaf particles occasioanlly coming from trees and flying in the direction of wind and despawning after sometime 
