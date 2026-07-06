@@ -2,8 +2,6 @@ import pygame, math, random
 from ...components.physics import Position
 from ...utils import CENTER, VIRTUAL_WINDOW_SIZE
 
-print(CENTER, VIRTUAL_WINDOW_SIZE)
-
 class Camera:
     def __init__(self):
         self.target_entity_id = None
@@ -11,17 +9,21 @@ class Camera:
         self.shake_offset = pygame.Vector2(0,0)
         self.shake_timer = 0.0
         self.shake_intensity = 0.0
+        self._scratch = pygame.Vector2(0, 0)
+        self._cached_scroll = pygame.Vector2(0, 0)
+        self._cached_scroll_int = pygame.Vector2(0, 0)
+        self._cached_center = pygame.Vector2(0, 0)
+        self._cached_rect = pygame.Rect(0, 0, *VIRTUAL_WINDOW_SIZE)
 
         self.zoom = 1
 
     @property
     def scroll(self):
-        return self._scroll + self.shake_offset
+        return self._cached_scroll
 
     @property
     def scroll_int(self):
-        s = self.scroll
-        return pygame.Vector2(math.floor(s.x), math.floor(s.y))
+        return self._cached_scroll_int
 
     def trigger_shake(self, intensity: float, duration: float):
         self.shake_intensity = max(self.shake_intensity, intensity)
@@ -38,7 +40,8 @@ class Camera:
 
         # follow mouse
         if mouse:
-            desired_pos += (pygame.Vector2(mouse) - CENTER) * mouse_ratio
+            desired_pos.x += (mouse[0] - CENTER.x) * mouse_ratio
+            desired_pos.y += (mouse[1] - CENTER.y) * mouse_ratio
 
         # lerp
         if lerp: 
@@ -49,27 +52,33 @@ class Camera:
             
         if self.shake_timer > 0:
             self.shake_timer -= dt
-            self.shake_offset = pygame.Vector2(
+            self.shake_offset.update(
                 random.uniform(-self.shake_intensity, self.shake_intensity),
                 random.uniform(-self.shake_intensity, self.shake_intensity)
             )
         else:
-            self.shake_offset = pygame.Vector2(0, 0)
+            self.shake_offset.update(0, 0)
             self.shake_intensity = 0.0
-    
+
+        self._cached_scroll.update(self._scroll)
+        self._cached_scroll += self.shake_offset
+        self._cached_scroll_int.update(int(self._cached_scroll.x), int(self._cached_scroll.y))
+        self._cached_center.update(self._cached_scroll)
+        self._cached_center += CENTER
+        self._cached_rect.topleft = self._cached_scroll_int
+
     def set_target(self, entity_id):
         self.target_entity_id = entity_id
 
     def set_zoom(self, zoom: float):
         self.zoom = max(0.1, zoom)
-    
+
     @property
     def rect(self):
-        # We now render to a half-sized virtual surface, so culling should match that
-        return pygame.Rect(*self.scroll, *VIRTUAL_WINDOW_SIZE)
+        return self._cached_rect
     
     @property
     def center(self):
-        return self.scroll + pygame.Vector2(VIRTUAL_WINDOW_SIZE) * 0.5
+        return self._cached_center
     
 

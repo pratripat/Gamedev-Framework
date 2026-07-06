@@ -82,13 +82,15 @@ class HealthComponent:
             self.event_manager.emit(GameSceneEvents.DEATH, entity_id=self.entity_id, proj_vel=kwargs.get('proj_vel'), proj_pos=kwargs.get('proj_pos'), death=True)
         
 class AttackPattern:
-    def __init__(self, shoot_fn, projectile_data, cooldown, duration):
+    def __init__(self, shoot_fn, projectile_data, cooldown, duration, warmup=0.0):
         self.shoot_fn = shoot_fn
         self.projectile_data = projectile_data
         self.cooldown = cooldown      # time between shots within this pattern
         self.duration = duration      # how long this pattern lasts before cycling to next
+        self.warmup = warmup          # telegraph delay before first shot fires
         self.shoot_timer = 0
         self.phase_timer = 0
+        self.warmed = False           # becomes True after warmup elapses
 
 class AttackPatternComponent:
     def __init__(self, patterns: list[AttackPattern], loop=True):
@@ -110,4 +112,5 @@ class AttackPatternComponent:
         # reset timers on advance
         self.current.shoot_timer = 0
         self.current.phase_timer = 0
+        self.current.warmed = False
 

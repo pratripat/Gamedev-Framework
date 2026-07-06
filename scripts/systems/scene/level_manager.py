@@ -20,7 +20,7 @@ class Level:
         layers = data["layers"]
         tilemaps = data["tilemaps"]
         # loading tilemap
-        self.tilemap = Tilemap(layers, tilemaps, self.ctx.resource_manager, exception_layers=["player", "enemies", "foliage"])
+        self.tilemap = Tilemap(layers, tilemaps, self.ctx.resource_manager, exception_layers=["player", "enemies", "foliage", "destructibles"])
 
         # Generate Grass on the RenderSystem's instance
         if hasattr(render_system, 'grass_system'):
@@ -132,6 +132,25 @@ class Level:
                     chess_piece_type = ['pawn', 'rook', 'knight', 'bishop'][spritesheet_index]
                 )
         
+        # destructibles loading
+        layer_data = layers.get("destructibles", [])
+        if isinstance(layer_data, dict):
+            destructibles_data = layer_data.get("tiles", [])
+        else:
+            destructibles_data = layer_data
+
+        if destructibles_data:
+            for tile_pos, _, _, _, _ in destructibles_data:
+                entity_factory.create_destructible(
+                    pos=tile_pos,
+                    component_manager=component_manager,
+                    entity_manager=entity_manager,
+                    event_manager=self.ctx.event_manager,
+                    animation_handler=self.ctx.animation_handler,
+                    input_system=self.ctx.input_system,
+                    resource_manager=self.ctx.resource_manager
+                )
+
         # foliage loading
         layer_data = layers.get("foliage", [])
         if isinstance(layer_data, dict):

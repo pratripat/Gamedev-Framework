@@ -1,9 +1,10 @@
 import pygame, math
-from ...utils import CENTER, INITIAL_WINDOW_SIZE, VIRTUAL_WINDOW_SIZE
+from ...utils import CENTER, INITIAL_WINDOW_SIZE, VIRTUAL_WINDOW_SIZE, ZERO_VEC
 
 from ...components.physics import Position, Velocity, CollisionComponent
 from ...components.animation import RenderComponent, AnimationComponent
 from ...components.render_effect import RenderEffectComponent, YSortRender, ShadowComponent, WindAffectedComponent, PulseComponent
+from ...components.destructible import DestructibleComponent
 
 from .wind_system import WindSystem
 from ..animation.animation_state_machine import AnimationStateMachine
@@ -26,6 +27,8 @@ class RenderSystem:
         self.particle_effect_system.wind_system = self.wind_system
         self._pulse_cache = {}
         self._sprite_transform_cache = {}
+        self._ysort_queue = []
+        self._batch = []
 
     def update(self, dt, tilemap=None, camera=None, quadtree=None, mouse_pos=None):
         self.render_effect_system.update(dt)
@@ -33,7 +36,10 @@ class RenderSystem:
         self.proximity_fade_system.update()
         self.wind_system.update(dt)
         # Collect grass interactors
-        interactors = []
+        if not hasattr(self, '_interactors'):
+            self._interactors = []
+        interactors = self._interactors
+        interactors.clear()
 
         # 1. Entities with Position (and optional CollisionComponent for size)
         for eid in self.component_manager.get_entities_with(Position):
@@ -41,15 +47,14 @@ class RenderSystem:
             col = self.component_manager.get(eid, CollisionComponent)
 
             if col:
-                # Use actual collision box center and scaled radius
                 center_x = pos.x + col.offset.x + col.size.x / 2
                 center_y = pos.y + col.offset.y + col.size.y / 2
-                # Radius based on collision box size + padding
                 radius = max(col.size.x, col.size.y) / 2 + 6
-                interactors.append((center_x, center_y, radius, 1.4))
+                rsq = radius * radius
+                interactors.append((center_x, center_y, rsq, 1.0 / rsq, 1.4))
             else:
-                # Fallback to default radius if no collision box exists
-                interactors.append((pos.x, pos.y, 16, 1.4))
+                rsq = 256.0  # 16^2
+                interactors.append((pos.x, pos.y, rsq, 1.0 / rsq, 1.4))
 
         # 2. Projectiles (scaled by their physical size)
         if hasattr(self, 'combat_system') and self.combat_system:
@@ -58,16 +63,15 @@ class RenderSystem:
                 # FastProjectileSystem logic
                 for idx in p_sys.active_indices:
                     p = p_sys.projectiles[idx]
-                    # Radius proportional to projectile size + small padding
                     p_radius = (p.size / 2) + 6
-                    interactors.append((p.x, p.y, p_radius, 1.5))
+                    prsq = p_radius * p_radius
+                    interactors.append((p.x, p.y, prsq, 1.0 / prsq, 1.5))
             elif hasattr(p_sys, 'component_manager'):
-                # Standard ProjectileSystem fallback
                 for pid in p_sys.component_manager.get_entities_with(ProjectileComponent):
                     p_pos = p_sys.component_manager.get(pid, Position)
                     if p_pos:
-                        # Default size for standard projectiles if unknown
-                        interactors.append((p_pos.x, p_pos.y, 12, 1.5))
+                        prsq = 144.0  # 12^2
+                        interactors.append((p_pos.x, p_pos.y, prsq, 1.0 / prsq, 1.5))
 
         self.grass_system.update(dt, interactors, self.wind_system.magnitude_x, self.wind_system.time, camera.rect if camera else None)
         
@@ -85,31 +89,31 @@ class RenderSystem:
         # 1. Base Ground
         tilemap.render(surface, camera)
 
-        # 2. Y-Sorting Queue
-        ysort_queue = []
+        # 2. Y-Sorting Queue (grass, particles, entities, projectiles)
+        ysort_queue = self._ysort_queue
+        ysort_queue.clear()
         
-        # Batch objects
-        ysort_queue.extend(self.particle_effect_system.collect_render_items(camera))
         ysort_queue.extend(self.grass_system.collect_render_items(camera))
+        ysort_queue.extend(self.particle_effect_system.collect_render_items(camera))
         if hasattr(self, 'combat_system') and self.combat_system:
             ysort_queue.extend(self.combat_system.projectile_system.collect_render_items(camera))
         ysort_queue.extend(tilemap.get_ysort_items(camera.rect))
 
         # Entities
-        for eid in self.component_manager.get_entities_with(Position):
-            pos = self.component_manager.get(eid, Position)
+        cm = self.component_manager
+        for eid in cm.get_entities_with(Position):
+            pos = cm.get(eid, Position)
             sx, sy = int(pos.x - scroll.x), int(pos.y - scroll.y)
 
-            # Cull
             if not screen_rect.inflate(256, 256).collidepoint(sx, sy):
                 continue
 
-            render = self.component_manager.get(eid, RenderComponent)
-            anim = self.component_manager.get(eid, AnimationComponent)
-            rec = self.component_manager.get(eid, RenderEffectComponent)
-            ysort = self.component_manager.get(eid, YSortRender)
-            shadow = self.component_manager.get(eid, ShadowComponent)
-            pulse = self.component_manager.get(eid, PulseComponent)
+            dc, render, anim, rec, ysort, shadow, pulse = cm.get_many(
+                eid, DestructibleComponent, RenderComponent, AnimationComponent,
+                RenderEffectComponent, YSortRender, ShadowComponent, PulseComponent
+            )
+            if dc and dc.shattered:
+                continue
 
             # Effects
             if rec and not rec.disabled:
@@ -140,9 +144,14 @@ class RenderSystem:
                 a_pos = (sx + int(anim.offset.x), sy + int(anim.offset.y - z_off))
                 ysort_queue.append((sort_y, "animation", anim, a_pos, scale, tint, alpha, rotation))
 
+        # Destructible shattered shards
+        if hasattr(self, 'destructible_system') and self.destructible_system:
+            ysort_queue.extend(self.destructible_system.collect_shard_items(camera, screen_rect))
+
         # 3. Sort and Flush
         ysort_queue.sort(key=lambda x: x[0])
-        batch = []
+        batch = self._batch
+        batch.clear()
         def flush():
             if batch: surface.blits(batch); batch.clear()
         
@@ -154,7 +163,7 @@ class RenderSystem:
                 batch.append((item[2], item[3]))
             elif itype == "animation":
                 flush()
-                item[2].animation.render(surface, item[3], scale=item[4], tint=item[5], alpha=item[6], angle=item[7], offset=pygame.Vector2(0,0))
+                item[2].animation.render(surface, item[3], scale=item[4], tint=item[5], alpha=item[6], angle=item[7], offset=ZERO_VEC)
         flush()
 
 

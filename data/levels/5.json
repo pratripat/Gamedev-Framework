@@ -71464,6 +71464,17 @@
                 ]
             ],
             "autotile_config": "/home/pratyush/Documents/puttar/github-ssh/OptimizedGamedevFramework/Level_Editor/data/autotile/8_bit_autotiling.json"
+        },
+        "destructibles": {
+            "tiles": [
+                [[440, -32], 0, 0, 0, 1.0],
+                [[500, -32], 0, 0, 0, 1.0],
+                [[560, -32], 0, 0, 0, 1.0],
+                [[440, 32], 0, 0, 0, 1.0],
+                [[500, 32], 0, 0, 0, 1.0],
+                [[560, 32], 0, 0, 0, 1.0]
+            ],
+            "autotile_config": null
         }
     },
     "tilemaps": {

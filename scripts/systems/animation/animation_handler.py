@@ -1,5 +1,5 @@
 import pygame, json, bisect
-from ...utils import load_image, load_images_from_spritesheet, DEFAULT_COLORKEY, ANIMATION_FOLDER, GameSceneEvents, normalize_scale, SCALE
+from ...utils import load_image, load_images_from_spritesheet, DEFAULT_COLORKEY, ANIMATION_FOLDER, GameSceneEvents, normalize_scale, SCALE, ZERO_VEC
 
 class AnimationHandler:
     def __init__(self, resource_manager):
@@ -201,17 +201,23 @@ class Animation:
                 self._render_cache.clear()
             self._render_cache[cache_key] = cached_img
 
-        off = pygame.Vector2(0, 0)
         if offset is not None:
             off = offset
+            if self.animation_data.config.get("centered", center):
+                rx = pos[0] + off.x - cached_img.get_width() / 2
+                ry = pos[1] + off.y - cached_img.get_height() / 2
+            else:
+                rx = pos[0] + off.x
+                ry = pos[1] + off.y
         else:
-            off = self.animation_data.config.get("offset", pygame.Vector2(0, 0)).copy()
+            off = self.animation_data.config.get("offset", ZERO_VEC).copy()
+            if self.animation_data.config.get("centered", center):
+                off.x -= cached_img.get_width() / 2
+                off.y -= cached_img.get_height() / 2
+            rx = pos[0] + off.x
+            ry = pos[1] + off.y
 
-        if self.animation_data.config.get("centered", center):
-            off.x -= cached_img.get_width() / 2
-            off.y -= cached_img.get_height() / 2
-
-        render_pos = (int(pos[0] + off.x), int(pos[1] + off.y))
+        render_pos = (int(rx), int(ry))
         surface.blit(cached_img, render_pos)
 
     def run(self, event_manager, entity_id, fps, dt):

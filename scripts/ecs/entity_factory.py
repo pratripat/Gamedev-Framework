@@ -4,6 +4,7 @@ from ..components.animation import AnimationComponent, RenderComponent
 from ..components.combat import AttackPattern, AttackPatternComponent, WeaponComponent, HitBoxComponent, HurtBoxComponent, HealthComponent
 from ..components.tags import PlayerTagComponent, EnemyTagComponent
 from ..components.render_effect import YSortRender, ShadowComponent, ProximityFadeComponent, WindAffectedComponent
+from ..components.destructible import DestructibleComponent
 from ..components.ai import AIComponent
 from .component_manager import ComponentManager
 
@@ -98,7 +99,8 @@ class EntityFactory:
                     shoot_fn=SHOOT_FUNCTIONS[p["shoot_fn"]],
                     projectile_data=p["projectile_data"],
                     cooldown=p["cooldown"],
-                    duration=p.get("duration", None)
+                    duration=p.get("duration", None),
+                    warmup=p.get("warmup", 0.0)
                 )
                 for p in data["patterns"]
             ],
@@ -131,6 +133,19 @@ class EntityFactory:
         ),
 
         "WindAffectedComponent": lambda eid, data, ctx: WindAffectedComponent(),
+
+        "HurtBoxComponent2": lambda eid, data, ctx: HurtBoxComponent(
+            entity_id=eid,
+            offset=(data["offset_x"], data["offset_y"]),
+            size=(data["width"], data["height"]),
+            shape=CollisionShape.RECT,
+            layer=CollisionLayer.ENVIRONMENT,
+            center=data.get("center", False)
+        ),
+
+        "DestructibleComponent": lambda eid, data, ctx: DestructibleComponent(
+            texture=ctx.get("image", None) or pygame.Surface((data["width"], data["height"]))
+        ),
     }
 
     def __init__(self):
@@ -209,6 +224,23 @@ class EntityFactory:
         render_effect_system.add_proximity_fade_component(foliage)
 
         return foliage
+
+    def create_destructible(self, pos, component_manager, entity_manager, event_manager, animation_handler, input_system, resource_manager):
+        entity_id = entity_manager.create_entity()
+        entity_data = self.data.get("destructible", {})
+        surface = resource_manager.get_image("data/graphics/images/crate.png")
+
+        # Inject shadow surface (can't be serialized to JSON)
+        alpha = 150
+        entity_data["ShadowComponent"] = {
+            "surface": get_blob_shadow_surface(alpha=alpha),
+            "offset": (0, 16),
+            "alpha": alpha,
+            "center": True
+        }
+
+        self.add_components_to_entity(entity_id, pos, entity_data, component_manager, entity_manager, event_manager, animation_handler, input_system, resource_manager, image=surface)
+        return entity_id
 
     def create_entity(self, pos, entity, component_manager, entity_manager, event_manager, animation_handler, input_system, resource_manager):
         """

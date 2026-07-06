@@ -313,6 +313,16 @@ def load_images_from_tilemap(filename, tile_size=32, skip_empty=True):
 
     return tiles
 
+ZERO_VEC = pygame.Vector2(0, 0)
+
+def screen_to_virtual(mouse_pos):
+    surf = pygame.display.get_surface()
+    if surf is None:
+        return mouse_pos
+    surf_w, surf_h = surf.get_size()
+    vw, vh = VIRTUAL_WINDOW_SIZE
+    return (int(mouse_pos[0] * vw / surf_w), int(mouse_pos[1] * vh / surf_h))
+
 def get_blob_shadow_surface(size=[26, 12], color=(80, 80, 80), alpha=200):
     # TEMP
     shadow_surf = pygame.Surface(size).convert_alpha()
