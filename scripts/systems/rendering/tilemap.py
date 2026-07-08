@@ -1,6 +1,30 @@
-import pygame
+import pygame, math
 import os
-from ...utils import TILE_SIZE, CHUNK_SIZE
+from ...utils import TILE_SIZE, CHUNK_SIZE, VIRTUAL_WINDOW_SIZE
+
+class Ripple:
+    __slots__ = ('x', 'y', 'time', 'duration')
+    def __init__(self, x, y, duration=1.2):
+        self.x = x
+        self.y = y
+        self.time = 0.0
+        self.duration = duration
+
+    def update(self, dt):
+        self.time += dt
+        return self.time < self.duration
+
+    @property
+    def progress(self):
+        return self.time / self.duration
+
+    @property
+    def brightness(self):
+        return max(1, int(200 * (1 - self.progress)))
+
+    @property
+    def radius(self):
+        return int(4 + 48 * self.progress)
 
 class Tilemap:
     TILE_SIZE = TILE_SIZE
@@ -19,6 +43,10 @@ class Tilemap:
         self.water_frame_index = 0
         self.water_frame_timer = 0.0
         self.WATER_FPS = 8
+
+        # Water ripples
+        self.ripples = []
+        self._ripple_cache = {}
 
         # Wall shadow state: positions of lowest wall tiles + cached shadow surface
         self._bottom_wall_positions = set()
@@ -116,6 +144,10 @@ class Tilemap:
             if self.water_frame_timer >= 1 / self.WATER_FPS:
                 self.water_frame_timer = 0
                 self.water_frame_index = (self.water_frame_index + 1) % len(self.water_frames)
+        self.ripples = [r for r in self.ripples if r.update(dt)]
+
+    def add_ripple(self, x, y):
+        self.ripples.append(Ripple(x, y))
 
     def set_water_frames(self, frames, fps: int = 8, intensity: float = 0.6):
         """
@@ -261,8 +293,13 @@ class Tilemap:
         water_layer = self.layers.get("water", {})
         scroll_int = camera.scroll_int
 
-        base_blits = []
-        overlay_blits = []
+        if not hasattr(self, '_water_base_blits'):
+            self._water_base_blits = []
+            self._water_overlay_blits = []
+        base_blits = self._water_base_blits
+        overlay_blits = self._water_overlay_blits
+        base_blits.clear()
+        overlay_blits.clear()
 
         for chunk_pos, tiles in water_layer.items():
             # Quick visibility check for the whole chunk
@@ -302,10 +339,87 @@ class Tilemap:
         if overlay_blits:
             surface.blits(overlay_blits)
 
+        # Draw water ripples (rendered via subsurface to clip exactly to each water tile)
+        if self.ripples and base_blits:
+            TILE_SIZE = self.TILE_SIZE
+            ERODE_PX = 3
+            scroll = scroll_int
+            for r in self.ripples:
+                sx = int(r.x - scroll.x)
+                sy = int(r.y - scroll.y)
+                rad = r.radius
+                b = r.brightness
+                if b <= 1 or rad <= 0:
+                    continue
+                ck = (rad, b)
+                ripple_surf = self._ripple_cache.get(ck)
+                if not ripple_surf:
+                    dim = rad * 2 + 12
+                    ripple_surf = pygame.Surface((dim, dim), pygame.SRCALPHA)
+                    center = dim // 2
+                    for i in range(3):
+                        ring_rad = max(1, rad - i * 6)
+                        ring_b = max(1, b - i * 30)
+                        if ring_b > 1:
+                            pygame.draw.circle(ripple_surf, (ring_b, ring_b, ring_b, 255),
+                                               (center, center), ring_rad, max(1, 3 - i))
+                    self._ripple_cache[ck] = ripple_surf
+                half = ripple_surf.get_width() // 2
+                ripple_left = sx - half
+                ripple_top = sy - half
+                rw = ripple_surf.get_width()
+                rh = ripple_surf.get_height()
+                for chunk_pos, tiles in water_layer.items():
+                    cx = chunk_pos[0]
+                    cy = chunk_pos[1]
+                    if cx + self.CHUNK_RES <= scroll.x or cx > scroll.x + VIRTUAL_WINDOW_SIZE[0]:
+                        continue
+                    if cy + self.CHUNK_RES <= scroll.y or cy > scroll.y + VIRTUAL_WINDOW_SIZE[1]:
+                        continue
+                    if cx - scroll.x + self.CHUNK_RES <= ripple_left or cx - scroll.x > ripple_left + rw:
+                        continue
+                    if cy - scroll.y + self.CHUNK_RES <= ripple_top or cy - scroll.y > ripple_top + rh:
+                        continue
+                    for tile_pos, tile_data in tiles.items():
+                        tile_rect = tile_data["rect"]
+                        if tile_rect.x + tile_rect.w <= scroll.x or tile_rect.x > scroll.x + VIRTUAL_WINDOW_SIZE[0]:
+                            continue
+                        if tile_rect.y + tile_rect.h <= scroll.y or tile_rect.y > scroll.y + VIRTUAL_WINDOW_SIZE[1]:
+                            continue
+                        tsx = tile_rect.x - scroll.x
+                        tsy = tile_rect.y - scroll.y
+                        if tsx + TILE_SIZE <= ripple_left or tsx > ripple_left + rw:
+                            continue
+                        if tsy + TILE_SIZE <= ripple_top or tsy > ripple_top + rh:
+                            continue
+                        bits = tile_data.get("water_bits", 0)
+                        tx = tile_pos[0] - scroll.x
+                        ty = tile_pos[1] - scroll.y
+                        tw, th = TILE_SIZE, TILE_SIZE
+                        if bits & 1: ty += ERODE_PX; th -= ERODE_PX
+                        if bits & 2: tw -= ERODE_PX
+                        if bits & 4: th -= ERODE_PX
+                        if bits & 8: tx += ERODE_PX; tw -= ERODE_PX
+                        if tw <= 0 or th <= 0:
+                            continue
+                        clip_left = tx if tx > ripple_left else ripple_left
+                        clip_top = ty if ty > ripple_top else ripple_top
+                        clip_right = (tx + tw) if (tx + tw) < (ripple_left + rw) else (ripple_left + rw)
+                        clip_bottom = (ty + th) if (ty + th) < (ripple_top + rh) else (ripple_top + rh)
+                        if clip_left < clip_right and clip_top < clip_bottom:
+                            src_x = clip_left - ripple_left
+                            src_y = clip_top - ripple_top
+                            cw = clip_right - clip_left
+                            ch = clip_bottom - clip_top
+                            surface.blit(ripple_surf, (clip_left, clip_top), area=(src_x, src_y, cw, ch), special_flags=pygame.BLEND_RGB_ADD)
+
     def get_ysort_items(self, camera_rect):
         """Returns a list of tiles from ysort_layers that are within camera_rect."""
-        items = [] # (sort_y, surface, pos)
         SHADOW_OFFSET = 5
+        if not hasattr(self, '_ysort_items'):
+            self._ysort_items = []
+        items = self._ysort_items
+        items.clear()
         for layer_id in self.ysort_layers:
             if layer_id not in self.layers:
                 continue

@@ -19,6 +19,7 @@ from ..systems.core.physics_engine import PhysicsEngine
 from ..systems.rendering.render_system import AnimationSystem, RenderSystem
 from ..systems.rendering.camera import Camera
 from ..systems.combat.combat_system import CombatSystem
+from ..systems.combat.destructible_system import DestructibleSystem
 from ..systems.combat.ai_system import AISystem
 from ..systems.rendering.particle_effect_system import ParticleEmitter
 
@@ -26,9 +27,11 @@ from ..systems.scene.level_manager import Level
 
 from ..weapons.bullet_patterns import *
 
-from ..utils import LEVEL, Inputs, GameSceneEvents#, swap_color
+from ..utils import LEVEL, Inputs, GameSceneEvents, screen_to_virtual
 
 import random
+
+from ..utils import Quadtree, VIRTUAL_WINDOW_SIZE
 
 class GameScene(Scene):
     """
@@ -41,6 +44,7 @@ class GameScene(Scene):
         super().__init__(id="game", ctx=ctx)
         self.component_manager = ComponentManager()
         self.camera = Camera()
+        self._dynamic_quadtree = None
         
         self.timer_system = TimerSystem(self.component_manager)
 
@@ -54,6 +58,10 @@ class GameScene(Scene):
         
         # Link combat system to render system so projectiles can be drawn
         self.render_system.combat_system = self.combat_system
+
+        self.destructible_system = DestructibleSystem(self.component_manager, self.entity_manager)
+        self.destructible_system.projectile_system = self.combat_system.projectile_system
+        self.render_system.destructible_system = self.destructible_system
 
         self.level = Level(self.ctx)
         self.current_level = f'data/levels/{LEVEL}.json'
@@ -226,19 +234,20 @@ class GameScene(Scene):
                     (right - 2, bottom - 2)
                 ]
                 
-                water_count = 0
-                for px, py in points:
-                    if self._is_pos_in_water(pygame.Vector2(px, py)):
-                        water_count += 1
-                
+                water_count = self._count_pos_in_water(points)
+
                 self.player_input_system.is_touching_water = (water_count > 0)
                 self.player_input_system.on_water_completely = (water_count == len(points))
-                # For completeness (though no longer the primary dash decider)
                 self.player_input_system.on_land_completely = (water_count == 0)
 
         # Build a single shared Dynamic Quadtree for all non-tile entities per frame
-        from ..utils import Quadtree, VIRTUAL_WINDOW_SIZE
-        dynamic_quadtree = Quadtree(0, (*self.camera.scroll, *VIRTUAL_WINDOW_SIZE))
+        qtree_bounds = (*self.camera.scroll, *VIRTUAL_WINDOW_SIZE)
+        if self._dynamic_quadtree is None:
+            self._dynamic_quadtree = Quadtree(0, qtree_bounds)
+        else:
+            self._dynamic_quadtree.clear()
+            self._dynamic_quadtree.bounds = qtree_bounds
+        dynamic_quadtree = self._dynamic_quadtree
         
         # Only insert entities that aren't tiles (tiles are in level.static_quadtree)
         # Foliage and destructibles need to be in this tree to be hittable/collidable
@@ -248,7 +257,7 @@ class GameScene(Scene):
             
             # Entities with CollisionComponents are dynamic by nature in our ECS 
             # (unless they were tile-entities which we removed from the loop)
-            rect = pygame.Rect(*(pos.vec + comp.offset), *comp.size)
+            rect = pygame.Rect(pos.x + comp.offset.x, pos.y + comp.offset.y, comp.size.x, comp.size.y)
             dynamic_quadtree.insert(entity, rect)
 
         self.player_input_system.update(self.component_manager, dt) 
@@ -273,10 +282,30 @@ class GameScene(Scene):
             player_id=self.player,
             camera_center=self.camera.center
         )
+        self.destructible_system.update(dt, self.player)
+
+        # Water ripples from projectiles and dash (throttled + capped)
+        if self.level and self.level.tilemap:
+            tilemap = self.level.tilemap
+            if not hasattr(self, '_ripple_timer'):
+                self._ripple_timer = 0.0
+            self._ripple_timer += dt
+            if self._ripple_timer >= 0.2 and len(tilemap.ripples) < 6:
+                self._ripple_timer = 0.0
+                p_sys = self.combat_system.projectile_system
+                if hasattr(p_sys, 'active_indices'):
+                    for idx in p_sys.active_indices[:2]:
+                        p = p_sys.projectiles[idx]
+                        if self._is_pos_in_water((p.x, p.y)):
+                            tilemap.add_ripple(p.x, p.y)
+                if self.player_input_system.is_dashing:
+                    p_pos = self.component_manager.get(self.player, Position)
+                    if p_pos and self._is_pos_in_water(p_pos.vec):
+                        tilemap.add_ripple(p_pos.x, p_pos.y)
+
         self.animation_system.update(fps, dt, camera_rect=self.camera.rect)
         
-        raw_mouse = pygame.mouse.get_pos()
-        scaled_mouse = (raw_mouse[0] // 2, raw_mouse[1] // 2)
+        scaled_mouse = screen_to_virtual(pygame.mouse.get_pos())
         
         self.render_system.update(dt, tilemap=self.level.tilemap, camera=self.camera, mouse_pos=scaled_mouse)
         self.entity_manager.refresh_entities(dt=dt)
@@ -390,14 +419,59 @@ class GameScene(Scene):
         from ..utils import TILE_SIZE
         water_layer = self.level.tilemap.layers.get("water")
         if not water_layer: return False
-        
-        chunk_pos = (int(pos.x // (self.level.tilemap.CHUNK_SIZE * TILE_SIZE)) * (self.level.tilemap.CHUNK_SIZE * TILE_SIZE),
-                     int(pos.y // (self.level.tilemap.CHUNK_SIZE * TILE_SIZE)) * (self.level.tilemap.CHUNK_SIZE * TILE_SIZE))
-        if chunk_pos in water_layer:
-            for tpos, tdata in water_layer[chunk_pos].items():
-                if tdata["rect"].collidepoint(pos.x, pos.y):
+
+        chunk_pos = (int(pos[0] // (self.level.tilemap.CHUNK_SIZE * TILE_SIZE)) * (self.level.tilemap.CHUNK_SIZE * TILE_SIZE),
+                     int(pos[1] // (self.level.tilemap.CHUNK_SIZE * TILE_SIZE)) * (self.level.tilemap.CHUNK_SIZE * TILE_SIZE))
+        chunk = water_layer.get(chunk_pos)
+        if chunk:
+            for tdata in chunk.values():
+                if tdata["rect"].collidepoint(pos[0], pos[1]):
                     return True
         return False
+
+    def _any_pos_in_water(self, points):
+        """Batch check: returns True if any point is in water. Only does one chunk lookup + tile scan."""
+        if not self.level.tilemap: return False
+        from ..utils import TILE_SIZE
+        water_layer = self.level.tilemap.layers.get("water")
+        if not water_layer: return False
+
+        seen_chunks = {}
+        for pos in points:
+            cx = int(pos[0] // (self.level.tilemap.CHUNK_SIZE * TILE_SIZE)) * (self.level.tilemap.CHUNK_SIZE * TILE_SIZE)
+            cy = int(pos[1] // (self.level.tilemap.CHUNK_SIZE * TILE_SIZE)) * (self.level.tilemap.CHUNK_SIZE * TILE_SIZE)
+            ck = (cx, cy)
+            if ck not in seen_chunks:
+                seen_chunks[ck] = water_layer.get(ck)
+            chunk = seen_chunks[ck]
+            if chunk:
+                for tdata in chunk.values():
+                    if tdata["rect"].collidepoint(pos[0], pos[1]):
+                        return True
+        return False
+
+    def _count_pos_in_water(self, points):
+        """Batch check: returns how many points are in water."""
+        if not self.level.tilemap: return 0
+        from ..utils import TILE_SIZE
+        water_layer = self.level.tilemap.layers.get("water")
+        if not water_layer: return 0
+
+        count = 0
+        seen_chunks = {}
+        for pos in points:
+            cx = int(pos[0] // (self.level.tilemap.CHUNK_SIZE * TILE_SIZE)) * (self.level.tilemap.CHUNK_SIZE * TILE_SIZE)
+            cy = int(pos[1] // (self.level.tilemap.CHUNK_SIZE * TILE_SIZE)) * (self.level.tilemap.CHUNK_SIZE * TILE_SIZE)
+            ck = (cx, cy)
+            if ck not in seen_chunks:
+                seen_chunks[ck] = water_layer.get(ck)
+            chunk = seen_chunks[ck]
+            if chunk:
+                for tdata in chunk.values():
+                    if tdata["rect"].collidepoint(pos[0], pos[1]):
+                        count += 1
+                        break
+        return count
 
     def _handle_water_check(self, **kwargs):
         eid = kwargs.get('entity_id')
@@ -423,10 +497,8 @@ class GameScene(Scene):
                 (left + 2, bottom - 2),
                 (right - 2, bottom - 2)
             ]
-            for px, py in points:
-                if self._is_pos_in_water(pygame.Vector2(px, py)):
-                    is_touching_water = True
-                    break
+            if self._any_pos_in_water(points):
+                is_touching_water = True
         else:
             if self._is_pos_in_water(pos):
                 is_touching_water = True
@@ -464,7 +536,7 @@ class GameScene(Scene):
                                 (right - 2, bottom - 2)
                             ]
                             
-                            in_water = any(self._is_pos_in_water(pygame.Vector2(px, py)) for px, py in pts)
+                            in_water = self._any_pos_in_water(pts)
                             if not in_water:
                                 safe_found = True
                                 break
@@ -521,7 +593,7 @@ class GameScene(Scene):
 
     def _is_tile_walkable(self, x, y):
         # A tile is not walkable if it is water
-        if self._is_pos_in_water(pygame.Vector2(x, y)):
+        if self._is_pos_in_water((x, y)):
             return False
 
         tilemap = self.level.tilemap

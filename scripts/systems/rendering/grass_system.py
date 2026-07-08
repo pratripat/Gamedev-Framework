@@ -6,6 +6,12 @@ from ...utils import TILE_SIZE
 # Use the exact colors provided in grass_manager.py
 COLORS = [(25,60,62), (38,92,66), (62,137,72), (172,234,92)]
 
+SIN_TABLE_SIZE = 256
+SIN_TABLE = [math.sin(2 * math.pi * i / SIN_TABLE_SIZE) for i in range(SIN_TABLE_SIZE)]
+
+SQRT_TABLE_SIZE = 256
+SQRT_TABLE = [math.sqrt(i / (SQRT_TABLE_SIZE - 1)) for i in range(SQRT_TABLE_SIZE)]
+
 def load_grass_images(filename):
     """
     Dedicated loader for the grass spritesheet to prevent breaking standard engine assets.
@@ -92,72 +98,64 @@ class GrassSystem:
     def update(self, dt, interactors, wind_mag=0.0, wind_time=0.0, camera_rect=None):
         """
         Updates grass blade physics and handles interactivity with entities/projectiles.
-        interactors: list of (x, y, radius, force_multiplier)
+        interactors: list of (x, y, radius_sq, inv_radius_sq, force_multiplier)
         """
-        # dt-scaled factor (assuming 60fps base)
-        # Slower LERP for smoother, more stable movement
         lerp_factor = 2.0 * 80 * dt
         
-        # Inflate camera rect for culling to avoid snapping when scrolling
         update_rect = camera_rect.inflate(128, 128) if camera_rect else None
         
+        # Precompute sin index base for wind ripple (avoid per-blade math.sin)
+        sin_phase_offset = int(wind_time * 2.5 * SIN_TABLE_SIZE / (2 * math.pi)) & (SIN_TABLE_SIZE - 1)
+        TABLE_MASK = SIN_TABLE_SIZE - 1
+        
         for blade in self.blades:
-            # Spatial Culling: Skip physics and wind updates if far off-screen
             if update_rect and not update_rect.collidepoint(blade.x, blade.y):
                 continue
                 
-            # Reset target_angle every frame to find the "strongest" current push
             max_bend = 0.0
             
-            # Collision with interactors
-            for ix, iy, irad, iforce in interactors:
+            # Collision with interactors (sqrt-free strength via lookup table)
+            for ix, iy, irad_sq, inv_irad_sq, iforce in interactors:
                 dy = iy - blade.y
-                if abs(dy) < 32: # Max height check
+                if abs(dy) < 32:
                     dx = ix - blade.x
                     dist_sq = dx*dx + dy*dy
-                    if dist_sq < irad*irad:
-                        # Determine bend strength based on distance (closer = more bend)
-                        # This creates a stable "push" instead of a vibrating force
-                        dist = math.sqrt(dist_sq)
-                        strength = (1.0 - (dist / irad)) * iforce
+                    if dist_sq < irad_sq:
+                        ratio_idx = int(dist_sq * inv_irad_sq * (SQRT_TABLE_SIZE - 1))
+                        if ratio_idx > SQRT_TABLE_SIZE - 1:
+                            ratio_idx = SQRT_TABLE_SIZE - 1
+                        strength = (1.0 - SQRT_TABLE[ratio_idx]) * iforce
                         
-                        # Bend AWAY from interactor
                         current_push = 70.0 * strength
                         if dx < 0:
                             current_push = -current_push
                         
-                        # Keep the strongest push as our target
                         if abs(current_push) > abs(max_bend):
                             max_bend = current_push
 
-            # Calculate Wind Effect
-            # Add a phase based on world position so it ripples across the field
+            # Wind effect (sin via lookup table)
             wind_phase = blade.x * 0.01 + blade.y * 0.005
-            
-            # Base wind sway (up to ~20 degrees)
+            sin_idx = (sin_phase_offset + int(wind_phase * SIN_TABLE_SIZE / (2 * math.pi))) & TABLE_MASK
+            wind_ripple = SIN_TABLE[sin_idx] * 6.0 * abs(wind_mag)
             wind_sway = wind_mag * 20.0 
-            
-            # High-frequency ripple for more natural flutter
-            wind_ripple = math.sin(wind_time * 2.5 + wind_phase) * 6.0 * abs(wind_mag)
-            
             wind_bend = wind_sway + wind_ripple
 
-            # Blend forces: strong physical pushes override wind
             if abs(max_bend) > 10.0:
                 blade.target_angle = max_bend
             else:
-                # Smoothly blend back to wind if the push is weak/gone
                 blade.target_angle = wind_bend
             
-            # Smoothly transition current angle to the target
-            blade.angle += (blade.target_angle - blade.angle) / 4.0 * lerp_factor
+            blade.angle += (blade.target_angle - blade.angle) * 0.25 * lerp_factor
 
             # Clamp final angle
             blade.angle = max(min(blade.angle, 80), -80)
 
     def collect_render_items(self, camera):
         scroll_x, scroll_y = camera.scroll_int.x, camera.scroll_int.y
-        items = []
+        if not hasattr(self, '_items'):
+            self._items = []
+        items = self._items
+        items.clear()
         # Pad culling rect slightly to avoid pop-in at screen edges
         screen_rect = camera.rect.inflate(64, 64)
         
@@ -174,8 +172,11 @@ class GrassSystem:
             surf = self._render_cache.get(cache_key)
             if surf is None:
                 surf = pygame.transform.rotate(blade.image, angle_int)
-                if len(self._render_cache) > 500:
-                    self._render_cache.clear()
+                if len(self._render_cache) > 2000:
+                    try:
+                        del self._render_cache[next(iter(self._render_cache))]
+                    except StopIteration:
+                        pass
                 self._render_cache[cache_key] = surf
             
             # 4. Y-Sort Formatting: (sort_y, "sprite", surface, screen_position)
@@ -187,6 +188,37 @@ class GrassSystem:
             items.append((blade.y, "sprite", surf, (int(draw_x), int(draw_y))))
             
         return items
+
+    def render_direct(self, surface, camera):
+        scroll_x, scroll_y = camera.scroll_int.x, camera.scroll_int.y
+        if not hasattr(self, '_blit_items'):
+            self._blit_items = []
+        blit_items = self._blit_items
+        blit_items.clear()
+        screen_rect = camera.rect
+
+        for blade in self.blades:
+            if not screen_rect.collidepoint(blade.x, blade.y):
+                continue
+
+            angle_int = int(round((blade.angle + blade.angle_offset) / 2.0) * 2.0)
+            cache_key = (id(blade.image), angle_int)
+            surf = self._render_cache.get(cache_key)
+            if surf is None:
+                surf = pygame.transform.rotate(blade.image, angle_int)
+                if len(self._render_cache) > 2000:
+                    try:
+                        del self._render_cache[next(iter(self._render_cache))]
+                    except StopIteration:
+                        pass
+                self._render_cache[cache_key] = surf
+
+            draw_x = int(blade.x - (surf.get_width() / 2) - scroll_x)
+            draw_y = int(blade.y - (surf.get_height() / 2) - scroll_y)
+            blit_items.append((surf, (draw_x, draw_y)))
+
+        if blit_items:
+            surface.blits(blit_items)
 
     def generate_grass(self, layers):
         """Generates grass data structures in clumps, strictly avoiding ANY occupied tiles."""

@@ -97,7 +97,7 @@ def spawn_bomb(eid, cm, em, anim_handler, event_manager, data):
 
     return bomb_id
 
-def spawn_projectile(eid, cm, em, rm, direction, data, projectile_system=None, position_offset=pygame.Vector2(0,0)):
+def spawn_projectile(eid, cm, em, rm, direction, data, projectile_system=None, position_offset=pygame.Vector2(0,0), modifiers=None):
     if not projectile_system:
         return None
 
@@ -125,6 +125,7 @@ def spawn_projectile(eid, cm, em, rm, direction, data, projectile_system=None, p
     pulse_speed = data.get("pulse_speed", 10.0)
 
     # Spawn fast projectile
+    modifiers = data.get("modifiers")
     proj = projectile_system.spawn(
         source_entity=eid,
         x=spawn_pos.x,
@@ -136,7 +137,7 @@ def spawn_projectile(eid, cm, em, rm, direction, data, projectile_system=None, p
         effects=data.get("effects", []),
         bounce=data.get("bounce", 0),
         penetration=data.get("penetration", 0),
-        lifetime=data.get("lifetime", 2.0), # Fixed generic lifetime or use data if provided
+        lifetime=data.get("lifetime", 2.0),
         size=size_px,
         layer=layer,
         mask=mask,
@@ -144,8 +145,9 @@ def spawn_projectile(eid, cm, em, rm, direction, data, projectile_system=None, p
         pulse_radius=pulse_radius,
         pulse_speed=pulse_speed,
         pulse_color=pulse_color,
-        particle_rate=30,  # Emitting 30 particles / sec
-        hits_dashing_player=data.get("hits_dashing_player", False)
+        particle_rate=30,
+        hits_dashing_player=data.get("hits_dashing_player", False),
+        modifiers=modifiers
     )
 
     return proj
@@ -202,9 +204,89 @@ class SpiralShooter:
         
         return projs
     
+def shoot_aimed_fan(eid, cm, em, rm, data, projectile_system=None):
+    dir = get_unit_direction_towards(data["start_pos"], data["target_pos"])
+    number = data.get("number", 7)
+    max_angle = data.get("angle", 30)
+    step = (max_angle * 2) / (number - 1) if number > 1 else 0
+
+    projs = []
+    for i in range(number):
+        angle = -max_angle + step * i
+        d = rotate_vector(dir, angle)
+        projs.append(spawn_projectile(eid, cm, em, rm, d, data, projectile_system))
+
+    return projs
+
+def shoot_cross(eid, cm, em, rm, data, projectile_system=None):
+    import random
+    if random.random() < 0.5:
+        angles = [0, 90, 180, 270]
+    else:
+        angles = [45, 135, 225, 315]
+
+    projs = []
+    for a in angles:
+        d = rotate_vector(pygame.Vector2(1, 0), a)
+        projs.append(spawn_projectile(eid, cm, em, rm, d, data, projectile_system))
+
+    return projs
+
+def shoot_double_ring(eid, cm, em, rm, data, projectile_system=None):
+    number = data.get("number", 8)
+    dir = get_unit_direction_towards(data["start_pos"], data["target_pos"]) if data.get("on_player", False) else pygame.Vector2(1, 0)
+    offset = data.get("ring_offset", 11.25)
+
+    projs = []
+    for i in range(number):
+        angle = (360 / number) * i
+        d = rotate_vector(dir, angle)
+        projs.append(spawn_projectile(eid, cm, em, rm, d, data, projectile_system))
+
+    for i in range(number):
+        angle = (360 / number) * i + offset
+        d = rotate_vector(dir, angle)
+        projs.append(spawn_projectile(eid, cm, em, rm, d, data, projectile_system))
+
+    return projs
+
+def shoot_aimed_burst(eid, cm, em, rm, data, projectile_system=None):
+    dir = get_unit_direction_towards(data["start_pos"], data["target_pos"])
+    number = data.get("number", 5)
+    spread = data.get("spread", 5)
+
+    projs = []
+    for i in range(number):
+        import random
+        angle = random.uniform(-spread, spread)
+        d = rotate_vector(dir, angle)
+        projs.append(spawn_projectile(eid, cm, em, rm, d, data, projectile_system))
+
+    return projs
+
+def shoot_wall(eid, cm, em, rm, data, projectile_system=None):
+    dir = get_unit_direction_towards(data["start_pos"], data["target_pos"])
+    perp = pygame.Vector2(-dir.y, dir.x)
+    number = data.get("number", 7)
+    spacing = data.get("spacing", 12)
+
+    projs = []
+    offset_start = -(number - 1) * spacing / 2.0
+    for i in range(number):
+        start_pos = data["start_pos"] + perp * (offset_start + i * spacing)
+        pd = {**data, "start_pos": start_pos}
+        projs.append(spawn_projectile(eid, cm, em, rm, dir, pd, projectile_system))
+
+    return projs
+
 SHOOT_FUNCTIONS = {
     "shoot_single": shoot_single,
     "shoot_spread": shoot_spread,
     "shoot_radial": shoot_radial,
-    "shoot_radial_spiral": SpiralShooter(bullets_per_shot=10, angle_increment=1)
+    "shoot_radial_spiral": SpiralShooter(bullets_per_shot=10, angle_increment=1),
+    "shoot_aimed_fan": shoot_aimed_fan,
+    "shoot_cross": shoot_cross,
+    "shoot_double_ring": shoot_double_ring,
+    "shoot_aimed_burst": shoot_aimed_burst,
+    "shoot_wall": shoot_wall
 }

@@ -3,7 +3,7 @@ from ..utils import EnemyState
 class AIComponent:
     def __init__(self, entity_id, behavior, data={
         "speed": 2,
-        "attack_dist": 300
+        "attack_dist": 150
     }):
         self.entity_id = entity_id
         self.behavior = behavior

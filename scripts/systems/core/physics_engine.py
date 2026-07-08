@@ -16,6 +16,7 @@ class PhysicsEngine:
         self.player_id = None
 
         self.event_manager.subscribe(GameSceneEvents.DAMAGE, self._knockback)
+        self._rect = pygame.FRect(0, 0, 0, 0)
     
     def _knockback(self, entity_id, proj_id, **kwargs):
         if self.component_manager.get(entity_id, EnemyTagComponent):
@@ -47,53 +48,59 @@ class PhysicsEngine:
         pos_dict = self.component_manager._components.get(Position, {})
         vel_dict = self.component_manager._components.get(Velocity, {})
         col_dict = self.component_manager._components.get(CollisionComponent, {})
-        
+        proj_dict = self.component_manager._components.get(ProjectileComponent, {})
+        kbc_dict = self.component_manager._components.get(KnockbackComponent, {})
+        rec_dict = self.component_manager._components.get(RenderEffectComponent, {})
+
         for entity in self.component_manager.get_entities_with(Position, Velocity):
             position = pos_dict.get(entity)
             velocity = vel_dict.get(entity)
             collision_component = col_dict.get(entity)
             if not collision_component:
                 position += velocity.vec * dt * scale
-                velocity.realistic_vel = velocity.vec.copy()
+                velocity.realistic_vel.update(velocity.vec)
 
+        colliding_entities = []
         for non_solid_component_entity in self.component_manager.get_entities_with(CollisionComponent):
             non_solid_component = col_dict.get(non_solid_component_entity)
             if non_solid_component.solid:
                 continue
-            if self.component_manager.get(non_solid_component_entity, ProjectileComponent):
+            if proj_dict.get(non_solid_component_entity):
                 continue
 
             pos = pos_dict.get(non_solid_component_entity)
             vel = vel_dict.get(non_solid_component_entity)
             if not pos or not vel: continue
 
-            rect = pygame.FRect(*(pos.vec + non_solid_component.offset), *non_solid_component.size)
+            rect = self._rect
+            rect.x = pos.x + non_solid_component.offset.x
+            rect.y = pos.y + non_solid_component.offset.y
+            rect.w = non_solid_component.size.x
+            rect.h = non_solid_component.size.y
 
             kvx, kvy = 0, 0
-            kbc = self.component_manager.get(non_solid_component_entity, KnockbackComponent)
+            kbc = kbc_dict.get(non_solid_component_entity)
             if kbc:
                 kvx, kvy = kbc.update(dt, self.component_manager, non_solid_component_entity)
 
-            vel.realistic_vel = vel.vec.copy()
+            vel.realistic_vel.update(vel.vec)
 
-            # 1. Horizontal Movement & Collision
             total_dx = (vel.x + kvx) * dt * scale
             rect.x += total_dx
 
-            rec = self.component_manager.get(non_solid_component_entity, RenderEffectComponent)
+            rec = rec_dict.get(non_solid_component_entity)
             in_air = rec and rec.z_offset > 5.0
 
             collisions = None
             if not in_air:
-                colliding_entities = []
+                colliding_entities.clear()
                 if static_quadtree: static_quadtree.retrieve(colliding_entities, rect)
                 if dynamic_quadtree: dynamic_quadtree.retrieve(colliding_entities, rect)
                 
                 seen_h = set()
                 for entity, colliding_rect in colliding_entities:
-                    collision_id = (entity, tuple(colliding_rect))
-                    if collision_id in seen_h or entity == non_solid_component_entity: continue
-                    seen_h.add(collision_id)
+                    if entity in seen_h or entity == non_solid_component_entity: continue
+                    seen_h.add(entity)
                     
                     layer_id = entity[0] if isinstance(entity, tuple) else entity
                     is_water = (layer_id == "water")
@@ -126,15 +133,14 @@ class PhysicsEngine:
             rect.y += total_dy
 
             if not in_air:
-                colliding_entities = []
+                colliding_entities.clear()
                 if static_quadtree: static_quadtree.retrieve(colliding_entities, rect)
                 if dynamic_quadtree: dynamic_quadtree.retrieve(colliding_entities, rect)
                 
                 seen_v = set()
                 for entity, colliding_rect in colliding_entities:
-                    collision_id = (entity, tuple(colliding_rect))
-                    if collision_id in seen_v or entity == non_solid_component_entity: continue
-                    seen_v.add(collision_id)
+                    if entity in seen_v or entity == non_solid_component_entity: continue
+                    seen_v.add(entity)
                     
                     layer_id = entity[0] if isinstance(entity, tuple) else entity
                     is_water = (layer_id == "water")
@@ -172,4 +178,6 @@ class PhysicsEngine:
                     self._walk_timers[non_solid_component_entity] = 0
                     self.event_manager.emit_walk(pos.vec, vel.vec, non_solid_component_entity)
 
-            pos.vec.update(pygame.Vector2(rect.topleft) - non_solid_component.offset)
+            off = non_solid_component.offset
+            pos.vec.x = rect.x - off.x
+            pos.vec.y = rect.y - off.y

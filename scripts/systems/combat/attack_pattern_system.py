@@ -1,7 +1,7 @@
 import pygame
-from scripts.components.combat import AttackPatternComponent
-from scripts.components.physics import Position
-from scripts.utils import CollisionLayer
+from ...components.combat import AttackPatternComponent
+from ...components.physics import Position
+from ...utils import CollisionLayer
 
 class AttackPatternSystem:
     def __init__(self, component_manager, entity_manager, resource_manager):
@@ -17,6 +17,15 @@ class AttackPatternSystem:
                 continue
 
             pattern = apc.current
+
+            # Warmup phase: telegraph before first shot
+            if pattern.warmup > 0 and not pattern.warmed:
+                pattern.shoot_timer += dt
+                if pattern.shoot_timer >= pattern.warmup:
+                    pattern.warmed = True
+                    pattern.shoot_timer = 0
+                continue  # skip firing during warmup
+
             pattern.shoot_timer += dt
             if pattern.duration is not None:
                 pattern.phase_timer += dt
@@ -47,5 +56,10 @@ class AttackPatternSystem:
             data["target_pos"] = player_pos.vec.copy() if player_pos else pos.vec + pygame.Vector2(1, 0)
         else:
             data["target_pos"] = pos.vec + pygame.Vector2(1, 0)
+
+        # Inject player entity ID for homing modifiers
+        mods = data.get("modifiers")
+        if mods and mods.get("homing_strength", 0) > 0:
+            mods["homing_target_id"] = self.entity_manager.player_id
 
         pattern.shoot_fn(eid, self.component_manager, self.entity_manager, self.resource_manager, data, getattr(self, "projectile_system", None))

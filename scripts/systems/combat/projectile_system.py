@@ -64,6 +64,7 @@ class ProjectileSystem:
         # Movement scale
         movement_scale = fps if (fps and fps > 0) else 60.0
 
+        nearby = []
         for entity_id in list(self.component_manager.get_entities_with(ProjectileComponent)):
             projectile = proj_dict.get(entity_id)
             pos_comp = pos_dict.get(entity_id)
@@ -81,10 +82,11 @@ class ProjectileSystem:
 
             # Prepare movement rect
             rect = pygame.FRect(*(pos_comp.vec + col.offset), *col.size)
+            col_offset = col.offset
 
             # Move horizontally
             rect.x += vel.x * dt * movement_scale
-            nearby = []
+            nearby.clear()
             quadtree.retrieve(nearby, rect)
             seen_h = set()
             for other_entity, other_rect in nearby:
@@ -101,7 +103,7 @@ class ProjectileSystem:
                     if rect.colliderect(other_rect):
                         self.event_manager.emit(
                             GameSceneEvents.WATER_SPLASH,
-                            pos=pygame.Vector2(rect.center),
+                            pos=(rect.centerx, rect.centery),
                             vel=vel.vec,
                             size=col.size[0]
                         )
@@ -112,7 +114,7 @@ class ProjectileSystem:
                     if rect.colliderect(other_rect):
                         self.event_manager.emit(
                             GameSceneEvents.PROJECTILE_COLLISION,
-                            pos=pygame.Vector2(rect.center),
+                            pos=(rect.centerx, rect.centery),
                             vel=vel.vec,
                             target_type="environment",
                             size=col.size[0]
@@ -131,7 +133,7 @@ class ProjectileSystem:
 
             # Move vertically
             rect.y += vel.y * dt * movement_scale
-            nearby = []
+            nearby.clear()
             quadtree.retrieve(nearby, rect)
             seen_v = set()
             for other_entity, other_rect in nearby:
@@ -148,7 +150,7 @@ class ProjectileSystem:
                     if rect.colliderect(other_rect):
                         self.event_manager.emit(
                             GameSceneEvents.WATER_SPLASH,
-                            pos=pygame.Vector2(rect.center),
+                            pos=(rect.centerx, rect.centery),
                             vel=vel.vec,
                             size=col.size[0]
                         )
@@ -159,7 +161,7 @@ class ProjectileSystem:
                     if rect.colliderect(other_rect):
                         self.event_manager.emit(
                             GameSceneEvents.PROJECTILE_COLLISION,
-                            pos=pygame.Vector2(rect.center),
+                            pos=(rect.centerx, rect.centery),
                             vel=vel.vec,
                             target_type="environment",
                             size=col.size[0]
@@ -177,4 +179,5 @@ class ProjectileSystem:
                 continue
 
             # Apply final position
-            pos_comp.vec.update(pygame.Vector2(rect.topleft) - col.offset)
+            pos_comp.vec.x = rect.x - col_offset.x
+            pos_comp.vec.y = rect.y - col_offset.y

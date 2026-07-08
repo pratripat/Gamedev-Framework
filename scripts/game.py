@@ -1,3 +1,4 @@
+import pygame
 from .systems.scene.scene_manager import SceneManager
 from .scenes.game_scene import GameScene
 from .systems.input.input_system import Input
@@ -20,6 +21,8 @@ class Game():
         # Internal pixel-art resolution (half size)
         self.virtual_size = (INITIAL_WINDOW_SIZE[0] // 2, INITIAL_WINDOW_SIZE[1] // 2)
         self.virtual_surface = pygame.Surface(self.virtual_size).convert()
+        self._scaled_surf = pygame.Surface(INITIAL_WINDOW_SIZE).convert()
+        self._screen_size = INITIAL_WINDOW_SIZE
 
         self.clock = pygame.time.Clock()
         self.target_fps = 60
@@ -41,30 +44,27 @@ class Game():
         self.ctx.scene_manager.play_scene()
 
         while True:
-            # Calculate frame time (ms -> seconds) and current FPS
             self.calculate_dt()
             self.update()
             self.render()
     
     def render(self):
-        # expose timing info to scenes for diagnostics (fps, dt)
         self.ctx.fps = getattr(self, 'fps', 0)
         self.ctx.dt = getattr(self, 'dt', 0)
 
-        # Render world to virtual surface
         self.ctx.scene_manager.render_scene(self.virtual_surface)
-        
-        # Scale up 2x using nearest-neighbor (fast and crisp)
-        scaled_up = pygame.transform.scale(self.virtual_surface, self.screen.get_size())
-        self.screen.blit(scaled_up, (0,0))
 
-        # Render UI to the screen
+        screen_size = self.screen.get_size()
+        if screen_size != self._screen_size:
+            self._screen_size = screen_size
+            self._scaled_surf = pygame.Surface(screen_size).convert()
+        pygame.transform.scale(self.virtual_surface, self._screen_size, dest_surface=self._scaled_surf)
+        self.screen.blit(self._scaled_surf, (0, 0))
+
         self.ctx.scene_manager.render_ui(self.screen)
 
-        # Render custom cursor on top of everything (on the actual screen)
         cursor_img = self.ctx.resource_manager.get_image("data/graphics/images/cursor.png", scale=3)
         if cursor_img:
-            # We don't divide by 2 here because we are drawing on the unscaled screen
             mx, my = pygame.mouse.get_pos()
             cw, ch = cursor_img.get_size()
             self.screen.blit(cursor_img, (mx - cw // 2, my - ch // 2))
