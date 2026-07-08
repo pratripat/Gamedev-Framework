@@ -1,0 +1,612 @@
+# Architecture Audit: OptimizedGamedevFramework
+
+**Date:** 2026-07-07
+**Codebase:** `/home/pratyush/Documents/puttar/github-ssh/OptimizedGamedevFramework`
+
+---
+
+## CORE FRAMEWORKS
+
+### Event Bus / Event System
+**Status: 🟡 Partially implemented**
+
+**Why:** `EventManager` (`scripts/systems/core/event_manager.py`, 41 lines) provides subscribe/emit/unsubscribe pattern. `GameSceneEvents` enum in `scripts/utils/__init__.py` defines 13 event types. Used extensively across all systems.
+
+**Weaknesses:**
+- No event type safety — `emit()` and `subscribe()` accept arbitrary kwargs; callback signatures aren't validated
+- Two special-case emit methods (`emit_walk`, `emit_collision`) violate the generic pattern
+- No weak references — subscriber callbacks can leak without explicit unsubscribe
+- No event prioritization, cancellation, or bubbling
+- No async/deferred event queue
+
+**Improvements:** Introduce typed event dataclasses, replace special-case emitters with standard `emit()`, add weak references for automatic cleanup, add priority order for subscribers.
+
+---
+
+### ECS Architecture
+**Status: ✅ Fully implemented**
+
+**Why:** `ComponentManager` (`scripts/ecs/component_manager.py`, 84 lines) stores components as `{type: {entity_id: instance}}` with AND/OR queries and query caching. `EntityManager` (`scripts/ecs/entity_manager.py`, 154 lines) handles lifecycle with auto-incrementing IDs. `EntityFactory` (`scripts/ecs/entity_factory.py`, 290 lines) builds entities from JSON config with 17+ component builders. 10 component modules in `scripts/components/`.
+
+**Weaknesses:**
+- Several systems access `_components` private dict directly, breaking encapsulation
+- No component pooling — frequent add/remove causes GC pressure
+- No archetype/chunk storage — `defaultdict(dict)` is cache-unfriendly
+- Query cache invalidates on every single add/remove
+- Entity IDs are raw ints with no wrapper type
+- No entity hierarchy/parenting
+
+**Improvements:** Add public iteration API, implement component pooling, consider archetype-based storage, add `Entity` wrapper type, support parent-child relationships.
+
+---
+
+### Scene Management
+**Status: 🟡 Partially implemented**
+
+**Why:** `Scene` base class and `SceneManager` (`scripts/systems/scene/scene_manager.py`, 64 lines) support add/set-current/update/render. `GameScene` (`scripts/scenes/game_scene.py`, 841 lines) is the only concrete scene. `Level` manager (`scripts/systems/scene/level_manager.py`, 179 lines) loads levels from JSON.
+
+**Weaknesses:**
+- **Only one scene exists** — no menu, pause, loading, or game-over screen
+- `GameScene` is an 841-line **God class** handling physics, combat, rendering, particles, UI, water detection, respawn, and more
+- No scene lifecycle hooks (`on_enter`, `on_exit`, `pause`, `resume`, `destroy`)
+- No scene stack for overlays (pause menu over gameplay)
+- No scene transition effects
+- Level loading is synchronous/blocking
+
+**Improvements:** Split `GameScene` into focused subsystems, add lifecycle hooks, implement scene stack, add transition effects, add async level loading.
+
+---
+
+### Resource/Asset Manager
+**Status: 🟡 Partially implemented**
+
+**Why:** `ResourceManager` (`scripts/systems/core/resource_manager.py`, 106 lines) caches images, spritesheets, and tilemaps with scaling and color-swap support. Audio has its own separate `SoundCache` (`scripts/systems/audio/sound_cache.py`). `AnimationHandler` (`scripts/systems/animation/animation_handler.py`) loads and caches animation data separately.
+
+**Weaknesses:**
+- No asset reference counting or eviction
+- No async loading
+- No error recovery for missing assets — returns `None` silently
+- No asset bundles/packing
+- Audio resource management is architecturally separate from visual assets
+- Hardcoded paths throughout (`"data/config/entities.json"`, etc.)
+- No streaming for large assets
+
+**Improvements:** Implement LRU eviction, add async loading with callbacks, integrate audio into unified asset system, add bundle/pack format, centralize all hardcoded paths.
+
+---
+
+### Save/Load System
+**Status: ❌ Missing**
+
+**Why:** No save/load infrastructure exists anywhere. No serialization on components. No checkpoint system. `_respawn()` in `GameScene` simply reloads the entire level from scratch. No settings persistence.
+
+**Improvements:** Create `SaveManager` with `serialize()`/`deserialize()` on components, add checkpoint system, add settings persistence to JSON config file, implement autosave on significant events.
+
+---
+
+### Object Pooling
+**Status: 🟡 Partially implemented (ad-hoc)**
+
+**Why:** Three hand-rolled pools exist: `FastProjectileSystem` (4000 projectile pool), `ParticleEffectSystem` (4000 particle pool), `ChannelPool` (32 audio channels). All follow the same `free_indices`/`active_indices` pattern with pre-allocation and `__slots__`.
+
+**Weaknesses:**
+- No generic `ObjectPool` class — every pool duplicates the free-list pattern
+- Fixed capacities with silent failure on overflow
+- No pool metrics (utilization, churn)
+- ECS components are not pooled
+
+**Improvements:** Create generic `ObjectPool[T]` with factory pattern, apply to all hot-path types, add dynamic growth, add metrics reporting.
+
+---
+
+### Dependency Injection
+**Status: ❌ Missing (uses Service Locator anti-pattern)**
+
+**Why:** `GameContext` (`scripts/systems/core/game_context.py`, 23 lines) is a global mutable bag of services — textbook Service Locator. Dependencies are wired manually in `GameScene.__init__()` with explicit constructor arguments. Late imports used in 6+ locations to work around circular dependencies.
+
+**Weaknesses:**
+- Service Locator makes testing difficult (can't easily mock individual services)
+- Manual wiring is fragile — changing constructor signatures breaks all instantiation sites
+- No lifecycle management (init order, shutdown order, scope)
+- No interface abstractions — depends on concrete classes
+- Testing is impractical without substitution
+
+**Improvements:** Replace `GameContext` with proper DI container, define abstract interfaces for services, resolve dependencies at composition root.
+
+---
+
+## GAME FEEL
+
+### Juice Manager
+**Status: 🟡 Partial / Ad-hoc**
+
+**Why:** No centralized `JuiceManager`. Effects are scattered: `RenderEffectSystem` handles squash/stretch, flash, blink, rotation; `GameScene.render_ui()` has hardcoded health bar juice (scale/rotation decay). No coordinator exists.
+
+**Weaknesses:** No central authority, no prioritization/stacking, no easing functions, health bar juice mixed with scene code.
+
+### Camera Shake
+**Status: ✅ Present**
+
+**Why:** `Camera` class (`scripts/systems/rendering/camera.py`) has `trigger_shake(intensity, duration)` with random offset. Subscribed to `SCREEN_SHAKE` event.
+
+**Weaknesses:** No decay curve (constant intensity then abrupt stop), no directional shake, no predefined patterns, intensity uses `max` (weak shake can't override strong one), shake modifies cached scroll causing sub-pixel jitter.
+
+### Hit Stop / Freeze Frames
+**Status: ❌ Missing**
+
+**Why:** Not implemented anywhere. Combat resolves instantly with no impact pause — a standard game feel technique.
+
+### Slow Motion
+**Status: ❌ Missing**
+
+**Why:** No global `time_scale` mechanism exists. Only dash uses a local speed multiplier (not time scaling).
+
+### Screen Flash
+**Status: 🟡 Partial**
+
+**Why:** Entity-level flash exists in `RenderEffectSystem.trigger_flash()` (white tint on individual entities). No full-screen overlay flash exists.
+
+### Damage Numbers
+**Status: ❌ Missing**
+
+**Why:** Damage is applied silently — player sees only the health bar draining. No floating damage numbers.
+
+### Tween / Animation Framework
+**Status: 🟡 Partial**
+
+**Why:** Ad-hoc lerps scattered across `Camera` (smooth follow), `RenderEffectSystem` (squash/stretch), `ProximityFadeSystem`, and `GrassSystem`. No `Tween` class, no easing functions, no chainable animations.
+
+### Particle Engine
+**Status: ✅ Solid**
+
+**Why:** `ParticleEffectSystem` (`scripts/systems/rendering/particle_effect_system.py`) with 4000 pooled `FastParticle` slots, `__slots__`, ECS integration via `ParticleEmitter` component, emitter shapes (POINT/RECT/CIRCLE), friction, gravity, wind, sway, flicker, oscillation, shrink, fade, quadtree collision, Y-sorted rendering, surface caching.
+
+**Weaknesses:** No GPU acceleration, cache key grows unbounded, no color-over-lifetime curve, no particle subgroups, no additive blending.
+
+### VFX Framework
+**Status: 🟡 Fragmented**
+
+**Why:** Effects scattered across 6+ systems (`RenderEffectSystem`, `ParticleEffectSystem`, `Camera`, `GameScene`, `FastProjectileSystem`, `DestructibleSystem`). No unified `spawn_vfx(name, position, params)` API, no sequencing/timeline, no data-driven VFX config.
+
+---
+
+## AUDIO
+
+### Audio Manager
+**Status: ✅ Present**
+
+**Class:** `AudioManager` (`scripts/systems/audio/audio_manager.py`, 184 lines) — facade owning all sub-systems: `SoundConfig`, `SoundCache`, `ChannelPool`, `VoiceLimiter`, `Debouncer`, `MixerGroupManager`, `RequestQueue`, `MusicManager`.
+
+**Weaknesses:** `play_music()` ignores the `filepath` argument, spatial audio data (`x`, `y`) is stored but never consumed, no pause/resume lifecycle, `shutdown()` doesn't clean up queue/cache.
+
+### Music Manager
+**Status: ✅ Present**
+
+**Class:** `MusicManager` (`scripts/systems/audio/music_manager.py`, 154 lines) — playlist management, crossfade (simulated via volume tweening), shuffle, auto-advance.
+
+**Weaknesses:** Crossfade is a simulation (uses `queue()` which doesn't overlap), O(n) `list.index()` to find tracks, no music event callbacks.
+
+### Voice Limiting
+**Status: ✅ Present**
+
+**Class:** `VoiceLimiter` (`scripts/systems/audio/voice_limiter.py`, 32 lines) — limits simultaneous instances per `sound_id` with oldest-stop preemption.
+
+**Weaknesses:** `release()` is never called (dead code), no per-group voice limiting, timestamp stored but never read.
+
+### Audio Channels
+**Status: ✅ Present**
+
+**Class:** `ChannelPool` (`scripts/systems/audio/channel_pool.py`, 73 lines) — 32 fixed mixer channels, priority-based acquisition with preemption, dedication reservation.
+
+**Weaknesses:** `set_volume(group)` and `stop_group(group)` are dead code (volume handled through `MixerGroupManager` instead), priority finding selects the lowest-priority channel but not the oldest among equal priorities, dynamic attribute assignment on Channel objects (`_alloc_priority`, `_alloc_group`) is fragile.
+
+### Sound Queue
+**Status: ✅ Present**
+
+**Classes:** `RequestQueue` + `AudioRequest` (`scripts/systems/audio/request_queue.py`, 57 lines) — per-frame batching with deduplication.
+
+**Weaknesses:** Strictly FIFO — doesn't sort by priority despite priority field existing, dedup is destructive to other field values, no actual thread safety despite "thread-safe(ish)" comment.
+
+### Sound Priority
+**Status: 🟡 Partial**
+
+**Why:** Priority field exists in `SoundDefinition` and is used for channel preemption, but is **not** used for queue ordering, debounce bypass, or voice limiter preemption.
+
+### Audio Groups
+**Status: ✅ Present**
+
+**Classes:** `MixerGroup`, `MixerGroupManager` (`scripts/systems/audio/mixer_group.py`, 47 lines) — 8 groups (master, music, sfx, ui, ambient, player, enemy, boss), multiplicative volume calculation.
+
+**Weaknesses:** `add_channel()` and `channel_indices` are dead code, groups are hardcoded, unknown groups silently fall back to "sfx", volume can be boosted beyond 1.0 (risk of clipping).
+
+### Sound Variations
+**Status: ✅ Present**
+
+**Why:** `SoundVariation` dataclass with weighted random selection. Preloaded into `SoundCache` at init. 8 sound IDs defined in `data/config/sounds.json`.
+
+**Weaknesses:** **No audio asset files exist** — `data/audio/` directory is missing; `SoundCache` silently skips missing files. `pitch_variation` defined but never applied (pygame has no native pitch control). `max_distance` defined but never used for spatial audio.
+
+---
+
+## ANIMATION
+
+### Animation System
+**Status: 🟡 Partially implemented**
+
+**Files:** `AnimationHandler` + `AnimationData` + `Animation` (`scripts/systems/animation/animation_handler.py`, 257 lines), `AnimationComponent` (`scripts/components/animation.py`, 32 lines), `AnimationSystem` (embedded in `scripts/systems/rendering/render_system.py`, 215 lines).
+
+**Weaknesses:** `AnimationData` mutates shared spritesheet state (all instances share mutation), render cache is per-instance and cleared at 60 entries (periodic thrash), `resize_images()` modifies images in-place affecting all shared users.
+
+### Animation State Machine
+**Status: 🟡 Partially implemented**
+
+**Files:** `AnimationStateMachine` (`scripts/systems/animation/animation_state_machine.py`) — stored as an ECS **component** (not a system), holds priority list and transitions, subscribes to `ANIMATION_FINISHED`. Built from JSON via `entity_factory.py` with string-to-function resolution using `globals()`.
+
+**Weaknesses:** Architecture inversion — ASM is a component that acts like a system (holds refs to `component_manager` and `event_manager`). Transition conditions resolved via `globals().get()` — dangerously fragile. No immediate transitions (only on animation finish). `AnimationSystem` duplicates ASM logic by auto-overriding based on velocity.
+
+### Animation Events
+**Status: ❌ Missing**
+
+**Why:** Only `ANIMATION_FINISHED` event exists. No frame-level events (footstep on frame 3, projectile spawn on frame 5), no state-enter/state-exit events, no loop events.
+
+### Blend Transitions
+**Status: ❌ Missing**
+
+**Why:** No crossfade, no blend trees, no interpolation between animations. System hard-swaps between animations. Separate flipped animation entries in config (`movingflipped`, `idleflipped`) instead of programmatic flip.
+
+---
+
+## AI
+
+### Enemy State Machine
+**Status: 🟡 Partially implemented**
+
+**Files:** `EnemyState` enum (IDLE/PATROL/CHASE/ATTACK/FLEE/DEAD) in `scripts/utils/__init__.py`. `AIComponent` (`scripts/components/ai.py`, 13 lines). `AISystem` (`scripts/systems/combat/ai_system.py`, 310 lines) — dictionary-based behavior dispatch with 7 hardcoded FSM functions.
+
+**Weaknesses:** Magic numbers everywhere (`timer > 0.5`, `dist > 500`), PATROL state is a print-stub, PATROL is never transitioned to, `_default_behavior` is an alias for chase, no data-driven configuration for AI parameters, no debug visualization.
+
+### Behavior Tree
+**Status: ❌ Missing**
+
+**Why:** Not implemented anywhere. Despite being listed, there is no `BehaviorTree` class, no node types (Selector/Sequence/Condition/Action), no blackboard, no tree serialization.
+
+### AI Framework
+**Status: 🟡 Partially implemented**
+
+**Why:** `AISystem` dispatches to behavior functions based on string config. `AIComponent.data` dict is used for runtime mutable state. O(n²) ally search in `_support_behavior`.
+
+**Weaknesses:** No perception system (enemies always know player position globally), no line-of-sight, no awareness radius, no memory, no blackboard for coordinated behavior, no AI debug tools.
+
+### Boss Framework
+**Status: ❌ Missing**
+
+**Why:** Zero boss-specific code. Only "boss" appears as an audio mixer group name. No boss entity type, no phase transitions, no multi-stage health bar, no boss AI.
+
+### Attack Pattern System
+**Status: ✅ Present (with caveats)**
+
+**Files:** `AttackPattern` + `AttackPatternComponent` (`scripts/components/combat.py`), `AttackPatternSystem` (`scripts/systems/combat/attack_pattern_system.py`), 13 pattern functions in `bullet_patterns.py`.
+
+**Weaknesses:** Telegraph rendering creates new Surface per item per frame, `import random` inside method, warmup dash is hardcoded into the system, `shoot_fn` return types are inconsistent.
+
+### Bullet Pattern Framework
+**Status: ✅ Well-structured**
+
+**Files:** `bullet_patterns.py` (335 lines), `FastProjectileSystem` (509 lines), `projectile_visuals.py` (153 lines). 13 pattern functions, object-pooled projectiles with modifier pipeline and 50+ attributes.
+
+**Weaknesses:** `spawn_projectile()` has 30+ parameters (needs builder/config dataclass), modifier pipeline is monolithic (not plugin-extensible), no network-serializable definition, no visual pattern preview tool.
+
+### Data-driven Enemy Definitions
+**Status: 🟡 Partially implemented**
+
+**Files:** `data/config/entities.json` (796 lines) defines player + 4 enemy types + collision_box + destructible + foliage. Loaded by `EntityFactory`.
+
+**Weaknesses:** No schema validation (typo = silent runtime failure), no config inheritance (can't define base_enemy), ShadowComponent injected in Python code, string-based `shoot_fn` and condition resolution is fragile.
+
+---
+
+## COMBAT
+
+### Damage System
+**Status: 🟡 Partial**
+
+**Why:** Damage flows through event pipeline: `HitBoxSystem` or `FastProjectileSystem` emits `DAMAGE`, `HealthComponent.take_damage()` subscribes and applies. `HealthSystem` only decrements invincibility timer.
+
+**Weaknesses:** Business logic lives in component (`HealthComponent.take_damage()` — ECS anti-pattern), no damage modifier pipeline (the `effects` list on projectiles is defined but never processed), no damage type system, hardcoded iframe timer as class variable, death logic scattered across `HealthComponent`, `GameScene`, and `ai_system.py`.
+
+### HitBox/HurtBox
+**Status: ✅ Solid**
+
+**Why:** `HitBoxComponent` + `HurtBoxComponent` (`scripts/components/combat.py`) with bitmask layer system (`layer`/`mask`). `HitBoxSystem` uses `pygame.Rect.collidedictall()` for fast broadphase. Circular shape support via `CollisionShape` enum.
+
+**Weaknesses:** `HitBoxSystem.update()` does triple duty (projectile lifetime + hurtbox dict building + collision detection). Hardcoded player-only iframe gating. No spatial partitioning for collision loops. Non-projectile hitboxes (melee) silently ignored.
+
+### Status Effect Framework
+**Status: ❌ Missing**
+
+**Why:** `effects` list exists on `ProjectileComponent` and `FastProjectile` but is never iterated or applied anywhere. No `StatusEffectSystem`, no `StatusEffectComponent`, no effect type definitions.
+
+### Knockback
+**Status: ✅ Functional**
+
+**Why:** `KnockbackComponent` (`scripts/components/physics.py`) with velocity, force, duration, arc (up_force/gravity). Processed by `PhysicsEngine`.
+
+**Weaknesses:** Enemy-only — player never receives knockback. `KnockbackComponent.update()` accesses `component_manager` directly (system-behavior in a component). Hardcoded values with no per-weapon scaling.
+
+### Invulnerability Frames
+**Status: 🟡 Partial**
+
+**Why:** `HealthComponent.invincibility_timer` and `iframetimer = 1/6`. Checked in `take_damage()`. Decremented by `HealthSystem`.
+
+**Weaknesses:** Iframe gate is player-only in `HitBoxSystem` (enemies get extra collision checks every frame). Single global duration. No visual feedback layer tied to iframe state.
+
+### Material / Impact System
+**Status: ❌ Missing**
+
+**Why:** No `MaterialComponent`, no `ImpactSystem`. `target_type` is a hardcoded string ("enemy"/"environment"). Impact particle spawning is manual in `GameScene` event handlers. No impact audio integration.
+
+---
+
+## RENDERING
+
+### Camera System
+**Status: ✅ Solid**
+
+**Why:** `Camera` (`scripts/systems/rendering/camera.py`) — smooth lerp follow (frame-rate-independent via `1 - exp(-speed * dt)`), screen shake, mouse-relative offset, cached scroll/rect/center.
+
+**Weaknesses:** No dead zone or look-ahead, zoom is unused (`self.zoom` set but never consumed), `CENTER` is a global constant, no boundaries/constraints, single target only.
+
+### Lighting
+**Status: ❌ Absent**
+
+**Why:** No lighting infrastructure at all. No ambient light, point lights, lightmaps, or normal maps. Render pipeline draws directly with no lighting pass.
+
+### Shadows
+**Status: 🟡 Partial**
+
+**Why:** Two types: entity blob shadows (`ShadowComponent` with pre-rendered ellipse surfaces) and wall drop shadows (hardcoded dark rectangles below lowest wall tiles in `tilemap.py`).
+
+**Weaknesses:** Blob shadows are static ellipses — don't deform with height or light direction. Wall shadows are crude (hardcoded `(0,0,0,100)` alpha). No shadow caster/receiver distinction. No connection to lighting system (which doesn't exist).
+
+### Post Processing
+**Status: ❌ Absent**
+
+**Why:** No post-processing. Only `pygame.transform.scale` for pixel-art upscaling. No bloom, color grading, vignette, or scanlines.
+
+### Layered Rendering
+**Status: ✅ Solid**
+
+**Why:** `Tilemap.render()` with layer ordering from JSON, Y-sorted entities interleaved with y-sort tiles. Chunk-based pre-baking for performance. Y-sort queue with `(sort_y, type, surf, pos, ...)` tuples.
+
+**Weaknesses:** Single flat y-sort queue causes O(n log n) sort per frame for all entities/particles/grass. No per-layer blend mode configuration. Layer order from JSON insertion order (not configurable priority).
+
+### Sprite Sorting
+**Status: ✅ Functional**
+
+**Why:** Y-sort queue with secondary type sort. `YSortRender` component for pivot offset. Batch blits via `pygame.Surface.blits()`.
+
+**Weaknesses:** Single sort key (Y-only; ties cause z-fighting). Sort key is `pos.y` not bottom-of-sprite (tall sprites sort incorrectly). Particle leaf Y-sort hack uses magic `+100` offset. `flush()` called per animation frame defeats batching.
+
+---
+
+## UI
+
+### UI Framework
+**Status: ❌ Absent**
+
+**Why:** No `UIManager`, no `UIElement` hierarchy, no widget system. `render_ui()` in `GameScene` (150+ lines) draws everything procedurally — health bars, FPS, bomb cooldown, death overlay — using raw `pygame.font.Font.render()` and `blit()`.
+
+**Weaknesses:** No reusable widgets, no layout system, positions are hardcoded pixels, no click/hover/input handling, no responsive scaling.
+
+### UI Animation System
+**Status: ❌ Absent**
+
+**Why:** No `UIAnimationSystem`. Health bar juice is manually lerped in `GameScene`. No tweening, no enter/exit transitions, no stagger/sequence.
+
+### Notification System
+**Status: ❌ Absent**
+
+**Why:** No notification/toast system. No queue, no templates, no audio integration.
+
+### Menus
+**Status: ❌ Absent**
+
+**Why:** No main menu, pause menu, settings menu, or inventory. Only interaction is "press R to respawn" on death screen. No scene stack for overlay menus.
+
+### HUD
+**Status: 🟡 Partial**
+
+**Why:** Procedurally rendered in `GameScene.render_ui()` — FPS, bomb cooldown, dash charges, wind magnitude, health bar with drain effect, death overlay. Text caching via `_ui_text_cache` dict.
+
+**Weaknesses:** Monolithic 150-line method, debug elements mixed with gameplay HUD, health bar re-rendered every frame even when unchanged, no individual HUD element toggle/config, no numeric health display, text cache limited to 200 entries with no eviction.
+
+---
+
+## TOOLS
+
+### Debug Overlay
+**Status: ❌ Missing**
+
+**Why:** No toggleable debug overlay. FPS counter is hardcoded into `render_ui()`. No support for showing collision boxes, quadtree nodes, entity counts, or system timings.
+
+### Performance Profiler
+**Status: 🟡 Partial**
+
+**Why:** `profile_game.py` exists as a standalone script wrapping the game loop with `cProfile`. No in-game runtime profiler with per-system timing or frame-time display.
+
+### Entity Editor
+**Status: ✅ Present**
+
+**Why:** `entity_editor.py` (464 lines) — Tkinter-based editor with component field editing, animation preview, entity list, JSON save/load. 11 hardcoded component schemas.
+
+**Weaknesses:** Hardcoded schemas (not data-driven from actual components), hacky preview via file I/O (save to `preview_temp.png`, read with Tkinter), tightly coupled to both Pygame and Tkinter, no validation feedback.
+
+### Collision Visualization
+**Status: ❌ Missing**
+
+**Why:** No in-game collision visualization. Only the EntityEditor's preview shows hurtbox/collisionbox outlines. No way to see quadtree nodes, collision grid cells, or hitbox overlaps at runtime.
+
+### Animation Preview
+**Status: 🟡 Partial**
+
+**Why:** Embedded in `EntityEditor` — animation playback works but uses hacky file I/O bridge between Pygame and Tkinter. No standalone animation browser/tester. No preview of transitions or state machine behavior.
+
+### Hot Reloading
+**Status: ❌ Missing**
+
+**Why:** No file watcher, no `importlib.reload` usage, no asset hot-swap. All configs and code require full game restart.
+
+---
+
+## DATA DRIVEN
+
+### Config Files
+**Status: ✅ Present**
+
+**Files:** `entities.json` (796 lines), `sounds.json` (98 lines), `foliage_wind*.json`, level files `1.json`–`5.json`, animation `config.json`, `menu_positions.json`, `wall_config.json`, `8_bit_autotiling.json`.
+
+**Weaknesses:** No schema validation, no hot-reload, `entities2.json` is dead/unreferenced, hardcoded paths to configs, no fallback/default mechanism.
+
+### JSON/YAML Definitions
+**Status: 🟡 Partial**
+
+**Why:** JSON used extensively. YAML not used at all. JSON lacks comments for complex configs.
+
+### Scriptable Enemy Data
+**Status: ✅ Present**
+
+**Why:** Enemy definitions in `entities.json` with component data, attack patterns, state machine configs. Loaded by `EntityFactory`.
+
+**Weaknesses:** No inheritance between enemy types, `ShadowComponent` injected in Python code, string-based `shoot_fn` and condition lookup not validated at load time.
+
+### Loot Tables
+**Status: ❌ Missing**
+
+**Why:** No loot/drop system. No item definitions, no drop logic, no reward on enemy death.
+
+### Dialogue Data
+**Status: ❌ Missing**
+
+**Why:** No dialogue system. No conversation trees, no NPC interaction.
+
+---
+
+## CODE QUALITY
+
+| Dimension | Score | Key Issues |
+|-----------|-------|------------|
+| **Modularity** | 6/10 | Good ECS separation, but `GameScene` god class, `utils/__init__.py` is a 382-line dumping ground, duplicate grass logic in `grass_manager.py` and `grass_system.py`, empty `scripts/tools/` package |
+| **SOLID Principles** | 5/10 | SRP violated most severely in `GameScene` (841 lines, 15+ responsibilities), also `physics_engine.py` and `EntityEditor`. OCP violated in `EntityFactory` — needs modification to add component types |
+| **Separation of Concerns** | 4/10 | `GameScene` mixes scene management, physics, particles, water detection, UI rendering, and respawn logic. `RenderSystem` has back-references to `CombatSystem` and `DestructibleSystem`. `EntityManager` knows about `ParticleEmitter` |
+| **Extensibility** | 6/10 | ECS makes adding components easy, but no plugin/module system, no system registry, no config-driven system ordering |
+| **Maintainability** | 4/10 | Dead code (`entities2.json`, `utils_del.py`), duplicate logic (grass in 2 files, spritesheet loading in 3+ locations), hardcoded paths (10+ locations), 36+ print-debug statements, bare except blocks, 307-line `todo.txt`, inconsistent file naming (`colour_pallete_replacer.py` typo) |
+| **Naming Consistency** | 3/10 | `Grass_Manager` vs `GrassSystem`, `Level_Editor/` vs `level_editor.py`, `Grass_Blade` class, `get_cached_text` vs `_on_projectile_collision` |
+| **Circular Dependencies** | 5/10 | 6+ late imports to work around circular deps: `render_system.py` imports `GrassSystem` inside `__init__`, `entity_manager.py` imports components inside methods, `entity_factory.py` imports `ParticleEmitter` inside `create_foliage()` |
+| **Coupling** | 4/10 | `GameScene` instantiated with 15+ systems. `RenderSystem` has back-references to `CombatSystem` and `DestructibleSystem`. `PhysicsEngine` checks `EnemyTagComponent` directly. `EntityManager` accesses specific component types. Global mutable state (`LEVEL=5`, `SCALE=1`) |
+| **Reusability** | 5/10 | Audio system, ECS core, `EventManager`, `ResourceManager` are reusable. `GrassSystem` is tightly coupled to tilemap/camera. `EntityEditor` is coupled to both Tkinter and Pygame |
+
+---
+
+## SUMMARY TABLE
+
+| System | Status | Confidence | Notes |
+|--------|--------|------------|-------|
+| **Event Bus** | 🟡 Partial | High | Generic emit/subscribe but no type safety, special-case emitters, no weak refs |
+| **ECS Architecture** | ✅ Full | High | Complete but with private-dict access violations and no component pooling |
+| **Scene Management** | 🟡 Partial | High | Only one concrete scene, God class `GameScene`, no scene stack or transitions |
+| **Resource Manager** | 🟡 Partial | High | Good caching but no eviction, no async, audio assets split into separate system |
+| **Save/Load** | ❌ Missing | High | No infrastructure at any level |
+| **Object Pooling** | 🟡 Partial | High | Ad-hoc per-system pools, no generic abstraction |
+| **Dependency Injection** | ❌ Missing | High | Service Locator pattern with `GameContext`, testing impractical |
+| **Juice Manager** | 🟡 Partial | High | No central coordinator, effects scattered across systems |
+| **Camera Shake** | ✅ Present | High | Functional but no decay curve, no directional shake, no patterns |
+| **Hit Stop** | ❌ Missing | High | No impact pause — combat feels flat |
+| **Slow Motion** | ❌ Missing | High | No global time scaling |
+| **Screen Flash** | 🟡 Partial | Medium | Entity flash only, no full-screen flash |
+| **Damage Numbers** | ❌ Missing | High | No damage feedback beyond health bar |
+| **Tween Framework** | 🟡 Partial | High | Ad-hoc lerps everywhere, no Tween class, no easing |
+| **Particle Engine** | ✅ Present | High | Object-pooled, feature-rich, but no GPU, no color-over-lifetime |
+| **VFX Framework** | 🟡 Partial | High | Fragmented across 6+ systems, no unified API |
+| **Audio Manager** | ✅ Present | High | Well-modularized, but `play_music()` ignores filepath argument |
+| **Music Manager** | ✅ Present | High | Crossfade is simulated, no event callbacks |
+| **Voice Limiting** | ✅ Present | Medium | `release()` dead code, no per-group limiting |
+| **Audio Channels** | ✅ Present | Medium | Dead code methods, fragile monkey-patching of Channel objects |
+| **Sound Queue** | ✅ Present | Medium | FIFO only, priority field ignored for ordering |
+| **Sound Priority** | 🟡 Partial | Medium | Used for channel preemption only, ignored in queue/debounce/voice limiting |
+| **Audio Groups** | ✅ Present | Medium | Dead code methods, groups hardcoded |
+| **Sound Variations** | ✅ Present | Medium | **No audio files exist**, pitch variation unimplemented |
+| **Animation System** | 🟡 Partial | High | Shared state mutation, no blend transitions |
+| **Animation State Machine** | 🟡 Partial | High | Component masquerading as system, `globals()` lookup for conditions |
+| **Animation Events** | ❌ Missing | High | Only `ANIMATION_FINISHED`, no frame events |
+| **Blend Transitions** | ❌ Missing | High | No crossfade, no blend trees |
+| **Enemy State Machine** | 🟡 Partial | High | Hardcoded magic numbers, PATROL is a stub, not data-driven |
+| **Behavior Tree** | ❌ Missing | High | Not implemented |
+| **AI Framework** | 🟡 Partial | High | No perception, no blackboard, O(n²) ally search |
+| **Boss Framework** | ❌ Missing | High | Zero boss-specific code |
+| **Attack Pattern System** | ✅ Present | Medium | Per-frame surface allocations in telegraph |
+| **Bullet Pattern Framework** | ✅ Present | Medium | 30+ parameter spawn function, monolithic modifier pipeline |
+| **Data-driven Enemy Defs** | 🟡 Partial | High | No schema validation, no inheritance |
+| **Damage System** | 🟡 Partial | High | Logic in component (anti-pattern), no modifier pipeline, no damage types |
+| **HitBox/HurtBox** | ✅ Present | High | Bitmask layer system, but no spatial partitioning, player-only iframe gating |
+| **Status Effects** | ❌ Missing | High | `effects` field is dead code |
+| **Knockback** | ✅ Present | Medium | Enemy-only, component acts like a system |
+| **Invulnerability Frames** | 🟡 Partial | Medium | Player-only in hitbox system, single global duration |
+| **Material/Impact** | ❌ Missing | High | No material component, no impact system |
+| **Camera** | ✅ Present | High | No dead zone, no look-ahead, unused zoom |
+| **Lighting** | ❌ Missing | High | Completely absent |
+| **Shadows** | 🟡 Partial | Medium | Static blob shadows, crude wall shadows |
+| **Post Processing** | ❌ Missing | High | Only pixel-art upscaling |
+| **Layered Rendering** | ✅ Present | Medium | Single flat y-sort, no per-layer blend mode config |
+| **Sprite Sorting** | ✅ Present | Medium | Y-only sort key, per-animation flush defeats batching |
+| **UI Framework** | ❌ Missing | High | No widgets, no layout system, all procedural |
+| **UI Animation** | ❌ Missing | Medium | No tweening for UI |
+| **Notifications** | ❌ Missing | Medium | No toast/notification system |
+| **Menus** | ❌ Missing | High | No main menu, no pause menu |
+| **HUD** | 🟡 Partial | Medium | Hardcoded in 150-line method, no toggleable elements |
+| **Debug Overlay** | ❌ Missing | Medium | No toggleable overlay |
+| **Performance Profiler** | 🟡 Partial | Medium | Standalone script only, no in-game profiler |
+| **Entity Editor** | ✅ Present | Medium | Functional but tightly coupled, hacky preview |
+| **Collision Visualization** | ❌ Missing | Medium | No runtime collision debug |
+| **Animation Preview** | 🟡 Partial | Medium | Embedded in EntityEditor only |
+| **Hot Reloading** | ❌ Missing | High | No file watcher or hot-swap |
+| **Config Files** | ✅ Present | Medium | Multiple JSON configs but no validation |
+| **JSON/YAML** | 🟡 Partial | Low | JSON only, no YAML |
+| **Scriptable Enemy Data** | ✅ Present | Medium | No inheritance, no load-time validation |
+| **Loot Tables** | ❌ Missing | Medium | No drop system |
+| **Dialogue Data** | ❌ Missing | Low | No dialogue system |
+
+---
+
+## HIGH IMPACT MISSING SYSTEMS
+
+Ranked by how much they would improve the project:
+
+| Rank | Missing System | Impact | Why |
+|------|---------------|--------|-----|
+| 1 | **Save/Load System** | Gameplay Persistence | Game has no way to save progress, settings, or state — blocks any meaningful game design |
+| 2 | **Menu System** | User Experience | No main menu, pause menu, or settings — players can't configure or start/pause the game |
+| 3 | **UI Framework** | Developer Velocity | All UI is procedural and non-reusable — building new screens requires rewriting the same rendering code |
+| 4 | **Behavior Tree** | AI Extensibility | Current FSM-based AI is hardcoded, non-composable, and impossible to extend without editing system code |
+| 5 | **Status Effect Framework** | Combat Depth | `effects` field exists as dead data — adding poison/stun/burn would unlock significant gameplay variety |
+| 6 | **Hit Stop / Freeze Frames** | Game Feel | Most impactful single game-feel improvement — makes every hit feel weighty with minimal code |
+| 7 | **Damage Numbers** | Player Feedback | Critical combat feedback missing — players have no numeric sense of damage dealt/received |
+| 8 | **Material / Impact System** | VFX + Audio Depth | Without material-based reactions, all impacts look and sound identical regardless of surface |
+| 9 | **Hot Reloading** | Development Workflow | Developers must restart for every code/config change — significantly slows iteration |
+| 10 | **Lighting System** | Visual Quality | The lack of lighting is the single biggest gap in visual presentation |
+
+---
+
+## TOP 10 ARCHITECTURAL IMPROVEMENTS
+
+| Rank | Improvement | Long-term Benefit | Effort |
+|------|-------------|-------------------|--------|
+| 1 | **Refactor `GameScene` (841 lines) into focused subsystems** | Eliminates the single biggest maintainability risk. Extract: `PlayerController`, `ParticleEventManager`, `GameHUD`, `GameWorldState` | High |
+| 2 | **Replace Service Locator with DI container** | Enables unit testing, clarifies dependency graph, eliminates late imports, enables scoped services | Medium |
+| 3 | **Add typed Event dataclasses** | Prevents callback signature mismatches, enables event payload documentation, eliminates `**kwargs` abuse | Low |
+| 4 | **Add component serialization for save/load** | Unlocks game persistence, checkpoints, settings, and replay. Add `serialize()`/`deserialize()` to all components | High |
+| 5 | **Fix shared mutable state in `AnimationData`** | Prevents subtle cross-entity animation bugs. Clone spritesheet data per-entity or use copy-on-write | Medium |
+| 6 | **Implement generic `ObjectPool` class** | Eliminates duplicated pool logic across 3+ systems, improves maintainability and consistency | Low |
+| 7 | **Add JSON schema validation at load time** | Catches config errors immediately rather than at runtime. Use Cerberus or JSON Schema | Low |
+| 8 | **Implement `TweenSystem` with easing functions** | Foundational for all game feel — replaces ad-hoc lerps with composable, reusable tweens across camera, UI, particles, and effects | Medium |
+| 9 | **Replace `globals()` string resolution with registered factories** | Eliminates fragile `globals().get("make_" + cond_str)` pattern in state machine conditions. Use dict registry with validation at build time | Low |
+| 10 | **Add spatial partitioning to hitbox/hurtbox collisions** | Prevents performance degradation with many entities. Reuse existing dynamic quadtree from physics | Medium |

@@ -1,2 +1,2 @@
-pygame-ce
-tkinter
+pygame-ce>=2.5
+# tkinter is part of Python stdlib. On Debian/Ubuntu install: sudo apt install python3-tk

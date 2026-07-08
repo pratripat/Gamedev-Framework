@@ -1,0 +1,98 @@
+{
+    "player_shoot": {
+        "variations": [
+            {"file": "sfx/player_shoot_1.wav", "weight": 1.0},
+            {"file": "sfx/player_shoot_2.wav", "weight": 1.0}
+        ],
+        "volume": 0.5,
+        "cooldown": 0.05,
+        "max_instances": 3,
+        "priority": 140,
+        "group": "player",
+        "volume_variation": 0.1
+    },
+    "enemy_shoot": {
+        "variations": [
+            {"file": "sfx/enemy_shoot_1.wav", "weight": 1.0}
+        ],
+        "volume": 0.4,
+        "cooldown": 0.02,
+        "max_instances": 4,
+        "priority": 100,
+        "group": "enemy",
+        "volume_variation": 0.15
+    },
+    "player_hit": {
+        "variations": [
+            {"file": "sfx/player_hit.wav", "weight": 1.0}
+        ],
+        "volume": 0.7,
+        "cooldown": 0.0,
+        "max_instances": 2,
+        "priority": 200,
+        "group": "player"
+    },
+    "enemy_hit": {
+        "variations": [
+            {"file": "sfx/enemy_hit.wav", "weight": 1.0}
+        ],
+        "volume": 0.5,
+        "cooldown": 0.0,
+        "max_instances": 6,
+        "priority": 120,
+        "group": "enemy"
+    },
+    "explosion": {
+        "variations": [
+            {"file": "sfx/explosion_1.wav", "weight": 1.0},
+            {"file": "sfx/explosion_2.wav", "weight": 0.7}
+        ],
+        "volume": 0.8,
+        "cooldown": 0.1,
+        "max_instances": 3,
+        "priority": 180,
+        "group": "sfx",
+        "volume_variation": 0.1
+    },
+    "dash": {
+        "variations": [
+            {"file": "sfx/dash.wav", "weight": 1.0}
+        ],
+        "volume": 0.4,
+        "cooldown": 0.0,
+        "max_instances": 1,
+        "priority": 160,
+        "group": "player"
+    },
+    "ui_click": {
+        "variations": [
+            {"file": "sfx/ui_click.wav", "weight": 1.0}
+        ],
+        "volume": 0.3,
+        "cooldown": 0.0,
+        "max_instances": 1,
+        "priority": 110,
+        "group": "ui"
+    },
+    "boss_warn": {
+        "variations": [
+            {"file": "sfx/boss_warn.wav", "weight": 1.0}
+        ],
+        "volume": 0.9,
+        "cooldown": 0.0,
+        "max_instances": 1,
+        "priority": 255,
+        "group": "boss"
+    },
+    "water_splash": {
+        "variations": [
+            {"file": "sfx/water_splash.wav", "weight": 1.0}
+        ],
+        "volume": 0.3,
+        "cooldown": 0.05,
+        "max_instances": 2,
+        "priority": 90,
+        "group": "ambient",
+        "volume_variation": 0.2
+    }
+}
