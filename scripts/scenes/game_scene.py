@@ -77,6 +77,10 @@ class GameScene(Scene):
         self.hb_scale_juice = 1.0
         self.hb_rot_juice = 0.0
 
+        # Death / Respawn state
+        self._dead = False
+        self._respawn_key_held = False
+
     def start(self):
         print(f"[SCENE] Starting scene: '{self.id}' (DEBUG)")
 
@@ -126,6 +130,12 @@ class GameScene(Scene):
             target_type="enemy",
             size=10.0 # FastProjectiles don't have a reliable size parameter passed in DAMAGE yet, 10.0 is a good default
         ))
+
+        # Player death -> show death screen
+        def _on_player_death(entity_id, **kwargs):
+            if entity_id == self.player:
+                self._dead = True
+        self.ctx.event_manager.subscribe(GameSceneEvents.DEATH, _on_player_death)
         
         # Water death check
         self.ctx.event_manager.subscribe('request_water_check', self._handle_water_check)
@@ -183,6 +193,15 @@ class GameScene(Scene):
         )
   
     def update(self, fps, dt):
+        if self._dead:
+            keys = pygame.key.get_pressed()
+            if keys[pygame.K_r] and not self._respawn_key_held:
+                self._respawn_key_held = True
+                self._respawn()
+            elif not keys[pygame.K_r]:
+                self._respawn_key_held = False
+            return
+
         # Update the physics engine
         self.timer_system.update(dt)
 
@@ -322,10 +341,7 @@ class GameScene(Scene):
                     fade=False, shrink=True, friction=0.8
                 )
         
-    def _on_walk(self, **kwargs):
-        pos = kwargs.get('pos')
-        vel = kwargs.get('vel')
-        eid = kwargs.get('entity_id')
+    def _on_walk(self, pos, vel, entity_id):
         if not pos or not vel: return
 
         # Spawn dust behind feet directly without ECS
@@ -544,6 +560,54 @@ class GameScene(Scene):
         # Auto-delete
         self.component_manager.add(ghost_id, TimerComponent(0.4, lambda: self.entity_manager.delete_entity(ghost_id)))
 
+    def _respawn(self):
+        self.component_manager.clear_all()
+        self.entity_manager.entities.clear()
+        self.entity_manager.to_remove.clear()
+        self.entity_manager.dead_entities.clear()
+        self.entity_manager.player_id = None
+
+        ps = self.render_system.particle_effect_system
+        ps.active_indices.clear()
+        ps.free_indices = list(range(ps.capacity))
+        ps._particle_cache.clear()
+        for p in ps.particles:
+            p.active = False
+
+        fpps = self.combat_system.projectile_system
+        for p in fpps.projectiles:
+            p.active = False
+        fpps.active_indices.clear()
+        fpps.free_indices = list(range(fpps.capacity))
+        fpps._pulse_cache.clear()
+        fpps._shared_hits.clear()
+        fpps._shared_seen.clear()
+
+        self.render_system._pulse_cache.clear()
+        self.render_system._sprite_transform_cache.clear()
+        self.render_system.grass_system.blades.clear()
+        self.render_system.grass_system._render_cache.clear()
+
+        self.camera = Camera()
+
+        self.health_drain = 100.0
+        self.hb_scale_juice = 1.0
+        self.hb_rot_juice = 0.0
+
+        self.level = Level(self.ctx)
+        self.player = self.level.load(self.current_level, self.component_manager, self.entity_factory, self.entity_manager, self.render_system)
+
+        self.player_input_system = PlayerInputSystem(entity_id=self.player, event_manager=self.ctx.event_manager)
+        self.ai_system = AISystem(player_entity_id=self.player, component_manager=self.component_manager, event_manager=self.ctx.event_manager)
+        self.camera.set_target(self.player)
+
+        p_health = self.component_manager.get(self.player, HealthComponent)
+        if p_health:
+            self.health_drain = p_health.health
+
+        self._dead = False
+        self._respawn_key_held = False
+
     def render(self, surface):
         self.render_system.render(surface, self.level.tilemap, self.camera)
 
@@ -671,3 +735,31 @@ class GameScene(Scene):
             pos_y = screen.get_height() - temp_hb_surf.get_height() - 10
             
             screen.blit(temp_hb_surf, (pos_x, pos_y))
+
+        # Death overlay
+        if self._dead:
+            overlay = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 180))
+            screen.blit(overlay, (0, 0))
+            try:
+                big_font = pygame.font.SysFont(None, 72)
+                small_font = pygame.font.SysFont(None, 36)
+            except Exception:
+                big_font = self.font
+                small_font = self.font
+            if big_font:
+                death_text = big_font.render("YOU DIED", True, (200, 50, 50))
+                death_shadow = big_font.render("YOU DIED", True, (0, 0, 0))
+                dw, dh = death_text.get_size()
+                sx = (screen.get_width() - dw) // 2
+                sy = (screen.get_height() - dh) // 2 - 40
+                screen.blit(death_shadow, (sx + 2, sy + 2))
+                screen.blit(death_text, (sx, sy))
+            if small_font:
+                respawn_text = small_font.render("Press R to Respawn", True, (255, 255, 255))
+                respawn_shadow = small_font.render("Press R to Respawn", True, (0, 0, 0))
+                rw, rh = respawn_text.get_size()
+                rx = (screen.get_width() - rw) // 2
+                ry = (screen.get_height() - rh) // 2 + 20
+                screen.blit(respawn_shadow, (rx + 2, ry + 2))
+                screen.blit(respawn_text, (rx, ry))

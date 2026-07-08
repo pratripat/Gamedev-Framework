@@ -157,6 +157,8 @@ class RenderSystem:
                 item[2].animation.render(surface, item[3], scale=item[4], tint=item[5], alpha=item[6], angle=item[7], offset=pygame.Vector2(0,0))
         flush()
 
+
+
     def _get_pulse_surf(self, pulse, dr):
         ck = (pulse.color[0], pulse.color[1], pulse.color[2], pulse.alpha, dr)
         surf = self._pulse_cache.get(ck)

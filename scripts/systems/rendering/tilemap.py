@@ -20,6 +20,10 @@ class Tilemap:
         self.water_frame_timer = 0.0
         self.WATER_FPS = 8
 
+        # Wall shadow state: positions of lowest wall tiles + cached shadow surface
+        self._bottom_wall_positions = set()
+        self._wall_shadow_surf = None
+
         self.load_layers(layers, tilemaps, resource_manager, exception_layers)
     
     def _get_chunk_pos(self, pos):
@@ -86,6 +90,25 @@ class Tilemap:
                 }
             
         self.create_chunk_images(exception_layers)
+        self._compute_bottom_wall_positions()
+
+    def _compute_bottom_wall_positions(self):
+        wall_layer = self.layers.get("wall", {})
+        all_wall_positions = set()
+        for chunk in wall_layer.values():
+            all_wall_positions.update(chunk.keys())
+
+        self._bottom_wall_positions.clear()
+        for pos in all_wall_positions:
+            below = (pos[0], pos[1] + self.TILE_SIZE)
+            if below not in all_wall_positions:
+                self._bottom_wall_positions.add(pos)
+
+        if self._bottom_wall_positions:
+            sh = self.TILE_SIZE // 2
+            sw = self.TILE_SIZE
+            self._wall_shadow_surf = pygame.Surface((sw, sh), pygame.SRCALPHA)
+            self._wall_shadow_surf.fill((0, 0, 0, 100))
 
     def update(self, dt):
         if self.water_frames:
@@ -279,10 +302,10 @@ class Tilemap:
         if overlay_blits:
             surface.blits(overlay_blits)
 
-    
     def get_ysort_items(self, camera_rect):
         """Returns a list of tiles from ysort_layers that are within camera_rect."""
         items = [] # (sort_y, surface, pos)
+        SHADOW_OFFSET = 5
         for layer_id in self.ysort_layers:
             if layer_id not in self.layers:
                 continue
@@ -298,5 +321,15 @@ class Tilemap:
                         # Standard Y-sorting: sort by bottom edge of the tile
                         sort_y = tile_pos[1] + self.TILE_SIZE
                         items.append((sort_y, "tile", tile_data["image"], tile_pos))
+
+                    # Shadow for lowest wall tiles — on top of wall tile but y-sorted
+                    # so entities sort in front/behind correctly
+                    if layer_id == "wall" and tile_pos in self._bottom_wall_positions and self._wall_shadow_surf:
+                        shadow_y = tile_pos[1] + self.TILE_SIZE
+                        sh = self._wall_shadow_surf.get_height()
+                        shadow_rect = pygame.Rect(tile_pos[0], tile_pos[1] + self.TILE_SIZE - SHADOW_OFFSET, self.TILE_SIZE, sh)
+                        if camera_rect.colliderect(shadow_rect):
+                            items.append((shadow_y, "tile", self._wall_shadow_surf, (tile_pos[0], tile_pos[1] + self.TILE_SIZE - SHADOW_OFFSET)))
+
         return items
                     

@@ -24,7 +24,7 @@
             "center": false
         },
         "HealthComponent": {
-            "max_health": 10000
+            "max_health": 100
         },
         "CollisionComponent": {
             "offset_x": 0.0,
