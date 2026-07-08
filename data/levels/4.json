@@ -10193,7 +10193,7 @@
                     1.0
                 ]
             ],
-            "autotile_config": "/home/pratyush/Documents/puttar/github-ssh/OptimizedGamedevFramework/Level_Editor/data/autotile/8_bit_autotiling.json"
+            "autotile_config": "Level_Editor/data/autotile/8_bit_autotiling.json"
         },
         "water": {
             "tiles": [
@@ -14188,7 +14188,7 @@
                     1.0
                 ]
             ],
-            "autotile_config": "/home/pratyush/Documents/puttar/github-ssh/OptimizedGamedevFramework/Level_Editor/data/autotile/8_bit_autotiling.json"
+            "autotile_config": "Level_Editor/data/autotile/8_bit_autotiling.json"
         },
         "path": {
             "tiles": [
@@ -15823,7 +15823,7 @@
                     1.0
                 ]
             ],
-            "autotile_config": "/home/pratyush/Documents/puttar/github-ssh/OptimizedGamedevFramework/Level_Editor/data/autotile/8_bit_autotiling.json"
+            "autotile_config": "Level_Editor/data/autotile/8_bit_autotiling.json"
         },
         "wall": {
             "tiles": [
@@ -24448,7 +24448,7 @@
                     1.0
                 ]
             ],
-            "autotile_config": "/home/pratyush/Documents/puttar/github-ssh/OptimizedGamedevFramework/Level_Editor/data/autotile/8_bit_autotiling.json"
+            "autotile_config": "Level_Editor/data/autotile/8_bit_autotiling.json"
         },
         "player": {
             "tiles": [
@@ -24463,7 +24463,7 @@
                     1.0
                 ]
             ],
-            "autotile_config": "/home/pratyush/Documents/puttar/github-ssh/OptimizedGamedevFramework/Level_Editor/data/autotile/8_bit_autotiling.json"
+            "autotile_config": "Level_Editor/data/autotile/8_bit_autotiling.json"
         },
         "enemies": {
             "tiles": [
@@ -24478,7 +24478,7 @@
                     1.0
                 ]
             ],
-            "autotile_config": "/home/pratyush/Documents/puttar/github-ssh/OptimizedGamedevFramework/Level_Editor/data/autotile/8_bit_autotiling.json"
+            "autotile_config": "Level_Editor/data/autotile/8_bit_autotiling.json"
         },
         "foliage": {
             "tiles": [
@@ -24763,31 +24763,31 @@
                     1.0
                 ]
             ],
-            "autotile_config": "/home/pratyush/Documents/puttar/github-ssh/OptimizedGamedevFramework/Level_Editor/data/autotile/8_bit_autotiling.json"
+            "autotile_config": "Level_Editor/data/autotile/8_bit_autotiling.json"
         }
     },
     "tilemaps": {
-        "/home/pratyush/Documents/puttar/github-ssh/OptimizedGamedevFramework/data/graphics/tilemaps/grass.png": {
+        "data/graphics/tilemaps/grass.png": {
             "autotile": false,
             "autotile_config": null
         },
-        "/home/pratyush/Documents/puttar/github-ssh/OptimizedGamedevFramework/data/graphics/tilemaps/water.png": {
+        "data/graphics/tilemaps/water.png": {
             "autotile": true,
             "autotile_config": null
         },
-        "/home/pratyush/Documents/puttar/github-ssh/OptimizedGamedevFramework/data/graphics/tilemaps/path.png": {
+        "data/graphics/tilemaps/path.png": {
             "autotile": true,
             "autotile_config": null
         },
-        "/home/pratyush/Documents/puttar/github-ssh/OptimizedGamedevFramework/data/graphics/tilemaps/wall.png": {
+        "data/graphics/tilemaps/wall.png": {
             "autotile": true,
-            "autotile_config": "/home/pratyush/Documents/puttar/github-ssh/OptimizedGamedevFramework/Level_Editor/data/autotile/wall_config.json"
+            "autotile_config": "Level_Editor/data/autotile/wall_config.json"
         },
-        "/home/pratyush/Documents/puttar/github-ssh/OptimizedGamedevFramework/data/graphics/spritesheets/entities.png": {
+        "data/graphics/spritesheets/entities.png": {
             "autotile": false,
             "autotile_config": null
         },
-        "/home/pratyush/Documents/puttar/github-ssh/OptimizedGamedevFramework/data/graphics/spritesheets/foliage.png": {
+        "data/graphics/spritesheets/foliage.png": {
             "autotile": false,
             "autotile_config": null
         }

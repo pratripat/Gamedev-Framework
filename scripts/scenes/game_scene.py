@@ -2,20 +2,14 @@ import pygame, math
 
 from scripts.components.combat import HealthComponent
 from ..systems.scene.scene_manager import Scene
-#components
 from ..components.physics import Position, Velocity, CollisionComponent
-# from ..components.combat import HitBoxComponent, HurtBoxComponent
-from ..components.render_effect import RenderEffectComponent, YSortRender
 from ..ecs.component_manager import ComponentManager
-# from ..components.ai import AIComponent
 
-#systems
 from ..systems.core.timer_system import TimerSystem
 from ..ecs.entity_manager import EntityManager
 from ..ecs.entity_factory import EntityFactory
 from ..systems.input.player_input_system import PlayerInputSystem
 from ..systems.core.physics_engine import PhysicsEngine
-# from ..systems.animation.animation_handler import AnimationHandler
 from ..systems.rendering.render_system import AnimationSystem, RenderSystem
 from ..systems.rendering.camera import Camera
 from ..systems.combat.combat_system import CombatSystem
@@ -28,609 +22,519 @@ from ..systems.scene.level_manager import Level
 from ..weapons.bullet_patterns import *
 
 from ..utils import LEVEL, Inputs, GameSceneEvents, screen_to_virtual
+from ..utils.tween import TweenSystem
+from ..utils.events import ScreenShakeEvent
+from ..systems.gamefeel import GameFeelManager
+from ..systems.vfx import VFXManager
 
 import random
 
 from ..utils import Quadtree, VIRTUAL_WINDOW_SIZE
+from ..utils.events import AnimationEvent
+from ..systems.animation.animation_event_handler import AnimationEventHandler
+
+from .game_hud import GameHUD
+from .particle_event_coordinator import ParticleEventCoordinator
+from .respawn_manager import RespawnManager
+from ..systems.debug import Profiler, DebugOverlay
+
 
 class GameScene(Scene):
-    """
-    Represents the main game scene, managing entities, components, and physics.
-    """
+    """Orchestrates all game systems. Delegates UI, particles, and respawn
+    to focused sub-managers so the scene stays manageable as the project grows."""
+
     def __init__(self, ctx):
-        """
-        Initializes the game scene with an entity manager, component manager, and physics engine.
-        """
         super().__init__(id="game", ctx=ctx)
         self.component_manager = ComponentManager()
         self.camera = Camera()
         self._dynamic_quadtree = None
-        
+
+        self.tween_system = TweenSystem()
         self.timer_system = TimerSystem(self.component_manager)
 
-        self.entity_manager = EntityManager(component_manager=self.component_manager, event_manager=self.ctx.event_manager)
+        self.entity_manager = EntityManager(
+            component_manager=self.component_manager,
+            event_manager=self.ctx.event_manager
+        )
         self.entity_factory = EntityFactory()
 
         self.physics_engine = PhysicsEngine(self.component_manager, self.ctx.event_manager)
         self.animation_system = AnimationSystem(self.component_manager)
-        self.render_system = RenderSystem(self.ctx.event_manager, self.component_manager, self.entity_manager, self.ctx.resource_manager)
-        self.combat_system = CombatSystem(self.component_manager, self.entity_manager, self.camera, self.ctx.event_manager, self.ctx.resource_manager)
-        
-        # Link combat system to render system so projectiles can be drawn
-        self.render_system.combat_system = self.combat_system
+        self.render_system = RenderSystem(
+            self.ctx.event_manager, self.component_manager,
+            self.entity_manager, self.ctx.resource_manager
+        )
+        self.combat_system = CombatSystem(
+            self.component_manager, self.entity_manager,
+            self.camera, self.ctx.event_manager, self.ctx.resource_manager
+        )
 
+        self.render_system.combat_system = self.combat_system
         self.destructible_system = DestructibleSystem(self.component_manager, self.entity_manager)
         self.destructible_system.projectile_system = self.combat_system.projectile_system
+        self.destructible_system.particle_system = self.render_system.particle_effect_system
         self.render_system.destructible_system = self.destructible_system
+        self.render_system.render_effect_system.tween_system = self.tween_system
 
         self.level = Level(self.ctx)
         self.current_level = f'data/levels/{LEVEL}.json'
 
-        # Font for debug overlay (FPS)
-        try:
-            self.font = pygame.font.SysFont(None, 20)
-        except Exception:
-            # Fallback in case font subsystem isn't ready yet
-            self.font = None
+        # Sub-managers (created in start())
+        self.hud = None
+        self.particle_coordinator = None
+        self.respawn_manager = None
 
-        # Health Bar Assets & State
-        self.health_bar_img = self.ctx.resource_manager.get_image("data/graphics/images/health_bar.png")
-        if self.health_bar_img:
-            self.health_bar_img.set_colorkey((0, 0, 0))
+        self.gamefeel = None
+        self.vfx_manager = None
 
-        self.health_drain = 100.0 # Will be initialized in start()
-        self.health_red = (228, 59, 68)
-        self.health_orange = (247, 118, 34)
-        
-        self.hb_scale_juice = 1.0
-        self.hb_rot_juice = 0.0
+        self.profiler = Profiler()
+        self.debug_overlay = None
 
-        # Death / Respawn state
-        self._dead = False
-        self._respawn_key_held = False
+        self._game_time = 0.0
+        self._ripple_timer = 0.0
+
+        # Active tree shakes: {entity_id: {'orig_x': float, 'orig_y': float,
+        #   'strength': float, 'timer': float, 'duration': float}}
+        self._tree_shakes: dict[int, dict] = {}
+
+    # ------------------------------------------------------------------
+    # Scene lifecycle
+    # ------------------------------------------------------------------
 
     def start(self):
         print(f"[SCENE] Starting scene: '{self.id}' (DEBUG)")
 
-        self.player = self.level.load(self.current_level, self.component_manager, self.entity_factory, self.entity_manager, self.render_system)
-
-        self.player_input_system = PlayerInputSystem(entity_id=self.player, event_manager=self.ctx.event_manager)
-        self.ai_system = AISystem(player_entity_id=self.player, component_manager=self.component_manager, event_manager=self.ctx.event_manager)
-
+        self.player = self.level.load(
+            self.current_level, self.component_manager,
+            self.entity_factory, self.entity_manager, self.render_system
+        )
+        self.player_input_system = PlayerInputSystem(
+            entity_id=self.player, event_manager=self.ctx.event_manager
+        )
+        self.ai_system = AISystem(
+            player_entity_id=self.player,
+            component_manager=self.component_manager,
+            event_manager=self.ctx.event_manager
+        )
         self.camera.set_target(self.player)
 
-        # Initialize health UI state
-        p_health = self.component_manager.get(self.player, HealthComponent)
-        if p_health:
-            self.health_drain = p_health.health
+        # --- Sub-managers ---
+        font = self._create_font()
+        health_bar_img = self.ctx.resource_manager.get_image("data/graphics/images/health_bar.png")
+        self.hud = GameHUD(self.component_manager, font, health_bar_img, self.ctx.event_manager)
+        self.hud.set_player(self.player, self.player_input_system, self.render_system)
 
-        # Subscribe to player input events
-        self.ctx.event_manager.subscribe(Inputs.UP, lambda: self.player_input_system.on_move("up"), source=self.player)
-        self.ctx.event_manager.subscribe(Inputs.DOWN, lambda: self.player_input_system.on_move("down"), source=self.player)
-        self.ctx.event_manager.subscribe(Inputs.LEFT, lambda: self.player_input_system.on_move("left"), source=self.player)
-        self.ctx.event_manager.subscribe(Inputs.RIGHT, lambda: self.player_input_system.on_move("right"), source=self.player)
+        self.particle_coordinator = ParticleEventCoordinator(
+            self.render_system, self.component_manager, self.entity_manager
+        )
+        self.particle_coordinator.subscribe_all(self.ctx.event_manager)
 
-        self.ctx.event_manager.subscribe(Inputs.UP_RELEASE, lambda: self.player_input_system.on_move("up", held=False), source=self.player)
-        self.ctx.event_manager.subscribe(Inputs.DOWN_RELEASE, lambda: self.player_input_system.on_move("down", held=False), source=self.player)
-        self.ctx.event_manager.subscribe(Inputs.LEFT_RELEASE, lambda: self.player_input_system.on_move("left", held=False), source=self.player)
-        self.ctx.event_manager.subscribe(Inputs.RIGHT_RELEASE, lambda: self.player_input_system.on_move("right", held=False), source=self.player)
-        
-        self.ctx.event_manager.subscribe(Inputs.LEFT_HOLD, lambda: self.player_input_system.shoot(self.ctx.event_manager), source=self.player)
+        # Game-feel / juice systems
+        self.gamefeel = GameFeelManager(
+            camera=self.camera,
+            tween_system=self.tween_system,
+            component_manager=self.component_manager,
+            event_manager=self.ctx.event_manager,
+        )
+        self.vfx_manager = VFXManager(
+            gamefeel=self.gamefeel,
+            particle_coordinator=self.particle_coordinator,
+        )
 
-        self.ctx.event_manager.subscribe(Inputs.SPACE, lambda: self.player_input_system.spawn_bomb(self.component_manager, self.entity_manager, self.ctx.animation_handler, self.ctx.event_manager), source=self.player)
-        self.ctx.event_manager.subscribe(Inputs.SPACE_RELEASE, lambda: self.player_input_system.on_bomb_release(), source=self.player)
-        self.ctx.event_manager.subscribe(Inputs.DASH, lambda: self.player_input_system.dash(self.component_manager), source=self.player)
-        self.ctx.event_manager.subscribe(Inputs.DASH_RELEASE, lambda: self.player_input_system.on_dash_release(), source=self.player)
-        
-        # Screen shake event
-        self.ctx.event_manager.subscribe(GameSceneEvents.SCREEN_SHAKE, lambda **kwargs: self.camera.trigger_shake(kwargs.get('intensity', 5.0), kwargs.get('duration', 0.5)))
-        
-        # Particles events
-        self.ctx.event_manager.subscribe(GameSceneEvents.PROJECTILE_COLLISION, self._on_projectile_collision)
-        self.ctx.event_manager.subscribe(GameSceneEvents.WALK, self._on_walk)
-        self.ctx.event_manager.subscribe(GameSceneEvents.WATER_SPLASH, self._on_water_splash)
-        self.ctx.event_manager.subscribe(GameSceneEvents.SPAWN_GHOST, self._on_spawn_ghost)
+        # Debug overlay
+        self.debug_overlay = DebugOverlay(font)
 
-        # Damage particles
-        self.ctx.event_manager.subscribe(GameSceneEvents.DAMAGE, lambda entity_id, proj_id, **args: self._on_projectile_collision(
-            pos=self.component_manager.get(entity_id, Position).vec.copy(),
-            vel=args.get('proj_vel', pygame.Vector2(0,0)),
-            target_type="enemy",
-            size=10.0 # FastProjectiles don't have a reliable size parameter passed in DAMAGE yet, 10.0 is a good default
-        ))
+        self.respawn_manager = RespawnManager(
+            self.level, self.component_manager, self.render_system
+        )
+        self.respawn_manager.set_player(self.player, self.player_input_system)
 
-        # Player death -> show death screen
-        def _on_player_death(entity_id, **kwargs):
-            if entity_id == self.player:
-                self._dead = True
-        self.ctx.event_manager.subscribe(GameSceneEvents.DEATH, _on_player_death)
-        
-        # Water death check
-        self.ctx.event_manager.subscribe('request_water_check', self._handle_water_check)
+        # Animation event handler — maps frame events (footstep, shoot, …) to game actions
+        self.animation_event_handler = AnimationEventHandler(
+            self.component_manager, self.ctx.event_manager,
+            self.render_system, self.ctx.resource_manager
+        )
+        self.ctx.event_manager.subscribe(
+            GameSceneEvents.ANIMATION_EVENT,
+            self.animation_event_handler.handle_kwargs
+        )
+        self.ctx.event_manager.subscribe_typed(
+            AnimationEvent, self.animation_event_handler.handle
+        )
 
-        # Health Bar Juice
-        def trigger_hb_juice(entity_id, **kwargs):
-            if entity_id == self.player:
-                self.hb_scale_juice = 1.1
-                self.hb_rot_juice = random.uniform(-3, 3)
+        # --- Event subscriptions ---
+        self._subscribe_events()
 
-        self.ctx.event_manager.subscribe(GameSceneEvents.DAMAGE, trigger_hb_juice)
-
-        self.ctx.event_manager.subscribe('l', lambda eid=self.entity_manager.create_entity(): self.component_manager.add(
-            eid,
-            Position(
-                eid,
-                *self.component_manager.get(self.player, Position).vec
-            ),
-            ParticleEmitter(
-                rate=10,
-                duration=10,
-                loop = False
-            )
-        ))
-
-        # Set up keybinds for input system
+        # Input binds
         self.ctx.input_system.set_input_binds(
-            keys_pressed = {
+            keys_pressed={
                 pygame.K_SPACE: Inputs.SPACE,
                 pygame.K_LSHIFT: Inputs.DASH
             },
-            keys_held = {
-                pygame.K_w: Inputs.UP,
-                pygame.K_s: Inputs.DOWN,
-                pygame.K_a: Inputs.LEFT,
-                pygame.K_d: Inputs.RIGHT,
+            keys_held={
+                pygame.K_w: Inputs.UP, pygame.K_s: Inputs.DOWN,
+                pygame.K_a: Inputs.LEFT, pygame.K_d: Inputs.RIGHT,
                 pygame.K_l: 'l'
             },
-            keys_released = {
-                pygame.K_w: Inputs.UP_RELEASE,
-                pygame.K_s: Inputs.DOWN_RELEASE,
-                pygame.K_a: Inputs.LEFT_RELEASE,
-                pygame.K_d: Inputs.RIGHT_RELEASE,
+            keys_released={
+                pygame.K_w: Inputs.UP_RELEASE, pygame.K_s: Inputs.DOWN_RELEASE,
+                pygame.K_a: Inputs.LEFT_RELEASE, pygame.K_d: Inputs.RIGHT_RELEASE,
                 pygame.K_SPACE: Inputs.SPACE_RELEASE,
                 pygame.K_LSHIFT: Inputs.DASH_RELEASE
             },
-            mouse_clicked = {
+            mouse_clicked={
                 pygame.BUTTON_LEFT: Inputs.LEFT_CLICK,
                 pygame.BUTTON_RIGHT: Inputs.RIGHT_CLICK
             },
-            mouse_held = {
+            mouse_held={
                 pygame.BUTTON_LEFT: Inputs.LEFT_HOLD,
                 pygame.BUTTON_RIGHT: Inputs.RIGHT_HOLD
             }
         )
-  
+
+    @staticmethod
+    def _create_font():
+        try:
+            return pygame.font.SysFont(None, 20)
+        except Exception:
+            return None
+
+    # ------------------------------------------------------------------
+    # Event wiring
+    # ------------------------------------------------------------------
+
+    def _subscribe_events(self):
+        em = self.ctx.event_manager
+
+        # Player input — use self.player_input_system so closures stay valid after respawn
+        em.subscribe(Inputs.UP, lambda: self.player_input_system.on_move("up"), source=self.player)
+        em.subscribe(Inputs.DOWN, lambda: self.player_input_system.on_move("down"), source=self.player)
+        em.subscribe(Inputs.LEFT, lambda: self.player_input_system.on_move("left"), source=self.player)
+        em.subscribe(Inputs.RIGHT, lambda: self.player_input_system.on_move("right"), source=self.player)
+        em.subscribe(Inputs.UP_RELEASE, lambda: self.player_input_system.on_move("up", held=False), source=self.player)
+        em.subscribe(Inputs.DOWN_RELEASE, lambda: self.player_input_system.on_move("down", held=False), source=self.player)
+        em.subscribe(Inputs.LEFT_RELEASE, lambda: self.player_input_system.on_move("left", held=False), source=self.player)
+        em.subscribe(Inputs.RIGHT_RELEASE, lambda: self.player_input_system.on_move("right", held=False), source=self.player)
+        em.subscribe(Inputs.LEFT_HOLD, lambda: self.player_input_system.shoot(em), source=self.player)
+        em.subscribe(Inputs.SPACE, lambda: self.player_input_system.spawn_bomb(
+            self.component_manager, self.entity_manager,
+            self.ctx.animation_handler, em
+        ), source=self.player)
+        em.subscribe(Inputs.SPACE_RELEASE, lambda: self.player_input_system.on_bomb_release(), source=self.player)
+        em.subscribe(Inputs.DASH, lambda: self.player_input_system.dash(self.component_manager), source=self.player)
+        em.subscribe(Inputs.DASH_RELEASE, lambda: self.player_input_system.on_dash_release(), source=self.player)
+
+        # Screen shake (legacy — keep for backwards compat)
+        em.subscribe_typed(ScreenShakeEvent, self._on_screen_shake)
+        em.subscribe(GameSceneEvents.SCREEN_SHAKE, lambda **kw: self.camera.trigger_shake(
+            kw.get('intensity', 5.0), kw.get('duration', 0.5)
+        ))
+
+        # Death detection
+        def _on_player_death(entity_id, **kwargs):
+            if entity_id == self.player:
+                self.respawn_manager.is_dead = True
+                self.hud.set_dead(True)
+
+        em.subscribe(GameSceneEvents.DEATH, _on_player_death)
+
+        # Water rescue
+        em.subscribe('request_water_check', lambda **kw: self.respawn_manager.handle_water_check(**kw))
+
+        # Debug: spawn particle emitter at player position
+        em.subscribe('l', lambda eid=self.entity_manager.create_entity():
+                     self.component_manager.add(
+                         eid,
+                         Position(eid, *self.component_manager.get(self.player, Position).vec),
+                         ParticleEmitter(rate=10, duration=10, loop=False)
+                     ))
+
+        # --- VFX event wiring ---
+        em.subscribe(GameSceneEvents.DASH_START, self._on_dash_vfx)
+        em.subscribe('bomb_burst', self._on_bomb_vfx)
+        em.subscribe(GameSceneEvents.DAMAGE, self._on_damage_vfx)
+        em.subscribe(GameSceneEvents.DEATH, self._on_death_vfx)
+        em.subscribe(GameSceneEvents.PROJECTILE_COLLISION, self._on_projectile_vfx)
+        em.subscribe(GameSceneEvents.WATER_SPLASH, lambda **kw: self.ctx.audio_manager.play('water_splash', priority=90))
+
+    # ------------------------------------------------------------------
+    # Callbacks
+    # ------------------------------------------------------------------
+
+    def _on_screen_shake(self, event):
+        self.camera.trigger_shake(event.intensity, event.duration)
+
+    # ------------------------------------------------------------------
+    # VFX callbacks
+    # ------------------------------------------------------------------
+
+    def _on_dash_vfx(self, entity_id, duration, **kw):
+        if self.vfx_manager:
+            self.vfx_manager.play('dash', entity_id=entity_id)
+        self.ctx.audio_manager.play('dash')
+
+    def _on_bomb_vfx(self, entity_id, **kw):
+        if not self.vfx_manager:
+            return
+        pos_comp = self.component_manager.get(entity_id, Position)
+        self.vfx_manager.play('bomb', entity_id=entity_id,
+                              pos=pos_comp.vec.copy() if pos_comp else None)
+        self.ctx.audio_manager.play('explosion', priority=200)
+
+        # Tree shake + leaf particles within bomb blast radius
+        radius = kw.get('radius', 150)
+        if not pos_comp:
+            return
+        bomb_pos = pos_comp.vec
+        from ..components.render_effect import RenderEffectComponent, WindAffectedComponent
+        p_sys = self.render_system.particle_effect_system
+        shake_duration = 0.8
+        for eid in self.component_manager.get_entities_with(Position, WindAffectedComponent):
+            tree_pos = self.component_manager.get(eid, Position)
+            if not tree_pos:
+                continue
+            dist = tree_pos.vec.distance_to(bomb_pos)
+            if dist > radius:
+                continue
+
+            # Continuous random shake — per-frame jitter for shake_duration seconds
+            render = self.component_manager.get(eid, RenderComponent)
+            if render:
+                strength = 30.0 * (1 - dist / radius)
+                self._tree_shakes[eid] = {
+                    'orig_x': render.offset.x,
+                    'orig_y': render.offset.y,
+                    'strength': strength,
+                    'timer': shake_duration,
+                    'duration': shake_duration,
+                }
+
+            # Leaf particles using actual tree greens (bright, medium, dark)
+            _LEAF_COLORS = [(96, 192, 64), (48, 128, 64), (32, 80, 64)]
+            if p_sys:
+                for _ in range(random.randint(25, 40)):
+                    size = random.uniform(2.5, 6)
+                    cr, cg, cb = random.choice(_LEAF_COLORS)
+                    p_sys.emit_fast_particle(
+                        x=tree_pos.x + random.uniform(-30, 30),
+                        y=tree_pos.y + random.uniform(10, 45),
+                        vx=random.uniform(-80, 80), vy=random.uniform(-90, -15),
+                        lifetime=1.2 + size * 0.15,
+                        r=cr, g=cg, b=cb, a=255,
+                        size=size,
+                        fade=True, shrink=True, friction=0.95,
+                        sway=True, gravity=50,
+                    )
+
+    def _on_damage_vfx(self, entity_id, **kw):
+        if self.vfx_manager and not kw.get('death'):
+            self.vfx_manager.play('player_damage', entity_id=entity_id, **kw)
+        if not kw.get('death'):
+            self.ctx.audio_manager.play('player_hit', group='player', priority=200)
+
+    def _on_death_vfx(self, entity_id, **kw):
+        # Player death is handled by the respawn system
+        if self.vfx_manager and entity_id != self.player:
+            self.vfx_manager.play('enemy_death', entity_id=entity_id, **kw)
+        if entity_id != self.player:
+            self.ctx.audio_manager.play('explosion', priority=200)
+
+    def _on_projectile_vfx(self, **kw):
+        if self.vfx_manager:
+            self.vfx_manager.play('projectile_impact', **kw)
+        self.ctx.audio_manager.play('enemy_hit', priority=150)
+
+    # ------------------------------------------------------------------
+    # Main update
+    # ------------------------------------------------------------------
+
     def update(self, fps, dt):
-        if self._dead:
-            keys = pygame.key.get_pressed()
-            if keys[pygame.K_r] and not self._respawn_key_held:
-                self._respawn_key_held = True
-                self._respawn()
-            elif not keys[pygame.K_r]:
-                self._respawn_key_held = False
+        # Debug overlay toggle
+        self._handle_debug_toggles()
+        self.profiler.begin_frame()
+
+        # Death gate — skip all updates while dead
+        if self.respawn_manager.update_death_gate(dt, self._respawn):
             return
 
-        # Update the physics engine
-        self.timer_system.update(dt)
+        # Save unscaled dt before applying time-scale effects
+        raw_dt = dt
 
-        # Update player water status for dash extension
-        if hasattr(self, 'player_input_system'):
-            p_pos = self.component_manager.get(self.player, Position)
-            p_col = self.component_manager.get(self.player, CollisionComponent)
-            if p_pos and p_col:
-                left = p_pos.x + p_col.offset.x
-                top = p_pos.y + p_col.offset.y
-                right = left + p_col.size.x
-                bottom = top + p_col.size.y
-                center_x = left + p_col.size.x / 2.0
-                center_y = top + p_col.size.y / 2.0
-                
-                # Check corners (inset slightly) and center of the actual collision box
-                points = [
-                    (center_x, center_y),
-                    (left + 2, top + 2),
-                    (right - 2, top + 2),
-                    (left + 2, bottom - 2),
-                    (right - 2, bottom - 2)
-                ]
-                
-                water_count = self._count_pos_in_water(points)
+        # Apply hit-stop / slow-motion time scale on game logic
+        if self.gamefeel:
+            dt *= self.gamefeel.time_scale.scale
 
-                self.player_input_system.is_touching_water = (water_count > 0)
-                self.player_input_system.on_water_completely = (water_count == len(points))
-                self.player_input_system.on_land_completely = (water_count == 0)
+        # Visual tweens use real time so squash/stretch animates even
+        # during hit-stop
+        self.tween_system.update(raw_dt)
+        self._update_tree_shakes(raw_dt)
 
-        # Build a single shared Dynamic Quadtree for all non-tile entities per frame
+        if dt > 0:
+            self.profiler.begin('ai')
+            self.ai_system.update(dt)
+            self.profiler.end('ai')
+
+            self.profiler.begin('physics')
+            self.timer_system.update(dt)
+            self._update_water_status()
+            dynamic_quadtree = self._build_dynamic_quadtree()
+            self.player_input_system.update(self.component_manager, dt)
+            self.physics_engine.update(
+                self.camera.scroll, fps, dt,
+                is_dashing=self.player_input_system.is_dashing,
+                player_id=self.player,
+                static_quadtree=self.level.static_quadtree,
+                dynamic_quadtree=dynamic_quadtree
+            )
+            self.profiler.end('physics')
+
+            self.profiler.begin('combat')
+            self.combat_system.update(
+                event_manager=self.ctx.event_manager,
+                component_manager=self.component_manager,
+                scroll=self.camera.scroll, dt=dt, fps=fps,
+                static_quadtree=self.level.static_quadtree,
+                dynamic_quadtree=dynamic_quadtree,
+                particle_system=self.render_system.particle_effect_system,
+                is_dashing=self.player_input_system.is_dashing,
+                player_id=self.player,
+                camera_center=self.camera.center,
+                game_time=self._game_time
+            )
+            self._game_time += dt
+            self.destructible_system.update(dt, self.player)
+            self.profiler.end('combat')
+
+            self.profiler.begin('particles')
+            self._update_water_ripples(raw_dt)
+            self.profiler.end('particles')
+
+            self.profiler.begin('animation')
+            self.animation_system.update(fps, dt, camera_rect=self.camera.rect)
+            self.profiler.end('animation')
+
+            self.profiler.begin('rendering')
+            scaled_mouse = screen_to_virtual(pygame.mouse.get_pos())
+            self.render_system.update(dt, tilemap=self.level.tilemap, camera=self.camera, mouse_pos=scaled_mouse)
+            self.entity_manager.refresh_entities(dt=dt)
+            if self.level and self.level.tilemap:
+                try:
+                    self.level.tilemap.update(dt)
+                except Exception:
+                    pass
+            self.camera.update(dt, self.component_manager, lerp=True, mouse=scaled_mouse, mouse_ratio=0.1)
+            self.profiler.end('rendering')
+
+        # Always run — HUD and time-scale stack use unscaled time
+        self.profiler.begin('gamefeel')
+        self.hud.update(raw_dt)
+        if self.gamefeel:
+            self.gamefeel.update(raw_dt)
+        self.profiler.end('gamefeel')
+
+    # ------------------------------------------------------------------
+    # Sub-updates
+    # ------------------------------------------------------------------
+
+    def _handle_debug_toggles(self):
+        if self.debug_overlay and self.ctx.input_system:
+            if pygame.K_F3 in self.ctx.input_system.keys_pressed:
+                self.debug_overlay.toggle()
+            if pygame.K_F4 in self.ctx.input_system.keys_pressed:
+                self.debug_overlay.toggle_profiler()
+
+    def _update_water_status(self):
+        if not hasattr(self, 'player_input_system'):
+            return
+        p_pos = self.component_manager.get(self.player, Position)
+        p_col = self.component_manager.get(self.player, CollisionComponent)
+        if not p_pos or not p_col:
+            return
+
+        left = p_pos.x + p_col.offset.x
+        top = p_pos.y + p_col.offset.y
+        right = left + p_col.size.x
+        bottom = top + p_col.size.y
+        points = [
+            (left + p_col.size.x / 2.0, top + p_col.size.y / 2.0),
+            (left + 2, top + 2), (right - 2, top + 2),
+            (left + 2, bottom - 2), (right - 2, bottom - 2)
+        ]
+        water_count = self.respawn_manager.count_pos_in_water(points)
+        self.player_input_system.is_touching_water = (water_count > 0)
+        self.player_input_system.on_water_completely = (water_count == len(points))
+        self.player_input_system.on_land_completely = (water_count == 0)
+
+    def _build_dynamic_quadtree(self):
         qtree_bounds = (*self.camera.scroll, *VIRTUAL_WINDOW_SIZE)
         if self._dynamic_quadtree is None:
             self._dynamic_quadtree = Quadtree(0, qtree_bounds)
         else:
             self._dynamic_quadtree.clear()
             self._dynamic_quadtree.bounds = qtree_bounds
-        dynamic_quadtree = self._dynamic_quadtree
-        
-        # Only insert entities that aren't tiles (tiles are in level.static_quadtree)
-        # Foliage and destructibles need to be in this tree to be hittable/collidable
         for entity in self.component_manager.get_entities_with(CollisionComponent, Position):
             comp = self.component_manager.get(entity, CollisionComponent)
             pos = self.component_manager.get(entity, Position)
-            
-            # Entities with CollisionComponents are dynamic by nature in our ECS 
-            # (unless they were tile-entities which we removed from the loop)
-            rect = pygame.Rect(pos.x + comp.offset.x, pos.y + comp.offset.y, comp.size.x, comp.size.y)
-            dynamic_quadtree.insert(entity, rect)
+            rect = pygame.Rect(pos.x + comp.offset.x, pos.y + comp.offset.y,
+                               comp.size.x, comp.size.y)
+            self._dynamic_quadtree.insert(entity, rect)
+        return self._dynamic_quadtree
 
-        self.player_input_system.update(self.component_manager, dt) 
-        self.ai_system.update(dt)
-        self.physics_engine.update(
-            self.camera.scroll, fps, dt, 
-            is_dashing=self.player_input_system.is_dashing, 
-            player_id=self.player, 
-            static_quadtree=self.level.static_quadtree,
-            dynamic_quadtree=dynamic_quadtree
-        )
-        self.combat_system.update(
-            event_manager=self.ctx.event_manager,
-            component_manager=self.component_manager,
-            scroll=self.camera.scroll,
-            dt=dt,
-            fps=fps,
-            static_quadtree=self.level.static_quadtree,
-            dynamic_quadtree=dynamic_quadtree,
-            particle_system=self.render_system.particle_effect_system,
-            is_dashing=self.player_input_system.is_dashing,
-            player_id=self.player,
-            camera_center=self.camera.center
-        )
-        self.destructible_system.update(dt, self.player)
-
-        # Water ripples from projectiles and dash (throttled + capped)
-        if self.level and self.level.tilemap:
-            tilemap = self.level.tilemap
-            if not hasattr(self, '_ripple_timer'):
-                self._ripple_timer = 0.0
-            self._ripple_timer += dt
-            if self._ripple_timer >= 0.2 and len(tilemap.ripples) < 6:
-                self._ripple_timer = 0.0
-                p_sys = self.combat_system.projectile_system
-                if hasattr(p_sys, 'active_indices'):
-                    for idx in p_sys.active_indices[:2]:
-                        p = p_sys.projectiles[idx]
-                        if self._is_pos_in_water((p.x, p.y)):
-                            tilemap.add_ripple(p.x, p.y)
-                if self.player_input_system.is_dashing:
-                    p_pos = self.component_manager.get(self.player, Position)
-                    if p_pos and self._is_pos_in_water(p_pos.vec):
-                        tilemap.add_ripple(p_pos.x, p_pos.y)
-
-        self.animation_system.update(fps, dt, camera_rect=self.camera.rect)
-        
-        scaled_mouse = screen_to_virtual(pygame.mouse.get_pos())
-        
-        self.render_system.update(dt, tilemap=self.level.tilemap, camera=self.camera, mouse_pos=scaled_mouse)
-        self.entity_manager.refresh_entities(dt=dt)
-
-        # Update tilemap animations (water frames)
-        if self.level and self.level.tilemap:
-            try:
-                self.level.tilemap.update(dt)
-            except Exception:
-                pass
-
-        self.camera.update(dt, self.component_manager, lerp=True, mouse=scaled_mouse, mouse_ratio=0.1)
-
-        # Update health bar drain effect
-        p_health = self.component_manager.get(self.player, HealthComponent)
-        if p_health:
-            if self.health_drain > p_health.health:
-                self.health_drain = max(p_health.health, self.health_drain - 40.0 * dt)
-            else:
-                self.health_drain = p_health.health
-
-        # Recover HB Juice
-        self.hb_scale_juice = 1.0 + (self.hb_scale_juice - 1.0) * (0.9 ** (dt * 60))
-        self.hb_rot_juice *= (0.9 ** (dt * 60))
-
-    def _on_projectile_collision(self, **kwargs):
-        pos = kwargs.get('pos')
-        vel = kwargs.get('vel')
-        target_type = kwargs.get('target_type')
-        size = kwargs.get('size', 10.0)
-        
-        if not pos or not vel: return
-        
-        # Calculate impact details
-        impact_dir = -vel.normalize() if vel.length_squared() > 0 else pygame.Vector2(0, 0)
-        impact_speed = vel.length() * 0.4 # Strong impact
-        
-        color = (255, 255, 255) # Enemy hit
-        particle_count = 8
-        
-        if target_type == "environment":
-            # Shades of brown from path/foliage
-            color = random.choice([(116, 73, 56), (155, 103, 80), (184, 111, 80)])
-            particle_count = 12 # Much lower for performance, especially with shotguns
-            
-        if hasattr(self, 'render_system') and self.render_system.particle_effect_system:
-            for _ in range(particle_count):
-                particle_size = random.uniform(4.0, 8.0) if target_type == "enemy" else random.uniform(1.5, 4.5) * (size/15.0)
-                
-                # Directional spread
-                spread_rad = math.radians(60.0)
-                base_angle = math.atan2(impact_dir.y, impact_dir.x) if impact_dir.length_squared() > 0 else random.uniform(0, math.pi * 2)
-                angle = base_angle + random.uniform(-spread_rad/2, spread_rad/2)
-                speed = random.uniform(impact_speed * 0.8, impact_speed * 1.4)
-                
-                self.render_system.particle_effect_system.emit_fast_particle(
-                    x=pos.x + random.uniform(-5, 5), y=pos.y + random.uniform(-5, 5),
-                    vx=math.cos(angle) * speed, vy=math.sin(angle) * speed,
-                    lifetime=0.6,
-                    r=color[0], g=color[1], b=color[2], a=255,
-                    size=particle_size,
-                    fade=False, shrink=True, friction=0.8
-                )
-        
-    def _on_walk(self, pos, vel, entity_id):
-        if not pos or not vel: return
-
-        # Spawn dust behind feet directly without ECS
-        if hasattr(self, 'render_system') and self.render_system.particle_effect_system:
-            for _ in range(2): # Just a couple of dust particles
-                self.render_system.particle_effect_system.emit_fast_particle(
-                    x=pos.x, y=pos.y + 5,
-                    vx=random.uniform(-5, 5), vy=random.uniform(-5, 5),
-                    lifetime=0.5,
-                    r=184, g=111, b=80, a=255,
-                    size=random.uniform(1.0, 2.5),
-                    fade=False, shrink=True, friction=0.85
-                )
-
-    def _on_water_splash(self, **kwargs):
-        pos = kwargs.get('pos')
-        vel = kwargs.get('vel')
-        size = kwargs.get('size', 10.0)
-        
-        if not pos or not vel: return
-        
-        impact_dir = -vel.normalize() if vel.length_squared() > 0 else pygame.Vector2(0, 0)
-        impact_speed = vel.length() * 0.15
-        
-        particle_count = int(10 * (size/15.0)) # Not too many
-        
-        if hasattr(self, 'render_system') and self.render_system.particle_effect_system:
-            for _ in range(particle_count):
-                particle_size = random.uniform(2.0, 4.0) * (size/15.0)
-                spread_rad = math.radians(90.0)
-                base_angle = math.atan2(impact_dir.y, impact_dir.x) if impact_dir.length_squared() > 0 else random.uniform(0, math.pi * 2)
-                angle = base_angle + random.uniform(-spread_rad/2, spread_rad/2)
-                speed = random.uniform(impact_speed * 0.8, impact_speed * 1.4)
-                
-                self.render_system.particle_effect_system.emit_fast_particle(
-                    x=pos.x + random.uniform(-2, 2), y=pos.y + random.uniform(-2, 2),
-                    vx=math.cos(angle) * speed, vy=math.sin(angle) * speed,
-                    lifetime=0.3,
-                    r=255, g=255, b=255, a=255,
-                    size=particle_size,
-                    fade=False, shrink=True, friction=0.9
-                )
-
-    def _is_pos_in_water(self, pos):
-        if not self.level.tilemap: return False
-        from ..utils import TILE_SIZE
-        water_layer = self.level.tilemap.layers.get("water")
-        if not water_layer: return False
-
-        chunk_pos = (int(pos[0] // (self.level.tilemap.CHUNK_SIZE * TILE_SIZE)) * (self.level.tilemap.CHUNK_SIZE * TILE_SIZE),
-                     int(pos[1] // (self.level.tilemap.CHUNK_SIZE * TILE_SIZE)) * (self.level.tilemap.CHUNK_SIZE * TILE_SIZE))
-        chunk = water_layer.get(chunk_pos)
-        if chunk:
-            for tdata in chunk.values():
-                if tdata["rect"].collidepoint(pos[0], pos[1]):
-                    return True
-        return False
-
-    def _any_pos_in_water(self, points):
-        """Batch check: returns True if any point is in water. Only does one chunk lookup + tile scan."""
-        if not self.level.tilemap: return False
-        from ..utils import TILE_SIZE
-        water_layer = self.level.tilemap.layers.get("water")
-        if not water_layer: return False
-
-        seen_chunks = {}
-        for pos in points:
-            cx = int(pos[0] // (self.level.tilemap.CHUNK_SIZE * TILE_SIZE)) * (self.level.tilemap.CHUNK_SIZE * TILE_SIZE)
-            cy = int(pos[1] // (self.level.tilemap.CHUNK_SIZE * TILE_SIZE)) * (self.level.tilemap.CHUNK_SIZE * TILE_SIZE)
-            ck = (cx, cy)
-            if ck not in seen_chunks:
-                seen_chunks[ck] = water_layer.get(ck)
-            chunk = seen_chunks[ck]
-            if chunk:
-                for tdata in chunk.values():
-                    if tdata["rect"].collidepoint(pos[0], pos[1]):
-                        return True
-        return False
-
-    def _count_pos_in_water(self, points):
-        """Batch check: returns how many points are in water."""
-        if not self.level.tilemap: return 0
-        from ..utils import TILE_SIZE
-        water_layer = self.level.tilemap.layers.get("water")
-        if not water_layer: return 0
-
-        count = 0
-        seen_chunks = {}
-        for pos in points:
-            cx = int(pos[0] // (self.level.tilemap.CHUNK_SIZE * TILE_SIZE)) * (self.level.tilemap.CHUNK_SIZE * TILE_SIZE)
-            cy = int(pos[1] // (self.level.tilemap.CHUNK_SIZE * TILE_SIZE)) * (self.level.tilemap.CHUNK_SIZE * TILE_SIZE)
-            ck = (cx, cy)
-            if ck not in seen_chunks:
-                seen_chunks[ck] = water_layer.get(ck)
-            chunk = seen_chunks[ck]
-            if chunk:
-                for tdata in chunk.values():
-                    if tdata["rect"].collidepoint(pos[0], pos[1]):
-                        count += 1
-                        break
-        return count
-
-    def _handle_water_check(self, **kwargs):
-        eid = kwargs.get('entity_id')
-        pos = kwargs.get('pos')
-        respawn_pos = kwargs.get('respawn_pos')
-        if not pos: return
-
-        # Check multiple points around the player to see if any part is in water
-        p_col = self.component_manager.get(eid, CollisionComponent)
-        is_touching_water = False
-        
-        if p_col:
-            left = pos.x + p_col.offset.x
-            top = pos.y + p_col.offset.y
-            right = left + p_col.size.x
-            bottom = top + p_col.size.y
-            center_x = left + p_col.size.x / 2.0
-            center_y = top + p_col.size.y / 2.0
-            points = [
-                (center_x, center_y),
-                (left + 2, top + 2),
-                (right - 2, top + 2),
-                (left + 2, bottom - 2),
-                (right - 2, bottom - 2)
-            ]
-            if self._any_pos_in_water(points):
-                is_touching_water = True
-        else:
-            if self._is_pos_in_water(pos):
-                is_touching_water = True
-
-        if is_touching_water:
-            # If a specific respawn position was provided (e.g. start of dash), use it as a raycast target
-            if respawn_pos and p_col:
-                p_pos = self.component_manager.get(eid, Position)
-                if p_pos:
-                    # Raycast backwards from current pos to respawn_pos
-                    start_vec = pygame.Vector2(respawn_pos)
-                    curr_vec = pygame.Vector2(pos.x, pos.y)
-                    direction = start_vec - curr_vec
-                    
-                    if direction.length_squared() > 0:
-                        direction_norm = direction.normalize()
-                        dist = direction.length()
-                        step = 2.0 # Move back in 2-pixel increments
-                        
-                        safe_found = False
-                        test_vec = curr_vec.copy()
-                        for _ in range(int(dist / step) + 1):
-                            left = test_vec.x + p_col.offset.x
-                            top = test_vec.y + p_col.offset.y
-                            right = left + p_col.size.x
-                            bottom = top + p_col.size.y
-                            cx = left + p_col.size.x / 2.0
-                            cy = top + p_col.size.y / 2.0
-                            
-                            pts = [
-                                (cx, cy),
-                                (left + 2, top + 2),
-                                (right - 2, top + 2),
-                                (left + 2, bottom - 2),
-                                (right - 2, bottom - 2)
-                            ]
-                            
-                            in_water = self._any_pos_in_water(pts)
-                            if not in_water:
-                                safe_found = True
-                                break
-                                
-                            test_vec += direction_norm * step
-                            
-                        if safe_found:
-                            # Add a small buffer to ensure the physics system doesn't register a collision on the boundary
-                            p_pos.vec.update(test_vec + direction_norm * 2.0)
-                        else:
-                            p_pos.vec.update(respawn_pos) # Fallback to start
-                    else:
-                        p_pos.vec.update(respawn_pos)
-                        
-                    self.render_system.render_effect_system.trigger_flash(eid)
-                    p_vel = self.component_manager.get(eid, Velocity)
-                    if p_vel: p_vel.vec.update(0, 0)
-                return
-
-            # Find nearest walkable tile (grass or path)
-            safe_pos = None
-            found = False
-            # Spiral search outwards
-            for radius in range(1, 10):
-                for dx in range(-radius, radius + 1):
-                    for dy in [-radius, radius]:
-                        if self._is_tile_walkable(pos.x + dx * 32, pos.y + dy * 32): # TILE_SIZE=32
-                            safe_pos = pygame.Vector2(pos.x + dx * 32, pos.y + dy * 32)
-                            found = True; break
-                    if found: break
-                    for dy in range(-radius + 1, radius):
-                        for dx in [-radius, radius]:
-                            if self._is_tile_walkable(pos.x + dx * 32, pos.y + dy * 32):
-                                safe_pos = pygame.Vector2(pos.x + dx * 32, pos.y + dy * 32)
-                                found = True; break
-                        if found: break
-                    if found: break
-                if found: break
-            
-            if safe_pos:
-                # Teleport player
-                p_pos = self.component_manager.get(eid, Position)
-                if p_pos:
-                    dist = pos.distance_to(safe_pos)
-                    # SOFT LANDING: if we are within 16px of shore, just snap without penalty
-                    if dist < 16:
-                        p_pos.vec.update(safe_pos)
-                    else:
-                        # Full drowning penalty
-                        p_pos.vec.update(safe_pos)
-                        self.render_system.render_effect_system.trigger_flash(eid)
-                        p_vel = self.component_manager.get(eid, Velocity)
-                        if p_vel: p_vel.vec.update(0, 0)
-
-    def _is_tile_walkable(self, x, y):
-        # A tile is not walkable if it is water
-        if self._is_pos_in_water((x, y)):
-            return False
-
+    def _update_water_ripples(self, dt):
+        if not self.level or not self.level.tilemap:
+            return
         tilemap = self.level.tilemap
-        from ..utils import TILE_SIZE
-        chunk_x = int(x // (tilemap.CHUNK_SIZE * TILE_SIZE)) * (tilemap.CHUNK_SIZE * TILE_SIZE)
-        chunk_y = int(y // (tilemap.CHUNK_SIZE * TILE_SIZE)) * (tilemap.CHUNK_SIZE * TILE_SIZE)
-        chunk_pos = (chunk_x, chunk_y)
+        self._ripple_timer += dt
+        if self._ripple_timer < 0.1 or len(tilemap.ripples) >= 12:
+            return
+        self._ripple_timer = 0.0
+        p_sys = self.combat_system.projectile_system
+        if hasattr(p_sys, 'active_indices'):
+            for idx in p_sys.active_indices:
+                p = p_sys.pool[idx]
+                if self.respawn_manager.is_pos_in_water((p.x, p.y)):
+                    tilemap.add_ripple(p.x, p.y, vx=p.vx, vy=p.vy)
+        if self.player_input_system.is_dashing:
+            p_pos = self.component_manager.get(self.player, Position)
+            if p_pos and self.respawn_manager.is_pos_in_water(p_pos.vec):
+                tilemap.add_ripple(p_pos.x, p_pos.y)
 
-        # Walkable if it exists in grass or path layer
-        for layer_id in ["grass", "path"]:
-            layer = tilemap.layers.get(layer_id)
-            if layer and chunk_pos in layer:
-                for tpos, tdata in layer[chunk_pos].items():
-                    if tdata["rect"].collidepoint(x, y):
-                        return True
-        return False
-    def _on_spawn_ghost(self, **kwargs):
-        image = kwargs.get('image')
-        pos = kwargs.get('pos')
-        offset = kwargs.get('offset')
-        if not image or not pos: return
-        
-        ghost_id = self.entity_manager.create_entity()
-        self.component_manager.add(ghost_id, Position(ghost_id, pos.x, pos.y))
-        self.component_manager.add(ghost_id, RenderComponent(ghost_id, surface=image.copy(), offset=offset, center=True))
-        
-        # Fade effect
-        rec = RenderEffectComponent()
-        rec.alpha = 150 # Start semi-transparent
-        self.component_manager.add(ghost_id, rec)
-        self.render_system.render_effect_system.add_effect(ghost_id, "fade", {"duration": 0.4, "start_alpha": 150, "target_alpha": 0})
-        
-        # Y-Sort
-        self.component_manager.add(ghost_id, YSortRender(ghost_id, offset=(0, 0)))
-        
-        # Auto-delete
-        self.component_manager.add(ghost_id, TimerComponent(0.4, lambda: self.entity_manager.delete_entity(ghost_id)))
+    def _update_tree_shakes(self, dt):
+        """Per-frame tree shake: random x/y offset with decaying intensity."""
+        dead = []
+        for eid, shake in self._tree_shakes.items():
+            shake['timer'] -= dt
+            if shake['timer'] <= 0:
+                dead.append(eid)
+                continue
+
+            render = self.component_manager.get(eid, RenderComponent)
+            if not render:
+                dead.append(eid)
+                continue
+
+            progress = 1.0 - (shake['timer'] / shake['duration'])
+            decay = 1.0 - progress  # linear decay
+            jitter = shake['strength'] * decay
+            render.offset.x = shake['orig_x'] + random.uniform(-jitter, jitter)
+            render.offset.y = shake['orig_y'] + random.uniform(-jitter * 0.5, jitter * 0.3)
+
+            if shake['timer'] <= 0.15:
+                # Spring back smoothly near the end
+                t = shake['timer'] / 0.15
+                render.offset.x += (shake['orig_x'] - render.offset.x) * (1.0 - t * t)
+
+        for eid in dead:
+            shake = self._tree_shakes.pop(eid, None)
+            if shake:
+                render = self.component_manager.get(eid, RenderComponent)
+                if render:
+                    render.offset.x = shake['orig_x']
+                    render.offset.y = shake['orig_y']
+
+    # ------------------------------------------------------------------
+    # Respawn
+    # ------------------------------------------------------------------
 
     def _respawn(self):
         self.component_manager.clear_all()
@@ -641,16 +545,12 @@ class GameScene(Scene):
 
         ps = self.render_system.particle_effect_system
         ps.active_indices.clear()
-        ps.free_indices = list(range(ps.capacity))
+        ps.pool.reset()
         ps._particle_cache.clear()
-        for p in ps.particles:
-            p.active = False
 
         fpps = self.combat_system.projectile_system
-        for p in fpps.projectiles:
-            p.active = False
         fpps.active_indices.clear()
-        fpps.free_indices = list(range(fpps.capacity))
+        fpps.pool.reset()
         fpps._pulse_cache.clear()
         fpps._shared_hits.clear()
         fpps._shared_seen.clear()
@@ -659,179 +559,93 @@ class GameScene(Scene):
         self.render_system._sprite_transform_cache.clear()
         self.render_system.grass_system.blades.clear()
         self.render_system.grass_system._render_cache.clear()
+        self._tree_shakes.clear()
 
         self.camera = Camera()
 
-        self.health_drain = 100.0
-        self.hb_scale_juice = 1.0
-        self.hb_rot_juice = 0.0
-
         self.level = Level(self.ctx)
-        self.player = self.level.load(self.current_level, self.component_manager, self.entity_factory, self.entity_manager, self.render_system)
-
-        self.player_input_system = PlayerInputSystem(entity_id=self.player, event_manager=self.ctx.event_manager)
-        self.ai_system = AISystem(player_entity_id=self.player, component_manager=self.component_manager, event_manager=self.ctx.event_manager)
+        self.player = self.level.load(
+            self.current_level, self.component_manager,
+            self.entity_factory, self.entity_manager, self.render_system
+        )
+        self.player_input_system = PlayerInputSystem(
+            entity_id=self.player, event_manager=self.ctx.event_manager
+        )
+        self.ai_system = AISystem(
+            player_entity_id=self.player,
+            component_manager=self.component_manager,
+            event_manager=self.ctx.event_manager
+        )
         self.camera.set_target(self.player)
 
-        p_health = self.component_manager.get(self.player, HealthComponent)
-        if p_health:
-            self.health_drain = p_health.health
+        # Re-wire sub-managers with new player reference
+        self.hud.set_player(self.player, self.player_input_system, self.render_system)
+        self.hud.reset()
+        self.respawn_manager.set_player(self.player, self.player_input_system)
+        self.respawn_manager.reset()
 
-        self._dead = False
-        self._respawn_key_held = False
+        # Update camera references in subsystems after respawn
+        self.combat_system.weapon_system.camera = self.camera
+        if self.gamefeel:
+            self.gamefeel.set_camera(self.camera)
+            self.gamefeel.clear_flashes()
+
+    # ------------------------------------------------------------------
+    # Rendering
+    # ------------------------------------------------------------------
 
     def render(self, surface):
         self.render_system.render(surface, self.level.tilemap, self.camera)
+        if hasattr(self, 'combat_system') and self.combat_system.attack_pattern_system:
+            self.combat_system.attack_pattern_system.render_telegraphs(surface, self.camera)
 
     def render_ui(self, screen):
-        # Draw FPS counter and bomb cooldown timer on the screen if font is available
-        if self.font:
-            if not hasattr(self, '_ui_text_cache'):
-                self._ui_text_cache = {}
+        if self.hud:
+            self.hud.render_ui(screen, self.ctx)
+        if self.gamefeel:
+            self.gamefeel.render_flash(screen)
 
-            def get_cached_text(text, color):
-                key = (text, color)
-                if key not in self._ui_text_cache:
-                    self._ui_text_cache[key] = self.font.render(text, True, color)
-                return self._ui_text_cache[key]
+        # Debug overlay
+        if self.debug_overlay:
+            self.debug_overlay.render(screen, self.ctx, self)
 
-            # Limit cache size
-            if len(self._ui_text_cache) > 200:
-                self._ui_text_cache.clear()
-
-            ui_blits = []
-            
-            fps_val = int(getattr(self.ctx, 'fps', 0))
-            fps_text = f"FPS: {fps_val}"
-            text_surf = get_cached_text(fps_text, (255, 255, 255))
-            shadow = get_cached_text(fps_text, (0, 0, 0))
-            ui_blits.append((shadow, (11, 11)))
-            ui_blits.append((text_surf, (10, 10)))
-
-            # Bomb cooldown display
-            bomb_timer = None
-            if hasattr(self, 'player_input_system'):
-                bomb_timer = getattr(self.player_input_system, 'bomb_timer', 0.0)
-
-            if bomb_timer and bomb_timer > 0:
-                bomb_text = f"Bomb CD: {bomb_timer:.1f}s"
-                color = (255, 200, 0)
-            else:
-                bomb_text = "Bomb: Ready"
-                color = (255, 200, 0)
-
-            bomb_surf = get_cached_text(bomb_text, color)
-            bomb_shadow = get_cached_text(bomb_text, (0, 0, 0))
-            ui_blits.append((bomb_shadow, (11, 31)))
-            ui_blits.append((bomb_surf, (10, 30)))
-
-            # Dash info
-            dash_charges = getattr(self.player_input_system, 'dash_charges', 0)
-            dash_refill = getattr(self.player_input_system, 'dash_refill_timer', 0.0)
-            is_dashing = getattr(self.player_input_system, 'is_dashing', False)
-            
-            dash_text = f"Dashes: {dash_charges} | Refill: {dash_refill:.1f}s"
-            if is_dashing:
-                dash_text += " [DASHING]"
-            
-            dash_surf = get_cached_text(dash_text, (0, 255, 255))
-            dash_shadow = get_cached_text(dash_text, (0, 0, 0))
-            ui_blits.append((dash_shadow, (11, 51)))
-            ui_blits.append((dash_surf, (10, 50)))
-
-            # Wind info
-            wind_mag = getattr(self.render_system.wind_system, 'magnitude_x', 0.0)
-            wind_text = f"Wind X: {wind_mag:+.2f}"
-            wind_surf = get_cached_text(wind_text, (200, 255, 200))
-            wind_shadow = get_cached_text(wind_text, (0, 0, 0))
-            ui_blits.append((wind_shadow, (11, 71)))
-            ui_blits.append((wind_surf, (10, 70)))
-            
-            if ui_blits:
-                screen.blits(ui_blits)
-
-        # Draw Health Bar
-        p_health = self.component_manager.get(self.player, HealthComponent)
-        if p_health and self.health_bar_img:
-            # Base Scale
-            hb_base_scale = 0.5
-            
-            # Dimensions based on scaled image
-            bw, bh = int(self.health_bar_img.get_width() * hb_base_scale), int(self.health_bar_img.get_height() * hb_base_scale)
-            
-            # Create a temporary surface
-            temp_hb_surf = pygame.Surface((bw, bh))
-            # Fill with the outer-transparency color
-            MASK_COLOR = (0, 0, 1)
-            temp_hb_surf.fill(MASK_COLOR)
-            
-            # Fill logic
-            inner_padding_x = 4 * hb_base_scale
-            inner_padding_y = 4 * hb_base_scale
-            inner_w = bw - (inner_padding_x * 2)
-            inner_h = bh - (inner_padding_y * 2)
-            
-            health_ratio = p_health.health / p_health.max_health
-            drain_ratio = self.health_drain / p_health.max_health
-            
-            # 1. Draw Bars underneath
-            # Draw Drain (Orange)
-            if drain_ratio > health_ratio:
-                drain_rect = pygame.Rect(inner_padding_x, inner_padding_y, int(inner_w * drain_ratio), inner_h)
-                pygame.draw.rect(temp_hb_surf, self.health_orange, drain_rect)
-            
-            # Draw Current Health (Red)
-            health_rect = pygame.Rect(inner_padding_x, inner_padding_y, int(inner_w * health_ratio), inner_h)
-            pygame.draw.rect(temp_hb_surf, self.health_red, health_rect)
-            
-            # 2. Draw Frame on top (using its (0,0,0) colorkey to let bars show through)
-            scaled_frame = pygame.transform.scale(self.health_bar_img, (bw, bh))
-            scaled_frame.set_colorkey((0, 0, 0))
-            temp_hb_surf.blit(scaled_frame, (0, 0))
-            
-            # Apply Juice (Final Scale and Rotation)
-            final_hb_scale = 1.5 * self.hb_scale_juice
-            if final_hb_scale != 1.0:
-                new_w = int(bw * (final_hb_scale/hb_base_scale))
-                new_h = int(bh * (final_hb_scale/hb_base_scale))
-                temp_hb_surf = pygame.transform.scale(temp_hb_surf, (new_w, new_h))
-            
-            if self.hb_rot_juice != 0:
-                temp_hb_surf = pygame.transform.rotate(temp_hb_surf, self.hb_rot_juice)
-            
-            # Set the final transparency (makes the (0,0,1) background invisible)
-            temp_hb_surf.set_colorkey(MASK_COLOR)
-            
-            # Center at bottom
-            pos_x = (screen.get_width() - temp_hb_surf.get_width()) // 2
-            pos_y = screen.get_height() - temp_hb_surf.get_height() - 10
-            
-            screen.blit(temp_hb_surf, (pos_x, pos_y))
-
-        # Death overlay
-        if self._dead:
-            overlay = pygame.Surface(screen.get_size(), pygame.SRCALPHA)
-            overlay.fill((0, 0, 0, 180))
-            screen.blit(overlay, (0, 0))
-            try:
-                big_font = pygame.font.SysFont(None, 72)
-                small_font = pygame.font.SysFont(None, 36)
-            except Exception:
-                big_font = self.font
-                small_font = self.font
-            if big_font:
-                death_text = big_font.render("YOU DIED", True, (200, 50, 50))
-                death_shadow = big_font.render("YOU DIED", True, (0, 0, 0))
-                dw, dh = death_text.get_size()
-                sx = (screen.get_width() - dw) // 2
-                sy = (screen.get_height() - dh) // 2 - 40
-                screen.blit(death_shadow, (sx + 2, sy + 2))
-                screen.blit(death_text, (sx, sy))
-            if small_font:
-                respawn_text = small_font.render("Press R to Respawn", True, (255, 255, 255))
-                respawn_shadow = small_font.render("Press R to Respawn", True, (0, 0, 0))
-                rw, rh = respawn_text.get_size()
-                rx = (screen.get_width() - rw) // 2
-                ry = (screen.get_height() - rh) // 2 + 20
-                screen.blit(respawn_shadow, (rx + 2, ry + 2))
-                screen.blit(respawn_text, (rx, ry))
+        # DEBUG: entity bounding boxes — red=sprite, blue=collision, green dot=Position
+        # Uses the same virtual→screen math as render_system (int truncation then scale).
+        if hasattr(self, 'camera') and self.camera:
+            from ..utils import VIRTUAL_WINDOW_SIZE
+            vsize = VIRTUAL_WINDOW_SIZE
+            dsize = screen.get_size()
+            sf = (dsize[0] / vsize[0], dsize[1] / vsize[1])
+            scroll = self.camera.scroll
+            from ..components.animation import RenderComponent
+            from ..components.render_effect import WindAffectedComponent
+            for eid in self.component_manager.get_entities_with(Position, WindAffectedComponent):
+                pos = self.component_manager.get(eid, Position)
+                render = self.component_manager.get(eid, RenderComponent)
+                collision = self.component_manager.get(eid, CollisionComponent)
+                # Virtual-space coords (same truncation as render_system)
+                sx_v = int(pos.x - scroll.x)
+                sy_v = int(pos.y - scroll.y)
+                # Green dot at Position (centre of entity)
+                pygame.draw.circle(screen, (0, 255, 0),
+                                   (int(sx_v * sf[0]), int(sy_v * sf[1])), 3 * int(sf[0]))
+                if render and render.surface:
+                    dr = render.offset
+                    rx_v = sx_v + int(dr.x)
+                    ry_v = sy_v + int(dr.y)
+                    r = pygame.Rect(
+                        int(rx_v * sf[0]), int(ry_v * sf[1]),
+                        int(render.surface.get_width() * sf[0]),
+                        int(render.surface.get_height() * sf[1])
+                    )
+                    pygame.draw.rect(screen, (255, 0, 0), r, 1)
+                if collision:
+                    c_off = collision.offset
+                    c_sz = collision.size
+                    cx_v = sx_v + int(c_off.x)
+                    cy_v = sy_v + int(c_off.y)
+                    col_rect = pygame.Rect(
+                        int(cx_v * sf[0]), int(cy_v * sf[1]),
+                        int(c_sz[0] * sf[0]), int(c_sz[1] * sf[1])
+                    )
+                    pygame.draw.rect(screen, (0, 100, 255), col_rect, 1)
