@@ -1,4 +1,5 @@
 import math
+import random
 import pygame
 from ...components.destructible import DestructibleComponent
 from ...components.physics import Position, CollisionComponent
@@ -12,6 +13,7 @@ class DestructibleSystem:
         self.component_manager = component_manager
         self.entity_manager = entity_manager
         self.projectile_system = None
+        self.particle_system = None
 
     def update(self, dt, player_id):
         col_dict = self.component_manager._components.get(CollisionComponent, {})
@@ -28,7 +30,7 @@ class DestructibleSystem:
         projectiles = []
         if self.projectile_system:
             for pool_idx in self.projectile_system.active_indices:
-                p = self.projectile_system.projectiles[pool_idx]
+                p = self.projectile_system.pool[pool_idx]
                 if p.active:
                     pr = p.size / 2
                     projectiles.append((p, pool_idx, pygame.Rect(p.x - pr, p.y - pr, p.size, p.size)))
@@ -56,8 +58,18 @@ class DestructibleSystem:
                     for p, pool_idx, pr in projectiles:
                         if pr.colliderect(d_rect):
                             dc.shatter(pos.x, pos.y, 60.0)
-                            p.active = False
-                            p.lifetime = 0
+                            if self.particle_system:
+                                for _ in range(3):
+                                    self.particle_system.emit_fast_particle(
+                                        x=pos.x + random.uniform(-8, 8),
+                                        y=pos.y + random.uniform(-8, 8),
+                                        vx=random.uniform(-40, 40), vy=random.uniform(-60, -20),
+                                        lifetime=random.uniform(0.3, 0.6),
+                                        r=random.randint(100, 180), g=random.randint(80, 140), b=random.randint(60, 100), a=255,
+                                        size=random.uniform(1.5, 3.5),
+                                        fade=True, shrink=True, friction=0.9,
+                                        gravity=120
+                                    )
                             destroyed = True
                             break
 

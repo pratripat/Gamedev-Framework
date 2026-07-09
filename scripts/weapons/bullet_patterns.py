@@ -19,8 +19,7 @@ def spawn_bomb(eid, cm, em, anim_handler, event_manager, data):
     def on_burst():
         # Notify systems that this bomb has burst (used by input cooldown)
         try:
-            event_manager.emit('bomb_burst', entity_id=bomb_id)
-            event_manager.emit(GameSceneEvents.SCREEN_SHAKE, intensity=8.0, duration=0.2)
+            event_manager.emit('bomb_burst', entity_id=bomb_id, radius=radius)
         except Exception as e:
             print(f"[BOMB BURST ERROR] {e}")
 
@@ -279,6 +278,47 @@ def shoot_wall(eid, cm, em, rm, data, projectile_system=None):
 
     return projs
 
+def shoot_spinning_ring(eid, cm, em, rm, data, projectile_system=None):
+    dir_to_player = get_unit_direction_towards(data["start_pos"], data["target_pos"])
+    number = data.get("number", 8)
+    speed = data.get("speed", 1.5)
+    spin_speed = data.get("spin_speed", 2.0)
+    ring_radius = data.get("ring_radius", 40)
+
+    projs = []
+    for i in range(number):
+        angle = (360 / number) * i
+        ring_offset = rotate_vector(pygame.Vector2(ring_radius, 0), angle)
+        spawn_pos = data["start_pos"] + ring_offset
+        tangent = rotate_vector(pygame.Vector2(spin_speed, 0), angle + 90)
+        drift = dir_to_player * speed * 0.3
+        combined = tangent + drift
+        d = combined.normalize() if combined.length_squared() > 0 else pygame.Vector2(1, 0)
+        pd = {**data, "start_pos": spawn_pos, "speed": combined.length()}
+        projs.append(spawn_projectile(eid, cm, em, rm, d, pd, projectile_system))
+
+    return projs
+
+def shoot_knight_l(eid, cm, em, rm, data, projectile_system=None):
+    dir_to_player = get_unit_direction_towards(data["start_pos"], data["target_pos"])
+    perp = pygame.Vector2(-dir_to_player.y, dir_to_player.x)
+    import random
+    flip = random.choice([-1, 1])
+    spacing = data.get("spacing", 14)
+
+    offsets = [
+        dir_to_player * 2 * spacing,
+        dir_to_player * spacing,
+        dir_to_player * spacing + perp * flip * spacing,
+    ]
+
+    projs = []
+    for off in offsets:
+        pd = {**data, "start_pos": data["start_pos"] + off}
+        projs.append(spawn_projectile(eid, cm, em, rm, dir_to_player, pd, projectile_system))
+
+    return projs
+
 SHOOT_FUNCTIONS = {
     "shoot_single": shoot_single,
     "shoot_spread": shoot_spread,
@@ -288,5 +328,7 @@ SHOOT_FUNCTIONS = {
     "shoot_cross": shoot_cross,
     "shoot_double_ring": shoot_double_ring,
     "shoot_aimed_burst": shoot_aimed_burst,
-    "shoot_wall": shoot_wall
+    "shoot_wall": shoot_wall,
+    "shoot_spinning_ring": shoot_spinning_ring,
+    "shoot_knight_l": shoot_knight_l,
 }

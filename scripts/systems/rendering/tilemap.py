@@ -3,15 +3,21 @@ import os
 from ...utils import TILE_SIZE, CHUNK_SIZE, VIRTUAL_WINDOW_SIZE
 
 class Ripple:
-    __slots__ = ('x', 'y', 'time', 'duration')
-    def __init__(self, x, y, duration=1.2):
+    __slots__ = ('x', 'y', 'vx', 'vy', 'time', 'duration')
+    def __init__(self, x, y, vx=0, vy=0, duration=1.2):
         self.x = x
         self.y = y
+        self.vx = vx
+        self.vy = vy
         self.time = 0.0
         self.duration = duration
 
     def update(self, dt):
         self.time += dt
+        self.x += self.vx * dt
+        self.y += self.vy * dt
+        self.vx *= 0.92
+        self.vy *= 0.92
         return self.time < self.duration
 
     @property
@@ -146,8 +152,8 @@ class Tilemap:
                 self.water_frame_index = (self.water_frame_index + 1) % len(self.water_frames)
         self.ripples = [r for r in self.ripples if r.update(dt)]
 
-    def add_ripple(self, x, y):
-        self.ripples.append(Ripple(x, y))
+    def add_ripple(self, x, y, vx=0, vy=0):
+        self.ripples.append(Ripple(x, y, vx, vy))
 
     def set_water_frames(self, frames, fps: int = 8, intensity: float = 0.6):
         """

@@ -1,11 +1,24 @@
 import pygame, json, bisect
 from ...utils import load_image, load_images_from_spritesheet, DEFAULT_COLORKEY, ANIMATION_FOLDER, GameSceneEvents, normalize_scale, SCALE, ZERO_VEC
+from ...utils.json_validator import validate, load_and_validate
+from ...utils.json_schemas import ANIMATION_ENTRY_SCHEMA
 
 class AnimationHandler:
     def __init__(self, resource_manager):
         self.resource_manager = resource_manager
         self.animations = {}
         self.animations_config = json.load(open(f"{ANIMATION_FOLDER}/config.json", "r"))
+        # Validate each entity's animation entries
+        for entity_name, anims in self.animations_config.items():
+            if isinstance(anims, dict):
+                for anim_name, entry in anims.items():
+                    errs = validate(entry, ANIMATION_ENTRY_SCHEMA,
+                                    path=f"config.json.{entity_name}.{anim_name}")
+                    if errs:
+                        raise ValueError(
+                            f"Animation validation errors for {entity_name}.{anim_name}:\n" +
+                            "\n".join(f"  - {e}" for e in errs)
+                        )
     
     def load_animation(self, entity):
         """
@@ -140,6 +153,16 @@ class Animation:
         self.image = None
         self._frame_lookup = self._generate_frame_lookup()
         self.update_image()
+        # Frame events: list of (frame_threshold, event_name) sorted by threshold
+        raw = animation_data.config.get('frame_events', [])
+        try:
+            self._frame_events = sorted(
+                [(float(e['frame']), e['event']) for e in raw],
+                key=lambda x: x[0]
+            )
+        except (TypeError, KeyError, ValueError):
+            self._frame_events = []
+        self._event_idx = 0  # next event to check
 
     def _generate_frame_lookup(self):
         frames = self.animation_data.get_frames()
@@ -221,7 +244,24 @@ class Animation:
         surface.blit(cached_img, render_pos)
 
     def run(self, event_manager, entity_id, fps, dt):
+        old_frame = self.frame
         self.frame += self.animation_data.config['speed'] * dt * fps
+
+        # Check frame events (only when frame advances forward)
+        if self._frame_events and self.frame > old_frame:
+            while (self._event_idx < len(self._frame_events) and
+                   self._frame_events[self._event_idx][0] <= self.frame):
+                _, event_name = self._frame_events[self._event_idx]
+                self._event_idx += 1
+                try:
+                    event_manager.emit(
+                        GameSceneEvents.ANIMATION_EVENT,
+                        entity_id=entity_id,
+                        animation_id=self.animation_id,
+                        event=event_name,
+                    )
+                except Exception:
+                    pass
 
         if self.frame >= self.animation_data.duration():
             try:
@@ -232,9 +272,14 @@ class Animation:
             loop = self.animation_data.config['loop']
             if loop is True:
                 self.frame = 0
+                self._event_idx = 0  # reset frame events for looped animations
             elif isinstance(loop, list):
                 loop_start, loop_end = loop
                 self.frame = sum(self.animation_data.get_frames()[:loop_start+1])
+                self._event_idx = max(
+                    (i for i, (th, _) in enumerate(self._frame_events) if th < self.frame),
+                    default=-1
+                ) + 1
             else:
                 self.frame = self.animation_data.duration()
 

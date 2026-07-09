@@ -1,6 +1,7 @@
 import pygame
 import math
-from ...utils import GameSceneEvents# , Quadtree, INITIAL_WINDOW_SIZE, SCALE, CollisionShape, collision_occured
+from ...utils import GameSceneEvents
+from ...utils.object_pool import ObjectPool
 
 class FastProjectile:
     __slots__ = [
@@ -21,6 +22,8 @@ class FastProjectile:
         'orbit_radius', 'orbit_speed', 'orbit_angle', 'orbit_center_x', 'orbit_center_y',
         'phase', 'phase_timer',
         'curvature',
+        # --- visual ---
+        'visual_type', 'color',
     ]
     def __init__(self):
         self.active = False
@@ -56,16 +59,18 @@ class FastProjectile:
         self.phase = 0
         self.phase_timer = 0.0
         self.curvature = 0.0
+        self.visual_type = "standard"
+        self.color = (255, 255, 255)
 
 class FastProjectileSystem:
     def __init__(self, event_manager, capacity=4000):
         self.event_manager = event_manager
         self.capacity = capacity
-        self.projectiles = [FastProjectile() for _ in range(capacity)]
+        self.pool = ObjectPool(FastProjectile, capacity=capacity, grow=True, max_capacity=8000)
         self.active_indices = []
-        self.free_indices = list(range(capacity))
         self._temp_rect = pygame.FRect(0, 0, 0, 0)
         self._pulse_cache = {}
+        self._proj_visual_cache = {}
         
         # Pre-allocated objects to eliminate per-frame garbage collection
         self._shared_hits = []
@@ -76,10 +81,10 @@ class FastProjectileSystem:
         self._render_items = []
         
     def spawn(self, source_entity, x, y, vx, vy, speed, damage, effects, bounce, penetration, lifetime, size, layer, mask, image, pulse_radius, pulse_speed, pulse_color, particle_rate, hits_dashing_player=False, modifiers=None):
-        if not self.free_indices:
+        idx = self.pool.acquire()
+        if idx is None:
             return None
-        idx = self.free_indices.pop()
-        p = self.projectiles[idx]
+        p = self.pool[idx]
         
         p.active = True
         p.source_entity = source_entity
@@ -135,10 +140,13 @@ class FastProjectileSystem:
         p.phase = 0
         p.phase_timer = 0.0
         p.curvature = 0.0
+        p.visual_type = "standard"
+        p.color = (255, 255, 255)
         if modifiers:
             for k, v in modifiers.items():
                 if hasattr(p, k):
                     setattr(p, k, v)
+        p.color = pulse_color  # always sync color from projectile data
         
         self.active_indices.append(idx)
         return p
@@ -238,10 +246,10 @@ class FastProjectileSystem:
 
     def _spawn_raw(self, source_entity, x, y, vx, vy, speed, damage, effects, bounce, penetration, lifetime, size, layer, mask, image, pulse_radius, pulse_speed, pulse_color, particle_rate, hits_dashing_player=False):
         """Minimal spawn for internal split/chain use without modifier overhead."""
-        if not self.free_indices:
+        idx = self.pool.acquire()
+        if idx is None:
             return None
-        idx = self.free_indices.pop()
-        child = self.projectiles[idx]
+        child = self.pool[idx]
         child.active = True
         child.source_entity = source_entity
         child.x = x; child.y = y
@@ -275,6 +283,8 @@ class FastProjectileSystem:
         child.orbit_radius = 0.0; child.orbit_speed = 0.0; child.orbit_angle = 0.0
         child.orbit_center_x = 0.0; child.orbit_center_y = 0.0
         child.phase = 0; child.phase_timer = 0.0; child.curvature = 0.0
+        child.visual_type = "split"
+        child.color = pulse_color
         self.active_indices.append(idx)
         return child
 
@@ -302,20 +312,18 @@ class FastProjectileSystem:
         write_ptr = 0
         for read_pos in range(len(self.active_indices)):
             idx = self.active_indices[read_pos]
-            p = self.projectiles[idx]
+            p = self.pool[idx]
             
             if camera_center:
                 dx = p.x - camera_center.x
                 dy = p.y - camera_center.y
                 if dx*dx + dy*dy > 2250000:
-                    p.active = False
-                    self.free_indices.append(idx)
+                    self.pool.release(idx)
                     continue
 
             p.lifetime -= dt
             if p.lifetime <= 0:
-                p.active = False
-                self.free_indices.append(idx)
+                self.pool.release(idx)
                 self._handle_split(p, dt)
                 continue
 
@@ -357,8 +365,7 @@ class FastProjectileSystem:
                         self.event_manager.emit(GameSceneEvents.DAMAGE, entity_id=target_eid, proj_id=idx, damage=p.damage, effects=p.effects, proj_vel=emit_vel, proj_pos=emit_pos)
                         if p.penetration > 0: p.penetration -= 1
                         else:
-                            p.active = False
-                            self.free_indices.append(idx)
+                            self.pool.release(idx)
                             hit_entity = True
                             self._handle_split(p, dt)
                             break
@@ -367,11 +374,13 @@ class FastProjectileSystem:
 
             if particle_system and p.particle_rate > 0:
                 p.particle_timer += dt
-                emit_count = int(p.particle_timer * p.particle_rate)
+                rate = p.particle_rate * (1.0 if p.size <= 20 else 0.4)
+                emit_count = int(p.particle_timer * rate)
                 if emit_count > 0:
-                    p.particle_timer -= emit_count / p.particle_rate
+                    p.particle_timer -= emit_count / rate
+                    trail_size = p.size * (0.2 if p.size <= 20 else 0.5)
                     for _ in range(emit_count):
-                        particle_system.emit_fast_particle(px, py, 0, 0, 0.5, p.pulse_color[0], p.pulse_color[1], p.pulse_color[2], 255, p.size * 0.2, True, True, 1.0)
+                        particle_system.emit_fast_particle(px, py, 0, 0, 0.5, p.pulse_color[0], p.pulse_color[1], p.pulse_color[2], 255, trail_size, True, True, 1.0)
 
             p.pulse_time += dt
 
@@ -413,7 +422,7 @@ class FastProjectileSystem:
                         if p.bounce > 0:
                             p.bounce -= 1; p.vx *= -1; p.x = cx + p.vx * dt * movement_scale
                         else:
-                            p.active = False; self.free_indices.append(idx); self._handle_split(p, dt); destroyed = True; break
+                            self.pool.release(idx); self._handle_split(p, dt); destroyed = True; break
                 if destroyed: break
             
             if destroyed: continue
@@ -451,7 +460,7 @@ class FastProjectileSystem:
                         if p.bounce > 0:
                             p.bounce -= 1; p.vy *= -1; p.y = cy + p.vy * dt * movement_scale
                         else:
-                            p.active = False; self.free_indices.append(idx); self._handle_split(p, dt); destroyed = True; break
+                            self.pool.release(idx); self._handle_split(p, dt); destroyed = True; break
                 if destroyed: break
             if destroyed: continue
 
@@ -468,8 +477,9 @@ class FastProjectileSystem:
         items = self._render_items
         items.clear()
         screen_rect = camera.rect
+        from ..rendering.projectile_visuals import get_projectile_sprite
         for idx in self.active_indices:
-            p = self.projectiles[idx]
+            p = self.pool[idx]
             if not screen_rect.inflate(64, 64).collidepoint(p.x, p.y): continue
             px, py = p.x - scroll_int_x, p.y - scroll_int_y
             if p.pulse_radius > 0:
@@ -483,7 +493,16 @@ class FastProjectileSystem:
                         pygame.draw.circle(pulse_surf, (*p.pulse_color, 255), (dr_int, dr_int), dr_int)
                         self._pulse_cache[cache_key] = pulse_surf
                     items.append((p.y, "sprite", pulse_surf, (px - dr_int, py - dr_int), None, None))
-            if p.image:
+            # Use visual_type sprite if available, fall back to p.image
+            if p.visual_type != "standard" or p.image is None:
+                vkey = (p.visual_type, int(p.size), tuple(p.color))
+                sprite = self._proj_visual_cache.get(vkey)
+                if sprite is None:
+                    sprite = get_projectile_sprite(p.visual_type, p.size, p.color)
+                    self._proj_visual_cache[vkey] = sprite
+                w, h = sprite.get_size()
+                items.append((p.y, "sprite", sprite, (px - w/2, py - h/2), None, None))
+            elif p.image:
                 w, h = p.image.get_size()
                 items.append((p.y, "sprite", p.image, (px - w/2, py - h/2), None, None))
         return items

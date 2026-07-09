@@ -168,7 +168,7 @@ class PhysicsEngine:
                         vel.realistic_vel.y = 0
 
             if collisions is not None:
-                self.event_manager.emit_collision(non_solid_component_entity, collisions)
+                self.event_manager.emit(GameSceneEvents.COLLISION, entity_id=non_solid_component_entity, collisions=collisions)
 
             # Particles WALK event
             if vel.vec.length_squared() > 0.1:
@@ -176,7 +176,7 @@ class PhysicsEngine:
                 self._walk_timers[non_solid_component_entity] = self._walk_timers.get(non_solid_component_entity, 0) + dt
                 if self._walk_timers[non_solid_component_entity] > 0.15:
                     self._walk_timers[non_solid_component_entity] = 0
-                    self.event_manager.emit_walk(pos.vec, vel.vec, non_solid_component_entity)
+                    self.event_manager.emit(GameSceneEvents.WALK, pos=pos.vec, vel=vel.vec, entity_id=non_solid_component_entity)
 
             off = non_solid_component.offset
             pos.vec.x = rect.x - off.x
