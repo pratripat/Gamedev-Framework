@@ -62,7 +62,7 @@ class RenderSystem:
             if hasattr(p_sys, 'active_indices'):
                 # FastProjectileSystem logic
                 for idx in p_sys.active_indices:
-                    p = p_sys.projectiles[idx]
+                    p = p_sys.pool[idx]
                     p_radius = (p.size / 2) + 6
                     prsq = p_radius * p_radius
                     interactors.append((p.x, p.y, prsq, 1.0 / prsq, 1.5))

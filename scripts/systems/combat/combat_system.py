@@ -15,9 +15,9 @@ class CombatSystem:
         self.projectile_system = FastProjectileSystem(event_manager)
         self.attack_pattern_system = AttackPatternSystem(component_manager, entity_manager, resource_manager)
 
-    def update(self, event_manager, component_manager, scroll, dt, fps=None, static_quadtree=None, dynamic_quadtree=None, particle_system=None, is_dashing=False, player_id=None, camera_center=None):
+    def update(self, event_manager, component_manager, scroll, dt, fps=None, static_quadtree=None, dynamic_quadtree=None, particle_system=None, is_dashing=False, player_id=None, camera_center=None, game_time=0.0):
         self.weapon_system.update(dt, self.projectile_system)
-        self.attack_pattern_system.update(dt, self.projectile_system)
+        self.attack_pattern_system.update(dt, self.projectile_system, game_time=game_time)
         # Update projectiles first so their positions are ready when hitboxes are checked
 
         hurtbox_dict = component_manager._components.get(HurtBoxComponent, {})

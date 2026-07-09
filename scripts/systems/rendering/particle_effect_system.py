@@ -3,6 +3,7 @@ import math
 
 from ...components.particle import ParticleEmitter
 from ...components.physics import Position
+from ...utils.object_pool import ObjectPool
 
 class FastParticle:
     __slots__ = [
@@ -23,9 +24,8 @@ class ParticleEffectSystem:
     def __init__(self, component_manager, entity_manager, capacity=4000):
         self.cm = component_manager
         self.capacity = capacity
-        self.particles = [FastParticle() for _ in range(capacity)]
+        self.pool = ObjectPool(FastParticle, capacity=capacity, grow=True, max_capacity=8000)
         self.active_indices = []
-        self.free_indices = list(range(capacity))
         self._temp_rect = pygame.Rect(0, 0, 0, 0)
         self._temp_hits = []
         self._particle_cache = {}
@@ -33,10 +33,10 @@ class ParticleEffectSystem:
         self.wind_system = None
         
     def emit_particle(self):
-        if not self.free_indices:
+        idx = self.pool.acquire()
+        if idx is None:
             return None
-        idx = self.free_indices.pop()
-        p = self.particles[idx]
+        p = self.pool[idx]
         p.active = True
         self.active_indices.append(idx)
         return p
@@ -105,14 +105,13 @@ class ParticleEffectSystem:
         write_ptr = 0
         for read_pos in range(len(self.active_indices)):
             idx = self.active_indices[read_pos]
-            p = self.particles[idx]
+            p = self.pool[idx]
 
             if cull_rect:
                 if not cull_rect.collidepoint(p.x, p.y):
                     p.age += dt
                     if p.age >= p.lifetime:
-                        p.active = False
-                        self.free_indices.append(idx)
+                        self.pool.release(idx)
                         continue
                     self.active_indices[write_ptr] = idx
                     write_ptr += 1
@@ -120,8 +119,7 @@ class ParticleEffectSystem:
 
             p.age += dt
             if p.age >= p.lifetime:
-                p.active = False
-                self.free_indices.append(idx)
+                self.pool.release(idx)
                 continue
 
             if p.friction < 1.0:
@@ -201,7 +199,7 @@ class ParticleEffectSystem:
         screen_rect = camera.rect.inflate(64, 64)
         
         for idx in self.active_indices:
-            p = self.particles[idx]
+            p = self.pool[idx]
             
             if not screen_rect.collidepoint(p.x, p.y):
                 continue

@@ -42,7 +42,7 @@
                 "speed": 7.5,
                 "range": 50.0,
                 "effects": [],
-                "size": 0.5,
+                "size": 1,
                 "image_file": "data/graphics/images/projectile.png",
                 "projectile_color": null,
                 "pulse_speed": 10.0,
@@ -271,36 +271,50 @@
                         "effects": [],
                         "size": 0.5,
                         "image_file": "data/graphics/images/projectile.png",
-                        "projectile_color": [255, 235, 59],
+                        "projectile_color": [
+                            255,
+                            235,
+                            59
+                        ],
                         "pulse_speed": 15.0,
                         "towards_player": true,
                         "spread": 6,
                         "modifiers": {
-                            "homing_strength": 0.05
-                        }
+                            "homing_strength": 0.05,
+                            "visual_type": "homing"
+                        },
+                        "range_min": 0
                     },
-                    "duration": 2
+                    "duration": 2,
+                    "tier": "light",
+                    "tier_cooldown": 0.5
                 },
                 {
-                    "cooldown": 1.5,
-                    "shoot_fn": "shoot_aimed_fan",
+                    "cooldown": 1.0,
+                    "tier": "heavy",
+                    "tier_cooldown": 3.0,
+                    "shoot_fn": "shoot_knight_l",
                     "projectile_data": {
-                        "number": 5,
-                        "damage": 10,
+                        "damage": 12,
                         "speed": 4.0,
                         "range": 80.0,
+                        "range_min": 20,
                         "effects": [],
                         "size": 0.6,
                         "image_file": "data/graphics/images/projectile.png",
-                        "projectile_color": [255, 235, 59],
+                        "projectile_color": [
+                            255,
+                            235,
+                            59
+                        ],
                         "pulse_speed": 12.0,
                         "towards_player": true,
-                        "angle": 15,
+                        "spacing": 16,
                         "modifiers": {
-                            "curvature": 15.0
+                            "visual_type": "curve"
                         }
                     },
-                    "duration": 2
+                    "duration": 1
                 },
                 {
                     "cooldown": 0.6,
@@ -312,7 +326,11 @@
                         "effects": [],
                         "size": 0.75,
                         "image_file": "data/graphics/images/projectile.png",
-                        "projectile_color": [255, 235, 59],
+                        "projectile_color": [
+                            255,
+                            235,
+                            59
+                        ],
                         "pulse_speed": 10.0,
                         "towards_player": true,
                         "angle": 2,
@@ -324,10 +342,14 @@
                             "split_count": 4,
                             "split_speed": 2.0,
                             "split_angle_spread": 360,
-                            "lifetime": 3.0
-                        }
+                            "visual_type": "delayed"
+                        },
+                        "range_min": 0
                     },
-                    "duration": 2
+                    "duration": 2,
+                    "tier": "signature",
+                    "tier_cooldown": 6.0,
+                    "warmup": 0.4
                 }
             ]
         },
@@ -404,35 +426,50 @@
                         "effects": [],
                         "size": 0.6,
                         "image_file": "data/graphics/images/projectile.png",
-                        "projectile_color": [76, 175, 80],
+                        "projectile_color": [
+                            76,
+                            175,
+                            80
+                        ],
                         "pulse_speed": 14.0,
                         "towards_player": true,
                         "modifiers": {
                             "accel": 0.3,
-                            "max_speed": 7.0
-                        }
+                            "max_speed": 7.0,
+                            "visual_type": "accel"
+                        },
+                        "range_min": 50
                     },
                     "warmup": 0.5,
-                    "duration": 1
+                    "duration": 1,
+                    "tier": "heavy",
+                    "tier_cooldown": 4.0
                 },
                 {
-                    "cooldown": 2.5,
-                    "shoot_fn": "shoot_double_ring",
+                    "cooldown": 2.0,
+                    "tier": "light",
+                    "tier_cooldown": 1.0,
+                    "shoot_fn": "shoot_spinning_ring",
                     "projectile_data": {
-                        "number": 6,
-                        "damage": 8,
-                        "speed": 2.0,
-                        "range": 120.0,
+                        "number": 8,
+                        "damage": 6,
+                        "speed": 1.5,
+                        "spin_speed": 2.5,
+                        "ring_radius": 36,
+                        "range": 140.0,
+                        "range_min": 0,
                         "effects": [],
-                        "size": 0.5,
+                        "size": 0.4,
                         "image_file": "data/graphics/images/projectile.png",
-                        "projectile_color": [76, 175, 80],
-                        "pulse_speed": 18.0,
-                        "towards_player": false,
-                        "ring_offset": 11.25,
+                        "projectile_color": [
+                            76,
+                            175,
+                            80
+                        ],
+                        "pulse_speed": 16.0,
+                        "towards_player": true,
                         "modifiers": {
-                            "wave_amplitude": 8.0,
-                            "wave_frequency": 6.0
+                            "visual_type": "standard"
                         }
                     },
                     "duration": 3
@@ -448,15 +485,24 @@
                         "effects": [],
                         "size": 0.5,
                         "image_file": "data/graphics/images/projectile.png",
-                        "projectile_color": [76, 175, 80],
+                        "projectile_color": [
+                            76,
+                            175,
+                            80
+                        ],
                         "pulse_speed": 16.0,
                         "towards_player": true,
                         "spacing": 16,
                         "modifiers": {
-                            "accel": -0.3
-                        }
+                            "accel": -0.3,
+                            "visual_type": "heavy"
+                        },
+                        "range_min": 0
                     },
-                    "duration": 2
+                    "duration": 2,
+                    "tier": "signature",
+                    "tier_cooldown": 8.0,
+                    "warmup": 1.0
                 }
             ]
         },
@@ -534,16 +580,24 @@
                         "effects": [],
                         "size": 1.2,
                         "image_file": "data/graphics/images/projectile.png",
-                        "projectile_color": [156, 39, 176],
+                        "projectile_color": [
+                            156,
+                            39,
+                            176
+                        ],
                         "pulse_speed": 5.0,
                         "towards_player": true,
                         "spacing": 16,
                         "modifiers": {
                             "accel": 0.5,
-                            "max_speed": 5.0
-                        }
+                            "max_speed": 5.0,
+                            "visual_type": "accel"
+                        },
+                        "range_min": 0
                     },
-                    "duration": 3
+                    "duration": 3,
+                    "tier": "heavy",
+                    "tier_cooldown": 4.0
                 },
                 {
                     "cooldown": 4.0,
@@ -556,7 +610,11 @@
                         "effects": [],
                         "size": 1.5,
                         "image_file": "data/graphics/images/projectile.png",
-                        "projectile_color": [156, 39, 176],
+                        "projectile_color": [
+                            156,
+                            39,
+                            176
+                        ],
                         "pulse_speed": 4.0,
                         "towards_player": false,
                         "modifiers": {
@@ -564,11 +622,16 @@
                             "split_on_death": true,
                             "split_count": 3,
                             "split_speed": 1.0,
-                            "split_angle_spread": 360
-                        }
+                            "split_angle_spread": 360,
+                            "visual_type": "delayed"
+                        },
+                        "range_min": 0,
+                        "dash_speed": 8.0
                     },
                     "warmup": 0.8,
-                    "duration": 2
+                    "duration": 2,
+                    "tier": "signature",
+                    "tier_cooldown": 8.0
                 },
                 {
                     "cooldown": 3.0,
@@ -581,16 +644,24 @@
                         "effects": [],
                         "size": 1.5,
                         "image_file": "data/graphics/images/projectile.png",
-                        "projectile_color": [156, 39, 176],
+                        "projectile_color": [
+                            156,
+                            39,
+                            176
+                        ],
                         "pulse_speed": 5.0,
                         "towards_player": true,
                         "angle": 6,
                         "modifiers": {
                             "trail_interval": 0.1,
-                            "trail_lifetime": 0.5
-                        }
+                            "trail_lifetime": 0.5,
+                            "visual_type": "standard"
+                        },
+                        "range_min": 0
                     },
-                    "duration": 2
+                    "duration": 2,
+                    "tier": "light",
+                    "tier_cooldown": 1.0
                 }
             ]
         },
@@ -671,12 +742,18 @@
         },
         "ShadowComponent": {
             "surface": null,
-            "offset": [0, 16],
+            "offset": [
+                0,
+                16
+            ],
             "alpha": 150,
             "center": true
         },
         "YSortComponent": {
-            "offset": [0.0, 16.0]
+            "offset": [
+                0.0,
+                16.0
+            ]
         }
     },
     "foliage": {
@@ -687,14 +764,16 @@
         "RenderComponent": {
             "image_file": "data/graphics/spritesheets/foliage.png",
             "offset_x": 0.0,
-            "offset_y": 0.0
+            "offset_y": 0.0,
+            "center": true
         },
         "CollisionComponent": {
             "offset_x": -8.0,
             "offset_y": 17.5,
             "width": 20.0,
             "height": 19.0,
-            "solid": true
+            "solid": true,
+            "center": false
         },
         "YSortComponent": {
             "offset": [

@@ -66,6 +66,7 @@ class GameSceneEvents(Enum):
     WALK = "walk"
     WATER_SPLASH = "water_splash"
     SPAWN_GHOST = "spawn_ghost"
+    ANIMATION_EVENT = "animation_event"
 
 class EnemyState(Enum):
     IDLE = auto()

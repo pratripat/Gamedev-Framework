@@ -2,18 +2,20 @@ from scripts.components.physics import Velocity
 from ...components.render_effect import RenderEffectComponent, ProximityFadeComponent
 from ...components.combat import WeaponComponent, HealthComponent
 from ...utils import GameSceneEvents
+from ...utils.tween import Tween, ease_out_quad
 
 import pygame
 
 class RenderEffectSystem:
     def __init__(self, event_manager, component_manager):
         self.component_manager = component_manager
+        self.tween_system = None  # Set externally by GameScene
 
-        event_manager.subscribe(GameSceneEvents.SHOOT, lambda entity_id: self.trigger_squash(entity_id, (0.9, 1.05)))
+        event_manager.subscribe(GameSceneEvents.SHOOT, lambda entity_id: self._tweened_squash(entity_id, (0.9, 1.05)))
         event_manager.subscribe(
             GameSceneEvents.DAMAGE,
             self.trigger_flash,
-            lambda entity_id, **args: self.trigger_squash(entity_id, target_scale=(1, 0.8)),
+            lambda entity_id, **args: self._tweened_squash(entity_id, target_scale=(1, 0.8)),
             lambda entity_id, proj_id, **args: self.trigger_rotate(
                 entity_id, 
                 angle=15 * (-1 if args.get('proj_vel', pygame.Vector2(0,0)).x > 0 else 1), 
@@ -58,14 +60,23 @@ class RenderEffectSystem:
             "duration": HealthComponent.iframetimer
         })
 
-    def trigger_squash(self, entity_id, target_scale=(0.5, 0.5)):
-        if not self.component_manager.get(entity_id, WeaponComponent): return
-        self.add_effect(entity_id, "squash", {
-            "start_scale": pygame.Vector2(1, 1),
-            "target_scale": pygame.Vector2(target_scale),
-            "duration": 0.05,
-            "return_back": True
-        })
+    def _tweened_squash(self, entity_id, target_scale=(1, 0.8)):
+        """Tween-based squash that animates RenderEffectComponent.scale.
+        Legacy effect data is NOT used; the tween directly interpolates the scale property.
+        """
+        rec = self.component_manager.get(entity_id, RenderEffectComponent)
+        if rec is None:
+            return
+        if self.tween_system is None:
+            return
+        self.tween_system.cancel_tweens_for(rec, 'scale')
+        rec.scale = pygame.Vector2(1, 1)
+        target = pygame.Vector2(target_scale)
+        tween = Tween(rec, 'scale', pygame.Vector2(1, 1), target, 0.04, easing='out_quad')
+        tween.on_complete = lambda: self.tween_system.from_to(
+            rec, 'scale', target, pygame.Vector2(1, 1), 0.08, easing='out_quad'
+        )
+        self.tween_system.add(tween)
     
     def trigger_blink(self, entity_id, **args):
         self.add_effect(entity_id, "blink", {
@@ -126,27 +137,6 @@ class RenderEffectSystem:
             # Death Pale Tint
             if "death_pale" in render_effect_comp.effect_data:
                 render_effect_comp.tint = render_effect_comp.effect_data["death_pale"]["color"]
-
-            if "squash" in render_effect_comp.effect_data:
-                total = render_effect_comp.effect_data["squash"]["duration"]
-
-                render_effect_comp.effect_timers["squash"] += dt
-                t = min(render_effect_comp.effect_timers["squash"] / total, 1)
-
-                current_scale = render_effect_comp.effect_data["squash"]["start_scale"].lerp(render_effect_comp.effect_data["squash"]["target_scale"], t)
-                render_effect_comp.scale = current_scale
-
-                if t >= 1:
-                    if render_effect_comp.effect_data["squash"]["return_back"]:
-                        render_effect_comp.effect_data["squash"]["start_scale"], render_effect_comp.effect_data["squash"]["target_scale"] = (
-                            render_effect_comp.effect_data["squash"]["target_scale"],
-                            pygame.Vector2(1, 1)
-                        )
-                        render_effect_comp.effect_timers["squash"] = 0
-                        render_effect_comp.effect_data["squash"]["return_back"] = False
-                    else:
-                        del render_effect_comp.effect_timers["squash"]
-                        del render_effect_comp.effect_data["squash"]
             
             if "flash" in render_effect_comp.effect_data:
                 total = render_effect_comp.effect_data["flash"]["duration"]

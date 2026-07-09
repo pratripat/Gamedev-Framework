@@ -1,894 +1,904 @@
 {
-    "white_pawn": {
-        "idle": {
-            "frames": [
-                5
-            ],
-            "loop": false,
-            "speed": 1,
-            "scale": 1,
-            "centered": false,
-            "flip": false,
-            "offset": [
-                0.0,
-                0.0
-            ]
-        },
-        "moving": {
-            "frames": [
-                5,
-                5,
-                3.75,
-                3.75,
-                2.5,
-                3.75,
-                3.75,
-                5,
-                5
-            ],
-            "loop": true,
-            "speed": 2,
-            "scale": 1,
-            "centered": false,
-            "flip": false,
-            "offset": [
-                0.0,
-                0.0
-            ]
-        },
-        "death": {
-            "frames": [
-                5,
-                5,
-                20,
-                5,
-                5,
-                5,
-                5,
-                5,
-                5,
-                20,
-                5,
-                5,
-                5,
-                5,
-                5,
-                5,
-                5,
-                5,
-                5,
-                50
-            ],
-            "loop": false,
-            "speed": 1,
-            "scale": 1,
-            "centered": false,
-            "flip": false,
-            "offset": [
-                -6.25,
-                0.0
-            ]
-        }
+  "white_pawn": {
+    "idle": {
+      "frames": [
+        5
+      ],
+      "loop": false,
+      "speed": 1,
+      "scale": 1,
+      "centered": false,
+      "flip": false,
+      "offset": [
+        0.0,
+        0.0
+      ]
     },
-    "white_knight": {
-        "idle": {
-            "frames": [
-                5
-            ],
-            "loop": false,
-            "speed": 1,
-            "scale": 1,
-            "centered": false,
-            "flip": false,
-            "offset": [
-                0.0,
-                0.0
-            ]
+    "moving": {
+      "frames": [
+        5,
+        5,
+        3.75,
+        3.75,
+        2.5,
+        3.75,
+        3.75,
+        5,
+        5
+      ],
+      "loop": true,
+      "speed": 2,
+      "scale": 1,
+      "centered": false,
+      "flip": false,
+      "offset": [
+        0.0,
+        0.0
+      ],
+      "frame_events": [
+        {
+          "frame": 2.5,
+          "event": "footstep"
         },
-        "idleflipped": {
-            "frames": [
-                5
-            ],
-            "loop": false,
-            "speed": 1,
-            "scale": 1,
-            "centered": false,
-            "flip": false,
-            "offset": [
-                0.0,
-                0.0
-            ]
-        },
-        "moving": {
-            "frames": [
-                5,
-                5,
-                3.75,
-                3.75,
-                2.5,
-                3.75,
-                3.75,
-                5,
-                5
-            ],
-            "loop": true,
-            "speed": 2,
-            "scale": 1,
-            "centered": false,
-            "flip": false,
-            "offset": [
-                0.0,
-                0.0
-            ]
-        },
-        "movingflipped": {
-            "frames": [
-                5,
-                5,
-                3.75,
-                3.75,
-                2.5,
-                3.75,
-                3.75,
-                5,
-                5
-            ],
-            "loop": true,
-            "speed": 2,
-            "scale": 1,
-            "centered": false,
-            "flip": false,
-            "offset": [
-                0.0,
-                0.0
-            ]
-        },
-        "shoot": {
-            "frames": [
-                2,
-                2,
-                2,
-                3,
-                1
-            ],
-            "loop": true,
-            "speed": 1,
-            "scale": 1,
-            "centered": false,
-            "flip": false,
-            "offset": [
-                0.0,
-                0.0
-            ]
-        },
-        "shootflipped": {
-            "frames": [
-                2,
-                2,
-                2,
-                3,
-                1
-            ],
-            "loop": true,
-            "speed": 1,
-            "scale": 1,
-            "centered": false,
-            "flip": false,
-            "offset": [
-                0.0,
-                0.0
-            ]
-        },
-        "damage": {
-            "frames": [
-                5,
-                5
-            ],
-            "loop": true,
-            "speed": 1,
-            "scale": 1,
-            "centered": false,
-            "flip": false,
-            "offset": [
-                0.0,
-                0.0
-            ]
-        },
-        "damageflipped": {
-            "frames": [
-                5,
-                5
-            ],
-            "loop": true,
-            "speed": 1,
-            "scale": 1,
-            "centered": false,
-            "flip": false,
-            "offset": [
-                0.0,
-                0.0
-            ]
+        {
+          "frame": 17.5,
+          "event": "footstep"
         }
+      ]
     },
-    "white_rook": {
-        "idle": {
-            "frames": [
-                5
-            ],
-            "loop": false,
-            "speed": 1,
-            "scale": 1,
-            "centered": false,
-            "flip": false,
-            "offset": [
-                0.0,
-                0.0
-            ]
-        },
-        "moving": {
-            "frames": [
-                5,
-                5,
-                3.75,
-                3.75,
-                2.5,
-                3.75,
-                3.75,
-                5,
-                5
-            ],
-            "loop": true,
-            "speed": 2,
-            "scale": 1,
-            "centered": false,
-            "flip": false,
-            "offset": [
-                0.0,
-                0.0
-            ]
-        },
-        "death": {
-            "frames": [
-                5,
-                5,
-                20,
-                5,
-                5,
-                5,
-                5,
-                5,
-                5,
-                20,
-                5,
-                5,
-                5,
-                5,
-                5,
-                5,
-                5,
-                5,
-                5,
-                50
-            ],
-            "loop": false,
-            "speed": 1,
-            "scale": 1,
-            "centered": false,
-            "flip": false,
-            "offset": [
-                -6.25,
-                0.0
-            ]
-        }
-    },
-    "white_bishop": {
-        "idle": {
-            "frames": [
-                5
-            ],
-            "loop": false,
-            "speed": 1,
-            "scale": 1,
-            "centered": false,
-            "flip": false,
-            "offset": [
-                0.0,
-                0.0
-            ]
-        },
-        "idleflipped": {
-            "frames": [
-                5
-            ],
-            "loop": false,
-            "speed": 1,
-            "scale": 1,
-            "centered": false,
-            "flip": false,
-            "offset": [
-                0.0,
-                0.0
-            ]
-        },
-        "moving": {
-            "frames": [
-                5,
-                5,
-                3.75,
-                3.75,
-                2.5,
-                3.75,
-                3.75,
-                5,
-                5
-            ],
-            "loop": true,
-            "speed": 2,
-            "scale": 1,
-            "centered": false,
-            "flip": false,
-            "offset": [
-                0.0,
-                0.0
-            ]
-        },
-        "movingflipped": {
-            "frames": [
-                5,
-                5,
-                3.75,
-                3.75,
-                2.5,
-                3.75,
-                3.75,
-                5,
-                5
-            ],
-            "loop": true,
-            "speed": 2,
-            "scale": 1,
-            "centered": false,
-            "flip": false,
-            "offset": [
-                0.0,
-                0.0
-            ]
-        },
-        "shoot": {
-            "frames": [
-                2,
-                2,
-                2,
-                3,
-                1
-            ],
-            "loop": true,
-            "speed": 1,
-            "scale": 1,
-            "centered": false,
-            "flip": false,
-            "offset": [
-                0.0,
-                0.0
-            ]
-        },
-        "shootflipped": {
-            "frames": [
-                2,
-                2,
-                2,
-                3,
-                1
-            ],
-            "loop": true,
-            "speed": 1,
-            "scale": 1,
-            "centered": false,
-            "flip": false,
-            "offset": [
-                0.0,
-                0.0
-            ]
-        },
-        "damage": {
-            "frames": [
-                5,
-                5
-            ],
-            "loop": true,
-            "speed": 1,
-            "scale": 1,
-            "centered": false,
-            "flip": false,
-            "offset": [
-                0.0,
-                0.0
-            ]
-        },
-        "damageflipped": {
-            "frames": [
-                5,
-                5
-            ],
-            "loop": true,
-            "speed": 1,
-            "scale": 1,
-            "centered": false,
-            "flip": false,
-            "offset": [
-                0.0,
-                0.0
-            ]
-        }
-    },
-    "black_pawn": {
-        "idle": {
-            "frames": [
-                5
-            ],
-            "loop": false,
-            "speed": 1,
-            "scale": 1,
-            "centered": false,
-            "flip": false,
-            "offset": [
-                0.0,
-                0.0
-            ]
-        },
-        "moving": {
-            "frames": [
-                5,
-                5,
-                3.75,
-                3.75,
-                2.5,
-                3.75,
-                3.75,
-                5,
-                5
-            ],
-            "loop": true,
-            "speed": 2,
-            "scale": 1,
-            "centered": false,
-            "flip": false,
-            "offset": [
-                0.0,
-                0.0
-            ]
-        },
-        "death": {
-            "frames": [
-                5,
-                5,
-                20,
-                5,
-                5,
-                5,
-                5,
-                5,
-                5,
-                20,
-                5,
-                5,
-                5,
-                5,
-                5,
-                5,
-                5,
-                5,
-                5,
-                50
-            ],
-            "loop": false,
-            "speed": 1,
-            "scale": 1,
-            "centered": false,
-            "flip": false,
-            "offset": [
-                -6.25,
-                0.0
-            ]
-        }
-    },
-    "black_rook": {
-        "idle": {
-            "frames": [
-                5
-            ],
-            "loop": false,
-            "speed": 1,
-            "scale": 1,
-            "centered": false,
-            "flip": false,
-            "offset": [
-                0.0,
-                0.0
-            ]
-        },
-        "moving": {
-            "frames": [
-                5,
-                5,
-                3.75,
-                3.75,
-                2.5,
-                3.75,
-                3.75,
-                5,
-                5
-            ],
-            "loop": true,
-            "speed": 2,
-            "scale": 1,
-            "centered": false,
-            "flip": false,
-            "offset": [
-                0.0,
-                0.0
-            ]
-        },
-        "death": {
-            "frames": [
-                5,
-                5,
-                20,
-                5,
-                5,
-                5,
-                5,
-                5,
-                5,
-                20,
-                5,
-                5,
-                5,
-                5,
-                5,
-                5,
-                5,
-                5,
-                5,
-                50
-            ],
-            "loop": false,
-            "speed": 1,
-            "scale": 1,
-            "centered": false,
-            "flip": false,
-            "offset": [
-                -6.25,
-                0.0
-            ]
-        }
-    },
-    "black_knight": {
-        "idle": {
-            "frames": [
-                5
-            ],
-            "loop": false,
-            "speed": 1,
-            "scale": 1,
-            "centered": false,
-            "flip": false,
-            "offset": [
-                0.0,
-                0.0
-            ]
-        },
-        "idleflipped": {
-            "frames": [
-                5
-            ],
-            "loop": false,
-            "speed": 1,
-            "scale": 1,
-            "centered": false,
-            "flip": false,
-            "offset": [
-                0.0,
-                0.0
-            ]
-        },
-        "moving": {
-            "frames": [
-                5,
-                5,
-                3.75,
-                3.75,
-                2.5,
-                3.75,
-                3.75,
-                5,
-                5
-            ],
-            "loop": true,
-            "speed": 2,
-            "scale": 1,
-            "centered": false,
-            "flip": false,
-            "offset": [
-                0.0,
-                0.0
-            ]
-        },
-        "movingflipped": {
-            "frames": [
-                5,
-                5,
-                3.75,
-                3.75,
-                2.5,
-                3.75,
-                3.75,
-                5,
-                5
-            ],
-            "loop": true,
-            "speed": 2,
-            "scale": 1,
-            "centered": false,
-            "flip": false,
-            "offset": [
-                0.0,
-                0.0
-            ]
-        },
-        "shoot": {
-            "frames": [
-                2,
-                2,
-                2,
-                3,
-                1
-            ],
-            "loop": true,
-            "speed": 1,
-            "scale": 1,
-            "centered": false,
-            "flip": false,
-            "offset": [
-                0.0,
-                0.0
-            ]
-        },
-        "shootflipped": {
-            "frames": [
-                2,
-                2,
-                2,
-                3,
-                1
-            ],
-            "loop": true,
-            "speed": 1,
-            "scale": 1,
-            "centered": false,
-            "flip": false,
-            "offset": [
-                0.0,
-                0.0
-            ]
-        },
-        "damage": {
-            "frames": [
-                5,
-                5
-            ],
-            "loop": true,
-            "speed": 1,
-            "scale": 1,
-            "centered": false,
-            "flip": false,
-            "offset": [
-                0.0,
-                0.0
-            ]
-        },
-        "damageflipped": {
-            "frames": [
-                5,
-                5
-            ],
-            "loop": true,
-            "speed": 1,
-            "scale": 1,
-            "centered": false,
-            "flip": false,
-            "offset": [
-                0.0,
-                0.0
-            ]
-        }
-    },
-    "black_bishop": {
-        "idle": {
-            "frames": [
-                5
-            ],
-            "loop": false,
-            "speed": 1,
-            "scale": 1,
-            "centered": false,
-            "flip": false,
-            "offset": [
-                0.0,
-                0.0
-            ]
-        },
-        "idleflipped": {
-            "frames": [
-                5
-            ],
-            "loop": false,
-            "speed": 1,
-            "scale": 1,
-            "centered": false,
-            "flip": false,
-            "offset": [
-                0.0,
-                0.0
-            ]
-        },
-        "moving": {
-            "frames": [
-                5,
-                5,
-                3.75,
-                3.75,
-                2.5,
-                3.75,
-                3.75,
-                5,
-                5
-            ],
-            "loop": true,
-            "speed": 2,
-            "scale": 1,
-            "centered": false,
-            "flip": false,
-            "offset": [
-                0.0,
-                0.0
-            ]
-        },
-        "movingflipped": {
-            "frames": [
-                5,
-                5,
-                3.75,
-                3.75,
-                2.5,
-                3.75,
-                3.75,
-                5,
-                5
-            ],
-            "loop": true,
-            "speed": 2,
-            "scale": 1,
-            "centered": false,
-            "flip": false,
-            "offset": [
-                0.0,
-                0.0
-            ]
-        },
-        "shoot": {
-            "frames": [
-                2,
-                2,
-                2,
-                3,
-                1
-            ],
-            "loop": true,
-            "speed": 1,
-            "scale": 1,
-            "centered": false,
-            "flip": false,
-            "offset": [
-                0.0,
-                0.0
-            ]
-        },
-        "shootflipped": {
-            "frames": [
-                2,
-                2,
-                2,
-                3,
-                1
-            ],
-            "loop": true,
-            "speed": 1,
-            "scale": 1,
-            "centered": false,
-            "flip": false,
-            "offset": [
-                0.0,
-                0.0
-            ]
-        }
-    },
-    "vegetation": {
-        "0": {
-            "frames": [
-                0
-            ],
-            "loop": false,
-            "speed": 1,
-            "scale": 1,
-            "centered": false,
-            "flip": false,
-            "offset": [
-                0.0,
-                0.0
-            ]
-        },
-        "1": {
-            "frames": [
-                1
-            ],
-            "loop": false,
-            "speed": 1,
-            "scale": 1,
-            "centered": false,
-            "flip": false,
-            "offset": [
-                0.0,
-                0.0
-            ]
-        },
-        "2": {
-            "frames": [
-                2
-            ],
-            "loop": false,
-            "speed": 1,
-            "scale": 1,
-            "centered": false,
-            "flip": false,
-            "offset": [
-                0.0,
-                0.0
-            ]
-        },
-        "3": {
-            "frames": [
-                3
-            ],
-            "loop": false,
-            "speed": 1,
-            "scale": 1,
-            "centered": false,
-            "flip": false,
-            "offset": [
-                0.0,
-                0.0
-            ]
-        }
-    },
-    "bomb": {
-        "lit": {
-            "frames": [
-                10,
-                10,
-                10,
-                10,
-                10
-            ],
-            "loop": false,
-            "speed": 1,
-            "scale": 1,
-            "centered": false,
-            "flip": false,
-            "offset": [
-                -4.25,
-                -8.25
-            ]
-        }
+    "death": {
+      "frames": [
+        5,
+        5,
+        20,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        20,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        50
+      ],
+      "loop": false,
+      "speed": 1,
+      "scale": 1,
+      "centered": false,
+      "flip": false,
+      "offset": [
+        -6.25,
+        0.0
+      ]
     }
+  },
+  "white_knight": {
+    "idle": {
+      "frames": [
+        5
+      ],
+      "loop": false,
+      "speed": 1,
+      "scale": 1,
+      "centered": false,
+      "flip": false,
+      "offset": [
+        0.0,
+        0.0
+      ]
+    },
+    "idleflipped": {
+      "frames": [
+        5
+      ],
+      "loop": false,
+      "speed": 1,
+      "scale": 1,
+      "centered": false,
+      "flip": false,
+      "offset": [
+        0.0,
+        0.0
+      ]
+    },
+    "moving": {
+      "frames": [
+        5,
+        5,
+        3.75,
+        3.75,
+        2.5,
+        3.75,
+        3.75,
+        5,
+        5
+      ],
+      "loop": true,
+      "speed": 2,
+      "scale": 1,
+      "centered": false,
+      "flip": false,
+      "offset": [
+        0.0,
+        0.0
+      ]
+    },
+    "movingflipped": {
+      "frames": [
+        5,
+        5,
+        3.75,
+        3.75,
+        2.5,
+        3.75,
+        3.75,
+        5,
+        5
+      ],
+      "loop": true,
+      "speed": 2,
+      "scale": 1,
+      "centered": false,
+      "flip": false,
+      "offset": [
+        0.0,
+        0.0
+      ]
+    },
+    "shoot": {
+      "frames": [
+        2,
+        2,
+        2,
+        3,
+        1
+      ],
+      "loop": true,
+      "speed": 1,
+      "scale": 1,
+      "centered": false,
+      "flip": false,
+      "offset": [
+        0.0,
+        0.0
+      ]
+    },
+    "shootflipped": {
+      "frames": [
+        2,
+        2,
+        2,
+        3,
+        1
+      ],
+      "loop": true,
+      "speed": 1,
+      "scale": 1,
+      "centered": false,
+      "flip": false,
+      "offset": [
+        0.0,
+        0.0
+      ]
+    },
+    "damage": {
+      "frames": [
+        5,
+        5
+      ],
+      "loop": true,
+      "speed": 1,
+      "scale": 1,
+      "centered": false,
+      "flip": false,
+      "offset": [
+        0.0,
+        0.0
+      ]
+    },
+    "damageflipped": {
+      "frames": [
+        5,
+        5
+      ],
+      "loop": true,
+      "speed": 1,
+      "scale": 1,
+      "centered": false,
+      "flip": false,
+      "offset": [
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "white_rook": {
+    "idle": {
+      "frames": [
+        5
+      ],
+      "loop": false,
+      "speed": 1,
+      "scale": 1,
+      "centered": false,
+      "flip": false,
+      "offset": [
+        0.0,
+        0.0
+      ]
+    },
+    "moving": {
+      "frames": [
+        5,
+        5,
+        3.75,
+        3.75,
+        2.5,
+        3.75,
+        3.75,
+        5,
+        5
+      ],
+      "loop": true,
+      "speed": 2,
+      "scale": 1,
+      "centered": false,
+      "flip": false,
+      "offset": [
+        0.0,
+        0.0
+      ]
+    },
+    "death": {
+      "frames": [
+        5,
+        5,
+        20,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        20,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        50
+      ],
+      "loop": false,
+      "speed": 1,
+      "scale": 1,
+      "centered": false,
+      "flip": false,
+      "offset": [
+        -6.25,
+        0.0
+      ]
+    }
+  },
+  "white_bishop": {
+    "idle": {
+      "frames": [
+        5
+      ],
+      "loop": false,
+      "speed": 1,
+      "scale": 1,
+      "centered": false,
+      "flip": false,
+      "offset": [
+        0.0,
+        0.0
+      ]
+    },
+    "idleflipped": {
+      "frames": [
+        5
+      ],
+      "loop": false,
+      "speed": 1,
+      "scale": 1,
+      "centered": false,
+      "flip": false,
+      "offset": [
+        0.0,
+        0.0
+      ]
+    },
+    "moving": {
+      "frames": [
+        5,
+        5,
+        3.75,
+        3.75,
+        2.5,
+        3.75,
+        3.75,
+        5,
+        5
+      ],
+      "loop": true,
+      "speed": 2,
+      "scale": 1,
+      "centered": false,
+      "flip": false,
+      "offset": [
+        0.0,
+        0.0
+      ]
+    },
+    "movingflipped": {
+      "frames": [
+        5,
+        5,
+        3.75,
+        3.75,
+        2.5,
+        3.75,
+        3.75,
+        5,
+        5
+      ],
+      "loop": true,
+      "speed": 2,
+      "scale": 1,
+      "centered": false,
+      "flip": false,
+      "offset": [
+        0.0,
+        0.0
+      ]
+    },
+    "shoot": {
+      "frames": [
+        2,
+        2,
+        2,
+        3,
+        1
+      ],
+      "loop": true,
+      "speed": 1,
+      "scale": 1,
+      "centered": false,
+      "flip": false,
+      "offset": [
+        0.0,
+        0.0
+      ]
+    },
+    "shootflipped": {
+      "frames": [
+        2,
+        2,
+        2,
+        3,
+        1
+      ],
+      "loop": true,
+      "speed": 1,
+      "scale": 1,
+      "centered": false,
+      "flip": false,
+      "offset": [
+        0.0,
+        0.0
+      ]
+    },
+    "damage": {
+      "frames": [
+        5,
+        5
+      ],
+      "loop": true,
+      "speed": 1,
+      "scale": 1,
+      "centered": false,
+      "flip": false,
+      "offset": [
+        0.0,
+        0.0
+      ]
+    },
+    "damageflipped": {
+      "frames": [
+        5,
+        5
+      ],
+      "loop": true,
+      "speed": 1,
+      "scale": 1,
+      "centered": false,
+      "flip": false,
+      "offset": [
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "black_pawn": {
+    "idle": {
+      "frames": [
+        5
+      ],
+      "loop": false,
+      "speed": 1,
+      "scale": 1,
+      "centered": false,
+      "flip": false,
+      "offset": [
+        0.0,
+        0.0
+      ]
+    },
+    "moving": {
+      "frames": [
+        5,
+        5,
+        3.75,
+        3.75,
+        2.5,
+        3.75,
+        3.75,
+        5,
+        5
+      ],
+      "loop": true,
+      "speed": 2,
+      "scale": 1,
+      "centered": false,
+      "flip": false,
+      "offset": [
+        0.0,
+        0.0
+      ]
+    },
+    "death": {
+      "frames": [
+        5,
+        5,
+        20,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        20,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        50
+      ],
+      "loop": false,
+      "speed": 1,
+      "scale": 1,
+      "centered": false,
+      "flip": false,
+      "offset": [
+        -6.25,
+        0.0
+      ]
+    }
+  },
+  "black_rook": {
+    "idle": {
+      "frames": [
+        5
+      ],
+      "loop": false,
+      "speed": 1,
+      "scale": 1,
+      "centered": false,
+      "flip": false,
+      "offset": [
+        0.0,
+        0.0
+      ]
+    },
+    "moving": {
+      "frames": [
+        5,
+        5,
+        3.75,
+        3.75,
+        2.5,
+        3.75,
+        3.75,
+        5,
+        5
+      ],
+      "loop": true,
+      "speed": 2,
+      "scale": 1,
+      "centered": false,
+      "flip": false,
+      "offset": [
+        0.0,
+        0.0
+      ]
+    },
+    "death": {
+      "frames": [
+        5,
+        5,
+        20,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        20,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        50
+      ],
+      "loop": false,
+      "speed": 1,
+      "scale": 1,
+      "centered": false,
+      "flip": false,
+      "offset": [
+        -6.25,
+        0.0
+      ]
+    }
+  },
+  "black_knight": {
+    "idle": {
+      "frames": [
+        5
+      ],
+      "loop": false,
+      "speed": 1,
+      "scale": 1,
+      "centered": false,
+      "flip": false,
+      "offset": [
+        0.0,
+        0.0
+      ]
+    },
+    "idleflipped": {
+      "frames": [
+        5
+      ],
+      "loop": false,
+      "speed": 1,
+      "scale": 1,
+      "centered": false,
+      "flip": false,
+      "offset": [
+        0.0,
+        0.0
+      ]
+    },
+    "moving": {
+      "frames": [
+        5,
+        5,
+        3.75,
+        3.75,
+        2.5,
+        3.75,
+        3.75,
+        5,
+        5
+      ],
+      "loop": true,
+      "speed": 2,
+      "scale": 1,
+      "centered": false,
+      "flip": false,
+      "offset": [
+        0.0,
+        0.0
+      ]
+    },
+    "movingflipped": {
+      "frames": [
+        5,
+        5,
+        3.75,
+        3.75,
+        2.5,
+        3.75,
+        3.75,
+        5,
+        5
+      ],
+      "loop": true,
+      "speed": 2,
+      "scale": 1,
+      "centered": false,
+      "flip": false,
+      "offset": [
+        0.0,
+        0.0
+      ]
+    },
+    "shoot": {
+      "frames": [
+        2,
+        2,
+        2,
+        3,
+        1
+      ],
+      "loop": true,
+      "speed": 1,
+      "scale": 1,
+      "centered": false,
+      "flip": false,
+      "offset": [
+        0.0,
+        0.0
+      ]
+    },
+    "shootflipped": {
+      "frames": [
+        2,
+        2,
+        2,
+        3,
+        1
+      ],
+      "loop": true,
+      "speed": 1,
+      "scale": 1,
+      "centered": false,
+      "flip": false,
+      "offset": [
+        0.0,
+        0.0
+      ]
+    },
+    "damage": {
+      "frames": [
+        5,
+        5
+      ],
+      "loop": true,
+      "speed": 1,
+      "scale": 1,
+      "centered": false,
+      "flip": false,
+      "offset": [
+        0.0,
+        0.0
+      ]
+    },
+    "damageflipped": {
+      "frames": [
+        5,
+        5
+      ],
+      "loop": true,
+      "speed": 1,
+      "scale": 1,
+      "centered": false,
+      "flip": false,
+      "offset": [
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "black_bishop": {
+    "idle": {
+      "frames": [
+        5
+      ],
+      "loop": false,
+      "speed": 1,
+      "scale": 1,
+      "centered": false,
+      "flip": false,
+      "offset": [
+        0.0,
+        0.0
+      ]
+    },
+    "idleflipped": {
+      "frames": [
+        5
+      ],
+      "loop": false,
+      "speed": 1,
+      "scale": 1,
+      "centered": false,
+      "flip": false,
+      "offset": [
+        0.0,
+        0.0
+      ]
+    },
+    "moving": {
+      "frames": [
+        5,
+        5,
+        3.75,
+        3.75,
+        2.5,
+        3.75,
+        3.75,
+        5,
+        5
+      ],
+      "loop": true,
+      "speed": 2,
+      "scale": 1,
+      "centered": false,
+      "flip": false,
+      "offset": [
+        0.0,
+        0.0
+      ]
+    },
+    "movingflipped": {
+      "frames": [
+        5,
+        5,
+        3.75,
+        3.75,
+        2.5,
+        3.75,
+        3.75,
+        5,
+        5
+      ],
+      "loop": true,
+      "speed": 2,
+      "scale": 1,
+      "centered": false,
+      "flip": false,
+      "offset": [
+        0.0,
+        0.0
+      ]
+    },
+    "shoot": {
+      "frames": [
+        2,
+        2,
+        2,
+        3,
+        1
+      ],
+      "loop": true,
+      "speed": 1,
+      "scale": 1,
+      "centered": false,
+      "flip": false,
+      "offset": [
+        0.0,
+        0.0
+      ]
+    },
+    "shootflipped": {
+      "frames": [
+        2,
+        2,
+        2,
+        3,
+        1
+      ],
+      "loop": true,
+      "speed": 1,
+      "scale": 1,
+      "centered": false,
+      "flip": false,
+      "offset": [
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "vegetation": {
+    "0": {
+      "frames": [
+        0
+      ],
+      "loop": false,
+      "speed": 1,
+      "scale": 1,
+      "centered": false,
+      "flip": false,
+      "offset": [
+        0.0,
+        0.0
+      ]
+    },
+    "1": {
+      "frames": [
+        1
+      ],
+      "loop": false,
+      "speed": 1,
+      "scale": 1,
+      "centered": false,
+      "flip": false,
+      "offset": [
+        0.0,
+        0.0
+      ]
+    },
+    "2": {
+      "frames": [
+        2
+      ],
+      "loop": false,
+      "speed": 1,
+      "scale": 1,
+      "centered": false,
+      "flip": false,
+      "offset": [
+        0.0,
+        0.0
+      ]
+    },
+    "3": {
+      "frames": [
+        3
+      ],
+      "loop": false,
+      "speed": 1,
+      "scale": 1,
+      "centered": false,
+      "flip": false,
+      "offset": [
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "bomb": {
+    "lit": {
+      "frames": [
+        10,
+        10,
+        10,
+        10,
+        10
+      ],
+      "loop": false,
+      "speed": 1,
+      "scale": 1,
+      "centered": false,
+      "flip": false,
+      "offset": [
+        -4.25,
+        -8.25
+      ]
+    }
+  }
 }

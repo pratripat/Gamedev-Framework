@@ -10,6 +10,8 @@ from .component_manager import ComponentManager
 
 from ..systems.animation.animation_state_machine import AnimationStateMachine
 from ..weapons.bullet_patterns import SHOOT_FUNCTIONS
+from ..utils.json_validator import load_and_validate
+from ..utils.json_schemas import ENTITY_SCHEMA, ENTITY_NAMES
 
 from ..utils import CollisionShape, CollisionLayer, get_blob_shadow_surface, SCALE
 
@@ -100,7 +102,9 @@ class EntityFactory:
                     projectile_data=p["projectile_data"],
                     cooldown=p["cooldown"],
                     duration=p.get("duration", None),
-                    warmup=p.get("warmup", 0.0)
+                    warmup=p.get("warmup", 0.0),
+                    tier=p.get("tier", "light"),
+                    tier_cooldown=p.get("tier_cooldown", 0.0)
                 )
                 for p in data["patterns"]
             ],
@@ -149,7 +153,7 @@ class EntityFactory:
     }
 
     def __init__(self):
-        self.data = json.load(open("data/config/entities.json", "r"))
+        self.data = load_and_validate("data/config/entities.json", ENTITY_SCHEMA)
 
     def create_player(self, pos, component_manager, entity_manager, event_manager, animation_handler, input_system, resource_manager):
         player = entity_manager.create_entity(player=True)
@@ -270,6 +274,8 @@ class EntityFactory:
         }
         
         for component_name, component_data in entity_data.items():
+            if component_data is None:
+                continue  # Schema may fill missing keys as None
             builder = self.COMPONENT_BUILDERS.get(component_name)
             if builder:
                 comp = builder(entity_id, component_data, ctx)

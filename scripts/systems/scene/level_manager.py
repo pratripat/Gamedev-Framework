@@ -1,6 +1,8 @@
 import json, pygame, os, glob
 from ..rendering.tilemap import Tilemap
 from ...components.physics import Position
+from ...utils.json_validator import load_and_validate
+from ...utils.json_schemas import LEVEL_SCHEMA
 from ...components.ai import AIComponent
 from ...components.animation import RenderComponent
 from ...components.render_effect import YSortRender
@@ -15,7 +17,7 @@ class Level:
         self.collidables = ["wall", "water"]
     
     def load(self, path, component_manager, entity_factory, entity_manager, render_system):
-        data = json.load(open(path, "r"))
+        data = load_and_validate(path, LEVEL_SCHEMA)
 
         layers = data["layers"]
         tilemaps = data["tilemaps"]

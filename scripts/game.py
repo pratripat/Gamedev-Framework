@@ -47,6 +47,7 @@ class Game():
             self.calculate_dt()
             self.update()
             self.render()
+            self.ctx.audio_manager.flush()
     
     def render(self):
         self.ctx.fps = getattr(self, 'fps', 0)
